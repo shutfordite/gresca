@@ -39,19 +39,36 @@ half-turn.
 The menu has a Snowboard / Skis picker, remembered where the browser allows it. Skis carve a little quicker (1.12x
 turn rate), grip better and spin slightly faster.
 
+## The rider
+
+The rider is drawn from the Hanga Dawn art spec and animated by a small pose and body-dynamics layer:
+
+- `art/gresca-hanga-spec.js` is the art spec (v1.3.0), a byte-for-byte copy of the one on the design canvas. The
+  game uses its rider rig, poses, blend timings and `HANGA.projectRider`.
+- `art/gresca-rider-anim.js` (`RiderAnim`) picks the pose with `HANGA.poseFor`, blends over `HANGA.blendTime`, holds
+  the landing pose and snaps into a wipeout. On top of the pose it adds body dynamics, so the rider reacts to any
+  terrain: the legs absorb the ground through a spring and squat deeper on harder landings, the rider leans into
+  turns by the real turn rate (`atan(v·ω/g)`), the upper body angulates, the outside arm counterbalances, and the
+  stance gets lower on ground steeper than the map's mean gradient and at speed. Every number is in `RiderAnim.tune`.
+- Both files are embedded in `index.html` as their own `<script>` blocks. After changing either one, run
+  `node tools/embed-art.js`; a test fails if they drift.
+- A goofy snowboard stance is read from `localStorage` key `gresca-stance` (the menu control is still to come).
+
 ## Tests
 
 ```
 npm test
 ```
 
-Needs Node 20 or newer, and no packages. The tests run the game's real `<script>` inside a Node `vm` with stubbed
+Needs Node 20 or newer, and no packages. The tests run the game's real `<script>` blocks inside a Node `vm` with stubbed
 browser APIs (`test/harness.js`), so no game code was refactored for testing.
 
 - `test/physics.test.js`: terrain, gravity, brake, steering, jumping, kickers, trees, finish.
 - `test/features.test.js`: touch and keyboard input, camera framing, snow look, spin and switch riding, rendering
   smoke tests and full-run integration tests with an autopilot.
 - `test/park.test.js`: kickers, rails and boxes, and the Snowboard / Skis menu.
+- `test/rider-anim.test.js`: the art modules match `art/`, the pose follows game state with the spec's timing,
+  and the body dynamics (lean, compression, landings, steepness) behave and stay stable.
 
 Run `npm test` after every change. To test another copy of the game: `GAME_FILE=/path/to/file.html npm test`.
 

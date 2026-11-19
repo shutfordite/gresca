@@ -56,8 +56,9 @@ function makeEl(id, w, h) {
 
 function load(opts = {}) {
   const html = fs.readFileSync(GAME, 'utf8');
-  const m = /<script>([\s\S]*)<\/script>/.exec(html);
-  if (!m) throw new Error('No <script> block found in ' + GAME);
+  // Every <script> block in page order: the art modules (HANGA, RiderAnim) come before the game script.
+  const blocks = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((b) => b[1]);
+  if (!blocks.length) throw new Error('No <script> block found in ' + GAME);
 
   const els = {}, timers = [], raf = [], wl = {};
   const document = {
@@ -79,7 +80,8 @@ function load(opts = {}) {
   };
   sandbox.window = sandbox;
   const ctx = vm.createContext(sandbox);
-  vm.runInContext(m[1], ctx, { filename: 'index.html' });
+  // Top-level let/const are shared between classic scripts, as in a browser, so run them in one context.
+  blocks.forEach((src, i) => vm.runInContext(src, ctx, { filename: `index.html#script${i}` }));
 
   const g = {
     ctx,
