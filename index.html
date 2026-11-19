@@ -5455,8 +5455,19 @@ function drawSky(){
  ctx.fillStyle=sg;ctx.fillRect(0,0,W,Hh)}
 function drawSun(){const s=sunDisc();if(!s.on)return;
  ctx.fillStyle=HANGA.colour(HANGA.sky.sun.colour);ctx.beginPath();ctx.arc(s.X,s.Y,s.r,0,7);ctx.fill()}
-// cam.s is the slope ahead (metres dropped per metre); the view tilts down by it so the snow fills the screen.
-const cam={px:0,py:0,dx:0,dy:1,RW:1,RH:1,kx:1,sc:1,hz:0,s:.26,pt:0};
+// cam.s is the slope ahead (metres dropped per metre). The camera height still follows it, but the view tilt
+// (cam.pt = sc * tilt) follows it only partly, from cameraTilt below.
+// Partial slope follow (spec camera.slopeFollow, HANGA.cameraPitch). The game's view is "full tilt": its look-down
+// grows by atan(s). The spec's rule is applied as a change to that: aim at the ground lookAheadM ahead of the rider
+// from a camera rel metres above them, and look down by (fullPitch - partialPitch) less. Level ground: no change.
+// s: full-tilt slope (tan); rel: camera height above the rider's ground; drop: how far the ground lookAheadM ahead
+// lies below the rider's. Returns the view tilt (tan). The rider clamp is applied in draw(), in screen pixels.
+function cameraTilt(s,rel,drop){
+ const F=HANGA.camera.slopeFollow,D=CAMBACK+F.lookAheadM,R2D=180/Math.PI,
+ level=-Math.atan(rel/D)*R2D,full=-Math.atan((rel+drop)/D)*R2D,
+ part=HANGA.cameraPitch(level,full,Infinity,0); // negative = looking down
+ return Math.tan(Math.atan(s)-(part-full)/R2D)}
+const cam={px:0,py:0,dx:0,dy:1,RW:1,RH:1,kx:1,sc:1,hz:0,s:.26,pt:0,tilt:.26};
 let col,col0;
 
 function build(){
@@ -5716,7 +5727,13 @@ function draw(dt){
  cam.s+=(Math.max(-.3,Math.min(.8,(gR-H[ay*W0+ax])/20))-cam.s)*Math.min(1,dt*3);
  camH+=(Math.max(gR+CAMH+cam.s*CAMBACK+jz*.5,H[pi]+2.5)-camH)*Math.min(1,dt*6);
  const hz=RH*HZ,sc=RH*.75,kx=W/RW,im=lx.createImageData(RW,RH),D=im.data;
- cam.px=px;cam.py=py;cam.dx=dx;cam.dy=dy;cam.RW=RW;cam.RH=RH;cam.kx=kx;cam.sc=sc;cam.hz=hz;cam.pt=sc*cam.s;
+ // View tilt: partial slope follow, then clamp so the rider stays riderMarginDeg inside the bottom of the frame.
+ const LA=HANGA.camera.slopeFollow.lookAheadM,
+ bx=Math.max(1,Math.min(W0-2,(x+dx*LA)|0)),by=Math.max(1,Math.min(H0-2,(y+dy*LA)|0)),
+ yMax=RH-sc*Math.tan(HANGA.camera.slopeFollow.riderMarginDeg*Math.PI/180),
+ tilt=Math.max(cameraTilt(cam.s,camH-gR,gR-H[by*W0+bx]),((camH-gR)/CAMBACK*sc+hz-yMax)/sc);
+ cam.tilt=tilt;
+ cam.px=px;cam.py=py;cam.dx=dx;cam.dy=dy;cam.RW=RW;cam.RH=RH;cam.kx=kx;cam.sc=sc;cam.hz=hz;cam.pt=sc*tilt;
  for(let c=0;c<RW;c++){
   const ph=(c/RW-.5)*FOV,cs=Math.cos(ph),rx=Math.cos(camA+ph),ry=Math.sin(camA+ph);
   let ym=RH,z=3;
