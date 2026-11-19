@@ -26,7 +26,12 @@ function makeCtx(canvas) {
             data: canvas._pix && canvas._pix.length === w * h * 4 ? canvas._pix.slice() : new Uint8ClampedArray(w * h * 4),
           });
         case 'createLinearGradient':
-          return () => ({ addColorStop() {} });
+          // Recorded so tests can check the sky's colour stops and extent.
+          return (x0, y0, x1, y1) => {
+            const gr = { x0, y0, x1, y1, stops: [], addColorStop(o, c) { gr.stops.push([o, c]); } };
+            (canvas._grads = canvas._grads || []).push(gr);
+            return gr;
+          };
         case 'measureText':
           return () => ({ width: 0 });
         default:
