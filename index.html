@@ -5437,7 +5437,24 @@ function resize(){const d=Math.min(2,devicePixelRatio||1);cv.width=cv.clientWidt
 addEventListener('resize',resize);resize();
 
 // Camera: behind and well above the rider, looking steeply down the slope.
-const FOV=1.15,NS=152,CAMBACK=10,CAMH=7.6,HZ=.14,RSC=.55,FOG=[214,220,238];
+const FOV=1.15,NS=152,CAMBACK=10,CAMH=7.6,HZ=.14,RSC=.55;
+// Hanga Dawn look (spec terrain.fog, sky, maps[id].sun). MAP_ID picks the map's sun and gradient.
+const MAP_ID='procedural',FOG=HANGA.terrain.fog.rgb.slice(),
+ FAR=(()=>{let z=3;for(let k=0;k<NS-1;k++)z+=1+z*.012;return z})(), // distance of the last terrain sample
+ fogAt=z=>HANGA.fogAmount(z,FAR);
+// Camera heading in compass degrees. Procedural map: world x = game x, world y = -game y.
+function camCompass(){return((Math.atan2(Math.cos(camA),-Math.sin(camA))*180/Math.PI)%360+360)%360}
+// Sun disc on screen: at the map's sun azimuth, a little above the horizon line (spec sky.sun).
+function sunDisc(){
+ const S=HANGA.sky.sun,az=HANGA.maps[MAP_ID].sun.azimuthDeg,rel=((az-camCompass()+540)%360-180)*Math.PI/180,
+ r=W*S.radiusFracOfWidth,X=(rel/FOV+.5)*W,Y=(cam.hz-cam.pt)*cam.kx-S.aboveHorizonFrac*Hh;
+ return{X,Y,r,on:Math.abs(rel)<Math.PI/2&&X>-r&&X<W+r&&Y>-r}}
+function drawSky(){
+ const hy=Math.max(1,(cam.hz-cam.pt)*cam.kx),sg=ctx.createLinearGradient(0,0,0,hy);
+ for(const [o,role] of HANGA.sky.stops)sg.addColorStop(o,HANGA.colour(role));
+ ctx.fillStyle=sg;ctx.fillRect(0,0,W,Hh)}
+function drawSun(){const s=sunDisc();if(!s.on)return;
+ ctx.fillStyle=HANGA.colour(HANGA.sky.sun.colour);ctx.beginPath();ctx.arc(s.X,s.Y,s.r,0,7);ctx.fill()}
 // cam.s is the slope ahead (metres dropped per metre); the view tilts down by it so the snow fills the screen.
 const cam={px:0,py:0,dx:0,dy:1,RW:1,RH:1,kx:1,sc:1,hz:0,s:.26,pt:0};
 let col,col0;
@@ -5709,7 +5726,7 @@ function draw(dt){
     const ix=xx|0,iy=yy|0,fx=xx-ix,fy=yy-iy,mi=iy*W0+ix,
     h=H[mi]*(1-fx)*(1-fy)+H[mi+1]*fx*(1-fy)+H[mi+W0]*(1-fx)*fy+H[mi+W0+1]*fx*fy,
     ys=Math.floor((camH-h)/(z*cs)*sc+hz-cam.pt);
-    if(ys<ym){const o4=mi*4,f=Math.min(.85,Math.pow(z/430,1.6));let c0=col[o4],c1=col[o4+1],c2=col[o4+2];
+    if(ys<ym){const o4=mi*4,f=fogAt(z);let c0=col[o4],c1=col[o4+1],c2=col[o4+2];
      if(z<80){const o1=o4+W0*4,w00=(1-fx)*(1-fy),w10=fx*(1-fy),w01=(1-fx)*fy,w11=fx*fy;
       c0=c0*w00+col[o4+4]*w10+col[o1]*w01+col[o1+4]*w11;c1=c1*w00+col[o4+5]*w10+col[o1+1]*w01+col[o1+5]*w11;c2=c2*w00+col[o4+6]*w10+col[o1+2]*w01+col[o1+6]*w11}
      const r=c0+(FOG[0]-c0)*f,g=c1+(FOG[1]-c1)*f,b=c2+(FOG[2]-c2)*f;
@@ -5718,7 +5735,7 @@ function draw(dt){
    z+=1+z*.012}
  }
  lx.putImageData(im,0,0);
- const sg=ctx.createLinearGradient(0,0,0,Hh*.3);sg.addColorStop(0,'#9ea8c2');sg.addColorStop(1,'rgb('+FOG.join(',')+')');ctx.fillStyle=sg;ctx.fillRect(0,0,W,Hh);
+ drawSky();drawSun(); // behind the terrain: transparent render pixels show the sky, and ridges cover the sun
  ctx.imageSmoothingEnabled=true;ctx.drawImage(lo,0,0,W,Hh);
  // trees, far to near, hidden when a nearer ridge covers them
  const vis=[];
@@ -5728,7 +5745,7 @@ function draw(dt){
   const ci=Math.min(RW-1,Math.max(0,(P.X/kx)|0)),k=Math.max(0,Math.min(NS-1,Math.floor(Math.log((P.z+83.33)/86.33)/Math.log(1.012)))),
   ysb=P.Y/kx,hs=9/P.f*sc;
   if(occ[ci*NS+k]<ysb-hs*.6)continue;
-  const fg=Math.min(.85,Math.pow(P.z/430,1.6)),X=P.X,Y=P.Y,hh=hs*kx;
+  const fg=fogAt(P.z),X=P.X,Y=P.Y,hh=hs*kx;
   ctx.fillStyle=`rgb(${(31+(FOG[0]-31)*fg)|0},${(74+(FOG[1]-74)*fg)|0},${(58+(FOG[2]-58)*fg)|0})`;
   for(let j=0;j<3;j++){const by=Y-hh*(.12+.27*j),w=hh*(.34-.07*j);ctx.beginPath();ctx.moveTo(X-w,by);ctx.lineTo(X+w,by);ctx.lineTo(X,by-hh*.42);ctx.fill()}
  }
