@@ -2,7 +2,9 @@
 
 Gresca is a browser ski and snowboard game: a static site on GitHub Pages with no build step and nothing to install
 (`docs/adr/0001-multi-file-site.md`). It is tested mainly on an iPad through each PR's preview link.
-The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3.
+Where things stand: `docs/STATUS.md`. The order of work: `docs/ROADMAP.md`. The architecture and work-package
+definitions: `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3. Coordination method:
+`.claude/skills/gresca-architect/SKILL.md`.
 
 ## Every change
 - Run `npm test` (Node 22) before every commit. CI runs the same command.

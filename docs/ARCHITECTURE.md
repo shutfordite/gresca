@@ -2,24 +2,11 @@
 
 Audit of `shutfordite/gresca` at `main` 9928948 (after PR #3, D1 fog and sky), 20 Nov 2026. PR #4 (D2 camera) has since been merged. The open branch `design/02-camera` (391c3da) was also read. All 146 tests pass on main (`npm test`, about 104 s).
 
-## 0. Status (20 Nov 2026, main a1c6833)
+## 0. Status
 
-| Package | State |
-|---|---|
-| A1 test façade | done, PR #6 |
-| A2 faster tests | done, PR #7 (suite about 13 s on CI) |
-| A3 fixed 120 Hz step, seeded RNG | done, PR #8 |
-| PR previews on GitHub Pages | done, PR #9 (not in the original plan) |
-| B1 game split into `src/` scripts (ADR 0001, no build step) | done, PR #12 |
-| Fix: black ski tracks at low speed | this PR |
-| B3 terrain interface (layer stack, R1) | done, PR #14 |
-| B2 state objects and events | **split in two.** **B2a** (this PR): `src/` becomes native ES modules by layer, every piece of state in objects made by one `createGame(env)` call, no module-level state (ADR 0002). **B2b** (next): the simulation becomes pure, talks outwards through events, and the DOM and camera side effects move out of `step()` and `draw()` (marked `TODO(B2b)` in the code). |
-| C1–C4, D1–D3 | to do. Phase C is amended by `docs/REAL-WORLD-DATA.md` (R1–R6) |
-
-Follow-ups from the A reviews, to fold into the package named:
-- ~~B1~~ (done in #12): pin Node with `"engines": {"node": ">=22.8"}` and make the README match (L1, A2 review). Replace the `debug.drawSource()` test (it reads `draw.toString()`) with call-order recording in the harness's ctx stub.
-- B2b: `Gresca.sim()` should call the same `simTick()` as the loop; record input per sim step (for replays and ghosts later). ~~`Gresca.set()` must reset interpolation when it writes the position~~ (done in B2a).
-- ~~B3: rename `world.height` (raw cell) to `world.cellHeight` and add an interpolated `height`.~~ Done in #14.
+Moved to `docs/STATUS.md` (current state, open PRs, next package, known issues). The order of work is in
+`docs/ROADMAP.md`. This file keeps the original audit (sections 1–3), the target architecture (section 4) and the
+work-package definitions (section 5).
 
 ## 1. Summary
 
