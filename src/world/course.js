@@ -115,7 +115,7 @@ export function createProceduralCourse(terrain, frame = DEFAULT_FRAME) {
  }
  function project(x, y, out) {
   frame.toGrid(x, y, at);
-  out.s = at.v;
+  out.s = at.v + 0; // + 0 turns a -0 from the frame's rounding into 0 (exact for every other value)
   out.d = at.u - cx(at.v);
   return worldTangent(at.v, out);
  }
