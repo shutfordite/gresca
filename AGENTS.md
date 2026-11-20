@@ -7,7 +7,8 @@ definitions: `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3. 
 `.claude/skills/gresca-architect/SKILL.md`.
 
 ## Every change
-- Run `npm test` (Node 22) before every commit. CI runs the same command.
+- Run `npm test` (Node 22) before every commit. CI runs it and `npm run test:rotated` (the whole suite with the
+  procedural map turned 37°): run that too when you touch coordinates, headings or the map.
 - Never weaken, skip or delete an assertion just to make a refactor pass. If a test has to change, say why in the PR.
 - One work package per PR, on its own branch (`refactor/a1-test-facade`, `design/03-…`).
   PR title: `<package id>: <what>`. In the body, list the behaviour changes (or write "none") and the test changes.
@@ -50,7 +51,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Terrain heights, layers, sampling | `src/world/terrain.js`, `noise.js` | `terrain`, `build` |
 | Course: centreline, finish, kickers, rails; the `Course` (s, d) the game asks | `src/world/course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
 | What the rider animation reads from the sim (`AnimInput`) | `src/sim/anim-input.js` | `course`, `rider-anim` |
-| The course seam lint (no `cx`, park constants, `H[`, "+y is downhill" outside the procedural map) | `test/frame.test.js` | `frame` |
+| The world frame: a map's grid placed in ENU (origin, rotation), compass degrees | `src/world/map-frame.js` (ADR 0005) | `course`, `golden`, `rotated`, all with `npm run test:rotated` |
+| The seam lint (no `cx`, park constants, `H[`, "+y is downhill" or the map's old axes outside the procedural map) | `test/frame.test.js` | `frame` |
+| How tests see the façade (on the map's grid, through its frame) | `test/map-view.js`, `test/harness.js` | all |
 | Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
 | Riding physics: steer, grip, brake, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
 | Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
@@ -98,8 +101,10 @@ Until then (the freeze, `docs/STATUS.md`), one code PR runs at a time and may to
 - Tests use the `window.Gresca` façade for whole-game behaviour; they may import only the pure modules directly.
 - Units: metres, seconds and radians internally; compass degrees only where the art spec needs them.
   Put the unit in a comment on every tunable.
-- Don't add new code that assumes +y is downhill or indexes the height array directly. Use the terrain
-  interface and the course's along/across coordinates (after B3 and C1).
+- One world frame (ADR 0005): x east, y north, z up, metres; headings radians counter-clockwise from east; compass
+  degrees only at the art spec (sun, `camCompass`). Don't assume which way is downhill or how the map lies: ask the
+  terrain, the course's along/across coordinates (s, d) and the map frame (`world.frame`), and never index the height
+  array outside the procedural map.
 - No `Math.random()` or wall-clock time in the simulation. Use the seeded RNG.
 - No per-frame allocations in hot loops. Anything map-sized needs a stated memory budget in the PR.
 - Colours come from palette roles and values from `HANGA`, never copied numbers.
@@ -134,5 +139,5 @@ Every agent session pays for what it reads and prints, so keep context small:
 
 ## Do not break
 - Tap-to-start, the Snowboard / Skis picker, and the `gresca-rig` / `gresca-stance` storage keys.
-- The empty stretch of piste between y 460 and 740 on the procedural map (the physics tests use it).
+- The empty stretch of piste between s 460 and 740 on the procedural map (the physics tests use it).
 - Credits and ODbL attribution for any real map data.
