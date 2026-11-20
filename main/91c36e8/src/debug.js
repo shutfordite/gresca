@@ -90,11 +90,16 @@ window.Gresca=(()=>{
   emitParticles(n,px,py,pz,spread,up,dvx,dvy){emit(n,px,py,pz,spread,up,dvx,dvy)}, // m, m, m, m/s, m/s, m/s, m/s
   config:Object.freeze({maxParticles:MAXP,camBack:CAMBACK,riderScale:RSC,fixedStep:SIM_DT,maxStepsPerFrame:SIM_MAX}), // particle cap; camera m behind the rider; rider draw scale; s per simulation step; steps the loop runs per frame at most
   world:Object.freeze({
-   size:Object.freeze({x:W0,y:H0}), // m, map extent (one height cell per metre)
+   size:Object.freeze({x:terrain.bounds.maxX,y:terrain.bounds.maxY}), // m, map extent (one height cell per metre)
    finishY:FIN,                    // m, the finish line
    centre:y=>cx(y),                // m, x of the piste centreline at y
-   height:(px,py)=>H[(py|0)*W0+(px|0)], // m, terrain altitude of the cell containing (px,py), kicker ramps included
-   groomed:(px,py)=>M[(py|0)*W0+(px|0)], // 0..255, how groomed the piste is in that cell (255 = groomed)
+   // The terrain (src/terrain.js) the physics, camera, renderer and rider all sample, kicker ramps included.
+   height:(px,py)=>terrain.height(px,py),      // m, altitude of the smooth (bicubic) surface at (px,py)
+   cellHeight:(px,py)=>terrain.cellHeight(px,py), // m, raw height of the cell containing (px,py) (before B3: height)
+   gradient:(px,py)=>{const o=terrain.gradient(px,py);return{gx:o.gx,gy:o.gy}}, // m/m, rise per metre in +x and +y
+   slopeDeg:(px,py)=>terrain.slopeDeg(px,py),  // degrees from horizontal at (px,py)
+   layers:terrain.layers,                      // the terrain layers in use, in stack order (frozen)
+   groomed:(px,py)=>Math.round(terrain.groomed(px,py)*255), // 0..255, how groomed the piste is in that cell (255 = groomed)
    noise:(px,py)=>fbm(px,py),      // 0..1, the terrain's fractal noise
    rampHeight:(px,py)=>bump(px,py),// m, kicker ramp height added at (px,py)
    get kickers(){return KICK.slice()},       // y of each kicker lip, top to bottom
@@ -113,9 +118,10 @@ window.Gresca=(()=>{
    mapId:MAP_ID,
    fog:()=>({rgb:FOG.slice(),far:FAR,samples:NS}), // fog colour, distance of the last terrain sample (m), samples per column
    fogAt:z=>fogAt(z),
+   heightFast:(px,py)=>terrain.heightFast(px,py), // m, the raycaster's fast terrain height (bilinear; see terrain.js)
    renderPixels:()=>lx.getImageData(0,0,lo.width,lo.height).data, // RGBA of the last low-res terrain render
-   colourAt:(px,py)=>{const o=((py|0)*W0+(px|0))*4;return[col[o],col[o+1],col[o+2],col[o+3]]}, // live colour map (with tracks)
-   baseColourAt:(px,py)=>{const o=((py|0)*W0+(px|0))*4;return[col0[o],col0[o+1],col0[o+2],col0[o+3]]}, // as built
+   colourAt:(px,py)=>{const o=((py|0)*map.width+(px|0))*4;return[col[o],col[o+1],col[o+2],col[o+3]]}, // live colour map (with tracks)
+   baseColourAt:(px,py)=>{const o=((py|0)*map.width+(px|0))*4;return[col0[o],col0[o+1],col0[o+2],col0[o+3]]}, // as built
    fillColourMap:v=>{col.fill(v)}, // until the next start()
    anim:()=>anim&&{rig:anim.rig,pose:anim.pose,comp:anim.comp,roll:anim.roll},
    animTick:dt=>{riderPose(1);animTick(dt)}, // advance the rider animation one frame without drawing (current pose)
