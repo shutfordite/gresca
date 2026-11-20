@@ -1,8 +1,8 @@
 name: Preview
 
 # Publishes a playable copy of the game on GitHub Pages:
-#   main:          https://shutfordite.github.io/gresca/
-#   pull request:  https://shutfordite.github.io/gresca/pr/<number>/
+#   main:          https://shutfordite.github.io/gresca/  (redirects to /main/<commit>/)
+#   pull request:  https://shutfordite.github.io/gresca/pr/<number>/<commit>/  (pr/<number>/ redirects to the newest)
 # and keeps one comment on each pull request with its link. The preview is removed when the pull request closes.
 # Pages must be set to "Deploy from a branch", branch gh-pages, folder / (Settings → Pages).
 
@@ -45,18 +45,32 @@ jobs:
           ACTION: ${{ github.event.action }}
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          # What gets published: the page and every folder it loads files from. Add new runtime folders here.
+          SITE: index.html src art maps assets
+          KEEP: 3 # builds kept per pull request (and for main), so a tab left open on an older build keeps working
         run: |
           set -euo pipefail
+          short=${SHA::7}
           if [ "$EVENT" = push ]; then
-            dir=site; what="main at ${SHA::7}"
+            base=site/main; top=site; what="main at $short"
           else
-            dir="site/pr/$PR"; what="PR #$PR at ${SHA::7}"
+            base="site/pr/$PR"; top="$base"; what="PR #$PR at $short"
           fi
           if [ "$ACTION" = closed ]; then
-            rm -rf "$dir"; what="remove preview for PR #$PR"
+            rm -rf "$base"; what="remove preview for PR #$PR"
           else
-            mkdir -p "$dir"
-            cp game/index.html "$dir/index.html"
+            # Each commit gets its own folder, so the browser cache (Pages sends max-age=600) can never mix
+            # files from two builds. The link in the PR comment points straight at this folder.
+            build="$base/$short"
+            rm -rf "$build"; mkdir -p "$build"
+            for f in $SITE; do if [ -e "game/$f" ]; then cp -R "game/$f" "$build/"; fi; done
+            # Keep the newest $KEEP builds; builds.txt lists them oldest first.
+            list="$base/builds.txt"; touch "$list"
+            grep -vx "$short" "$list" > "$list.tmp" || true; echo "$short" >> "$list.tmp"; mv "$list.tmp" "$list"
+            while [ "$(wc -l < "$list")" -gt "$KEEP" ]; do old=$(head -n1 "$list"); rm -rf "${base:?}/$old"; sed -i 1d "$list"; done
+            # The stable address (pr/N/ or the site root) redirects to the newest build.
+            rel=${build#"$top"/}
+            printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=./%s/"><title>Gresca</title><a href="./%s/">Open the latest build</a>\n' "$rel" "$rel" > "$top/index.html"
           fi
           touch site/.nojekyll
           cd site
@@ -80,9 +94,9 @@ jobs:
             const sha = process.env.SHA.slice(0, 7);
             const body = context.payload.action === 'closed'
               ? `${marker}\nPreview removed now that this pull request is closed. The current game on main: ${base}/`
-              : `${marker}\n**▶ Play this version:** ${base}/pr/${pr.number}/?v=${sha}\n\n` +
+              : `${marker}\n**▶ Play this version:** ${base}/pr/${pr.number}/${sha}/\n\n` +
                 `Built from ${sha}, merged with main as CI tests it. Updates on every push. ` +
-                `Allow a minute after this comment changes for Pages to publish. If you see an older build, reload.`;
+                `Each push gets its own address, so you never get a cached older build. Allow a minute after this comment changes for Pages to publish. ${base}/pr/${pr.number}/ always redirects to the newest build.`;
             const comments = await github.paginate(github.rest.issues.listComments,
               { ...context.repo, issue_number: pr.number, per_page: 100 });
             const mine = comments.find(c => c.user.type === 'Bot' && c.body.startsWith(marker));
