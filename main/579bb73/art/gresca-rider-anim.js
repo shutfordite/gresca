@@ -1,5 +1,5 @@
 /*
- * Gresca · rider animation  v0.1.0
+ * Gresca · rider animation  v0.1.1
  * Pure maths on top of the Hanga Dawn spec (HANGA). No canvas, no DOM.
  * Loads in the browser (window.RiderAnim) and in Node (require), like the spec module.
  *
@@ -19,7 +19,7 @@ var HANGA = root.HANGA || (typeof require === 'function' ? require('./gresca-han
 var D2R = Math.PI / 180, R2D = 180 / Math.PI, G = 9.81, LIVE = '__live';
 
 var RA = {
- version: '0.1.0',
+ version: '0.1.1',
  /* Every number here is a starting point to tune on a phone. */
  tune: {
   turnFull: 1.6,       // rad/s of path turn that counts as a full carve (turn = 1 for poseFor)
@@ -172,10 +172,14 @@ RA.livePose = function (s) {
  return { label: 'Live', roll: s.roll, lift: 0, move: move };
 };
 
-/* Draw list for the current pose, straight from HANGA.projectRider (lift is left to the game's jump height). */
-RA.project = function (s, yawDeg, pitchDeg, stance) {
+/*
+ * Draw list for the current pose, straight from HANGA.projectRider (lift is left to the game's jump height).
+ * options (optional): passed through to projectRider as they are (spec v1.4: cameraPitchDeg, twistDeg, headYawDeg,
+ * bodyPitchDeg, all degrees). The live pose has no twist or head yaw of its own, so they come only from options.
+ */
+RA.project = function (s, yawDeg, pitchDeg, stance, options) {
  HANGA.rider.poses[s.rig][LIVE] = RA.livePose(s);
- return HANGA.projectRider(s.rig, LIVE, yawDeg, pitchDeg, 0, stance);
+ return HANGA.projectRider(s.rig, LIVE, yawDeg, pitchDeg, 0, stance, options);
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = RA;
