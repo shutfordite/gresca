@@ -1,11 +1,10 @@
-'use strict';
 // Runs the game's scripts (the <script src> files index.html loads, in page order) inside one Node vm with just
 // enough browser stubs, so tests exercise the real game code with no dependencies.
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
 
-const GAME = process.env.GAME_FILE || path.join(__dirname, '..', 'index.html');
+export const GAME = process.env.GAME_FILE || path.join(import.meta.dirname, '..', 'index.html');
 
 // Drawing calls whose order tests may check. While canvas._calls is an array, each fillRect, arc, drawImage and
 // putImageData on that canvas's context is appended to it as [name, tag], where tag says what is drawn: the fill
@@ -72,7 +71,7 @@ function makeEl(id, w, h) {
 
 // The scripts a page runs, in page order: {file, src, code}. A <script src> is read from its path relative to the
 // page; an inline <script> (older single-file versions of the game, for GAME_FILE comparisons) is taken as it is.
-function pageScripts(page = GAME) {
+export function pageScripts(page = GAME) {
   const html = fs.readFileSync(page, 'utf8');
   const out = [...html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((m, i) => {
     const src = /\ssrc="([^"]+)"/.exec(m[1] || '');
@@ -84,7 +83,7 @@ function pageScripts(page = GAME) {
   return out;
 }
 
-function load(opts = {}) {
+export async function load(opts = {}) {
   // The art modules (HANGA, RiderAnim) come before the game's src/ files.
   const scripts = pageScripts();
 
@@ -153,5 +152,3 @@ function load(opts = {}) {
   while (timers.length) timers.shift()(); // runs build() and shows the start screen
   return g;
 }
-
-module.exports = { load, GAME, pageScripts };

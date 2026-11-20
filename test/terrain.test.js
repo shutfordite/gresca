@@ -1,14 +1,13 @@
-'use strict';
 // The terrain interface (src/terrain.js, B3): a layer stack sampled as one smooth surface, the gradient physics reads,
 // the renderer's fast path, and the rule that nothing else indexes the height arrays.
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(import.meta.dirname, '..');
 const TERRAIN_SRC = fs.readFileSync(path.join(ROOT, 'src', 'terrain.js'), 'utf8');
 
 // terrain.js on its own, in an empty context: no document, window, canvas or HANGA, and no other game file.
@@ -143,8 +142,8 @@ describe('Terrain (src/terrain.js on its own)', () => {
   });
 });
 
-describe('the game\'s terrain (through Gresca.world)', () => {
-  const g = load();
+describe('the game\'s terrain (through Gresca.world)', async () => {
+  const g = await load();
   const W = g.world, D = g.debug, FIN = W.finishY;
 
   it('is the procedural map as one base layer', () => {

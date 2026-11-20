@@ -1,13 +1,12 @@
-'use strict';
 // The terrain park: kickers, rails and boxes, and the Snowboard / Skis picker.
 // NOTE: y 460 to 740 is deliberately kept free of features. Many physics tests drop the rider at
 // y=500 and ride a few seconds, expecting empty snow. A test below guards that stretch.
-const fs = require('node:fs');
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load, GAME } = require('./harness');
+import fs from 'node:fs';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load, GAME } from './harness.js';
 
-const g = load();
+const g = await load();
 const frames = (n, dt = 1 / 60) => g.frames(n, dt);
 const st = () => g.state();
 const W = g.world;
@@ -261,13 +260,13 @@ describe('Snowboard or Skis (menu)', () => {
     assert.equal(g.run("localStorage.getItem('gresca-rig')"), 'board');
   });
 
-  it('still reads a choice saved under the old key (from before the rename)', () => {
-    const old = load({ store: { 'gv-rig': 'ski' } });
+  it('still reads a choice saved under the old key (from before the rename)', async () => {
+    const old = await load({ store: { 'gv-rig': 'ski' } });
     assert.equal(old.state().rig, 'ski');
   });
 
-  it('the new key wins over the old key', () => {
-    const both = load({ store: { 'gv-rig': 'ski', 'gresca-rig': 'board' } });
+  it('the new key wins over the old key', async () => {
+    const both = await load({ store: { 'gv-rig': 'ski', 'gresca-rig': 'board' } });
     assert.equal(both.state().rig, 'board');
   });
 

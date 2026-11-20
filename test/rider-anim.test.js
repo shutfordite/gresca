@@ -1,9 +1,11 @@
-'use strict';
 // Rider animation: the spec module's version, the pose state machine follows the spec's timing,
 // and the body dynamics react to the ground, landings and turns. Pure-module tests first, then the real game.
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { load } from './harness.js';
+
+const require = createRequire(import.meta.url);
 const HANGA = require('../art/gresca-hanga-spec.js');
 const RA = require('../art/gresca-rider-anim.js');
 
@@ -132,7 +134,7 @@ test('body dynamics', async (t) => {
 });
 
 test('in the game', async (t) => {
-  const g = load();
+  const g = await load();
   // Advance physics and animation together, as the game loop does (two physics steps per frame).
   const frames = (n) => { for (let i = 0; i < n; i++) { g.step(DT / 2); g.step(DT / 2); g.stepParticles(DT); g.debug.animTick(DT); } };
   const pose = () => g.debug.anim().pose;
@@ -192,9 +194,9 @@ test('in the game', async (t) => {
     assert.ok(list.some((i) => i.id === 'skiL') && list.some((i) => i.id === 'poleR'));
     g.el('pb').fire('click');
   });
-  await t.test('gresca-stance is read from storage (spec rider.stance)', () => {
+  await t.test('gresca-stance is read from storage (spec rider.stance)', async () => {
     assert.equal(st().stance, 'regular');
-    const goofy = load({ store: { 'gresca-stance': 'goofy' } });
+    const goofy = await load({ store: { 'gresca-stance': 'goofy' } });
     assert.equal(goofy.state().stance, 'goofy');
     const ticks = (n) => { for (let i = 0; i < n; i++) { goofy.step(DT); goofy.debug.animTick(DT); } };
     goofy.place({ y: 470, vy: 12 });

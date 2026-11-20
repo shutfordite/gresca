@@ -1,11 +1,10 @@
-'use strict';
 // GMA2-style experience: touch controls, camera framing, snow look, spray, score, plus full-run integration.
-const fs = require('node:fs');
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load, GAME } = require('./harness');
+import fs from 'node:fs';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load, GAME } from './harness.js';
 
-const g = load();
+const g = await load();
 const frames = (n, dt = 1 / 60) => g.frames(n, dt);
 const st = () => g.state();
 const W = g.world, D = g.debug;

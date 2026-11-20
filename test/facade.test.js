@@ -1,11 +1,10 @@
-'use strict';
 // The test and debug façade, window.Gresca. Tests read and drive the game only through it, so the game's state can
 // move into objects or modules without touching them. This file checks that rule and the façade itself.
-const fs = require('node:fs');
-const path = require('node:path');
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load, pageScripts } = require('./harness');
+import fs from 'node:fs';
+import path from 'node:path';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load, pageScripts } from './harness.js';
 
 // Names that may appear in a g.run('...') string even though the game script (src/) declares them at top level.
 // Each entry needs a one-line reason. Keep it empty: extend the façade instead.
@@ -116,9 +115,9 @@ function rootIdentifiers(code) {
 const gameFiles = pageScripts().filter((s) => s.src && s.src.startsWith('src/'));
 assert.ok(gameFiles.length, 'the page loads no src/ files');
 const GAME_NAMES = new Set(gameFiles.flatMap((s) => [...topLevelNames(s.code)]));
-const TEST_DIR = __dirname;
+const TEST_DIR = import.meta.dirname;
 // This file is left out: it holds planted bad run() strings on purpose, and never runs code strings itself.
-const testFiles = fs.readdirSync(TEST_DIR).filter((f) => f.endsWith('.test.js') && f !== path.basename(__filename));
+const testFiles = fs.readdirSync(TEST_DIR).filter((f) => f.endsWith('.test.js') && f !== path.basename(import.meta.filename));
 
 function lint(src) {
   const bad = [];
@@ -169,8 +168,8 @@ describe('tests use the façade, not game globals', () => {
   });
 });
 
-describe('Gresca façade', () => {
-  const g = load();
+describe('Gresca façade', async () => {
+  const g = await load();
   const G = g.game;
 
   it('is on window, frozen, and adds no top-level name to the game script', () => {

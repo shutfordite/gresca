@@ -1,10 +1,9 @@
-'use strict';
 // Hanga Dawn look, step D2: the camera follows the slope only partly (spec camera.slopeFollow, HANGA.cameraPitch).
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-const g = load();
+const g = await load();
 const frames = (n, dt = 1 / 60) => g.frames(n, dt);
 const cameraTilt = (s, rel, drop) => g.debug.cameraTilt(s, rel, drop);
 const D2R = Math.PI / 180;

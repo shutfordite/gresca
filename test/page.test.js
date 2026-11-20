@@ -1,13 +1,12 @@
-'use strict';
 // The page: index.html is only HTML and CSS, and loads the art modules and then the game's src/ files with plain
 // classic <script src> tags, in the order below (ADR 0001). Classic scripts share one set of globals and run in page
 // order, so the order is part of the game: a file may only use, at load time, what an earlier file declares.
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(import.meta.dirname, '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 // The load order. Adding a file to art/ or src/ means adding it here, in the place it must run.

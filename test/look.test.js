@@ -1,10 +1,9 @@
-'use strict';
 // Hanga Dawn look, step D1: fog and sky (spec terrain.fog, sky, maps[id].sun).
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-const g = load();
+const g = await load();
 const frames = (n, dt = 1 / 60) => g.frames(n, dt);
 const D = g.debug;
 const sunAz = () => g.run('HANGA.maps')[D.mapId].sun.azimuthDeg;
