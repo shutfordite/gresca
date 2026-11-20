@@ -222,7 +222,10 @@ describe('snow look', () => {
     const at = (row) => px[(row * RW + (RW >> 1)) * 4];
     assert.equal(px[((RH * 0.5 | 0) * RW + (RW >> 1)) * 4 + 3], 255, 'terrain should fill the lower screen');
     assert.ok(at(Math.floor(RH * 0.5)) < 5, 'near ground keeps its own colour');
-    assert.ok(at(Math.floor(RH * 0.17)) > 20, 'far ground should be washed toward the fog colour');
+    // The farthest ground is the first terrain row from the top (how much sky shows depends on the slope).
+    let top = 0;
+    while (top < RH && px[(top * RW + (RW >> 1)) * 4 + 3] !== 255) top++;
+    assert.ok(at(top + 2) > 20, 'far ground should be washed toward the fog colour');
     g.place({ vy: 10 });
   });
 
