@@ -21,9 +21,10 @@ function step(dt){
   for(let u=-1;u<=1;u++)for(let v=-1;v<=1;v++){const T=trees.get((gx0+u)*10000+gy0+v);
    if(T&&Math.hypot(T.x-x,T.y-y)<2.4&&s>1){crash=1.1;crashes++;x-=vx*.12;y-=vy*.12;vx=vy=0}}}
  if(crash<=0&&jz<=.05){
-  // deeper track in the snow, and spray when carving hard or braking
-  const dk=(B||slip>3)?.8:.9,o=((y|0)*W0+(x|0))*4;
-  for(const q of TQ){col[o+q]*=dk;col[o+q+1]*=dk+.02;col[o+q+2]*=Math.min(1,dk+.07)}
+  // deeper track in the snow, and spray when carving hard or braking. The track is a fixed depth below the snow as
+  // built (col0), never compounded per step: a slow rider stays over one cell for many steps, which turned it black.
+  const dk=(B||slip>3)?.8:.9,o=((y|0)*W0+(x|0))*4,dg=dk+.02,db=Math.min(1,dk+.07);
+  for(const q of TQ){const i=o+q;col[i]=Math.min(col[i],col0[i]*dk);col[i+1]=Math.min(col[i+1],col0[i+1]*dg);col[i+2]=Math.min(col[i+2],col0[i+2]*db)}
   const sn=Math.hypot(vx,vy);
   if(B&&sn>3)emit(1,x,y,.15,2.2,1.6,-vx*.15,-vy*.15);
   else if(slip>4)emit(1,x,y,.15,2.2,1.4,0,0)}

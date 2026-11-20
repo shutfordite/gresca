@@ -2,7 +2,7 @@
 
 Audit of `shutfordite/gresca` at `main` 9928948 (after PR #3, D1 fog and sky), 20 Nov 2026. PR #4 (D2 camera) has since been merged. The open branch `design/02-camera` (391c3da) was also read. All 146 tests pass on main (`npm test`, about 104 s).
 
-## 0. Status (20 Nov 2026, main a8931c5)
+## 0. Status (20 Nov 2026, main a304c86)
 
 | Package | State |
 |---|---|
@@ -10,11 +10,13 @@ Audit of `shutfordite/gresca` at `main` 9928948 (after PR #3, D1 fog and sky), 2
 | A2 faster tests | done, PR #7 (suite about 13 s on CI) |
 | A3 fixed 120 Hz step, seeded RNG | done, PR #8 |
 | PR previews on GitHub Pages | done, PR #9 (not in the original plan) |
-| **B1 `src/` + build** | **next** |
-| B2, B3, C1–C4, D1–D3 | to do. Phase C and B3 are amended by `docs/REAL-WORLD-DATA.md` (R1–R5) |
+| B1 game split into `src/` scripts (ADR 0001, no build step) | done, PR #12 |
+| Fix: black ski tracks at low speed | this PR |
+| **B3 terrain interface** | **next**, then B2. *Order changed:* B2 now converts every `src/` file to ES modules and B3 touches every terrain read, so they run one after the other, smaller first. |
+| B2, C1–C4, D1–D3 | to do. Phase C and B3 are amended by `docs/REAL-WORLD-DATA.md` (R1–R6) |
 
 Follow-ups from the A reviews, to fold into the package named:
-- B1: pin Node with `"engines": {"node": ">=22.8"}` and make the README match (L1, A2 review). Replace the `debug.drawSource()` test (it reads `draw.toString()`) with call-order recording in the harness's ctx stub.
+- ~~B1~~ (done in #12): pin Node with `"engines": {"node": ">=22.8"}` and make the README match (L1, A2 review). Replace the `debug.drawSource()` test (it reads `draw.toString()`) with call-order recording in the harness's ctx stub.
 - B2: `Gresca.sim()` should call the same `simTick()` as the loop; `Gresca.set()` must reset interpolation when it writes the position; record input per sim step (for replays and ghosts later).
 - B3: rename `world.height` (raw cell) to `world.cellHeight` and add an interpolated `height`.
 
