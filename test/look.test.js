@@ -100,6 +100,23 @@ describe('camera heading and the sun disc (spec maps[id].sun, sky.sun)', () => {
   });
 
   it('draws the sun before the terrain, so ridges cover it', () => {
-    assert.match(D.drawSource(), /drawSun\([^)]*\)[\s\S]*drawImage\(lo/);
+    // Face the sun at rest (frames draw without simulating, so the rider stays put and the camera settles behind them,
+    // looking along the sun azimuth), then record one frame's drawing calls.
+    const az = sunAz(), h = Math.atan2(-Math.cos(az * Math.PI / 180), Math.sin(az * Math.PI / 180));
+    g.place({ vy: 0, heading: h });
+    g.set({ camera: { heading: h } });
+    frames(60);
+    assert.ok(D.sunDisc().on, 'the sun is on screen');
+    const c = g.el('c');
+    c._calls = [];
+    frames(1);
+    const calls = c._calls;
+    c._calls = null;
+    const cam = g.state().camera, sun = g.run('HANGA.colour(HANGA.sky.sun.colour)');
+    const sky = calls.findIndex(([k, t]) => k === 'fillRect' && t === 'gradient');
+    const disc = calls.findIndex(([k, t]) => k === 'arc' && t === sun);
+    const terrain = calls.findIndex(([k, t]) => k === 'drawImage' && t === `${cam.renderW}x${cam.renderH}`);
+    assert.ok(sky >= 0 && disc >= 0 && terrain >= 0, `sky ${sky}, sun ${disc}, terrain ${terrain}`);
+    assert.ok(sky < disc && disc < terrain, `sky ${sky}, sun ${disc}, terrain ${terrain}: sky, then sun, then terrain`);
   });
 });

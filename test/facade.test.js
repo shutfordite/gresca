@@ -5,9 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { load, GAME } = require('./harness');
+const { load, pageScripts } = require('./harness');
 
-// Names that may appear in a g.run('...') string even though the game script declares them at top level.
+// Names that may appear in a g.run('...') string even though the game script (src/) declares them at top level.
 // Each entry needs a one-line reason. Keep it empty: extend the façade instead.
 const ALLOW = new Map([
 ]);
@@ -112,10 +112,10 @@ function rootIdentifiers(code) {
   return ids;
 }
 
-const html = fs.readFileSync(GAME, 'utf8');
-const blocks = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
-const gameScript = blocks.filter((b) => !/<script\s+id=/.test(b[0])).pop()[1];
-const GAME_NAMES = topLevelNames(gameScript);
+// The game script is the src/ files the page loads; as classic scripts they share one set of top-level names.
+const gameFiles = pageScripts().filter((s) => s.src && s.src.startsWith('src/'));
+assert.ok(gameFiles.length, 'the page loads no src/ files');
+const GAME_NAMES = new Set(gameFiles.flatMap((s) => [...topLevelNames(s.code)]));
 const TEST_DIR = __dirname;
 // This file is left out: it holds planted bad run() strings on purpose, and never runs code strings itself.
 const testFiles = fs.readdirSync(TEST_DIR).filter((f) => f.endsWith('.test.js') && f !== path.basename(__filename));

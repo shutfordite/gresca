@@ -15,8 +15,11 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
 
 ## Files
 - `art/gresca-hanga-spec.js` belongs to the art spec. Change it only to sync a new spec version, byte for byte.
-- Until B1 lands, the game code is the last `<script>` in `index.html` and `art/*.js` is embedded with
-  `node tools/embed-art.js`. After B1, `index.html` is only HTML and CSS; it loads `art/` and `src/` with `<script src>`.
+- `index.html` is only HTML and CSS. It loads `art/*.js` and then the game's `src/*.js` with plain classic
+  `<script src>` tags (no `type="module"`, `defer` or `async` until B2). The files share one set of top-level globals
+  and run in page order, so order matters: a file may only use, while it loads, what earlier files declare.
+  `test/page.test.js` lists the order; a new file in `art/` or `src/` goes in both places.
+- Each `src/` file starts with a one-line comment saying what it holds.
 - No build step and no runtime npm packages. Changing that needs a decision record in `docs/adr/`.
 - Any new folder the game loads at runtime must be added to `SITE` in `.github/workflows/preview.yml`, or previews break.
 - Changes must work in Safari on iPad (the main test device): check the preview there for anything visible or touch-related.
