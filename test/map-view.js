@@ -6,6 +6,10 @@
 // frame, both ways, so the same tests run with the map at any placement (npm run test:rotated). The conversions are exact at
 // the default placement (rotation 0: x = u, y = -v), so there nothing changes, bit for bit.
 
+// m: how far a value read back through a rotated frame may be from the one the game set (a few ulps of the round
+// trip through cos and sin; ADR 0005). At the default placement the round trip is exact, so the tolerance is 0.
+export const ROTATED_TOL = 1e-9;
+
 /** The façade G (ENU) as a frozen façade on the map's grid: the same members, coordinates converted. */
 export function mapView(G) {
  const F = G.world.frame;
@@ -20,6 +24,7 @@ export function mapView(G) {
  };
  const heading = (h) => F.headingToGrid(h); // its own inverse
  const side = (s) => (s === 0 ? 0 : -s); // the grid is mirrored: counter-clockwise there is clockwise here
+ const tol = F.rotation === 0 ? 0 : ROTATED_TOL;
 
  // state() and set() names that carry coordinates
  function stateToGrid(s) {
@@ -187,5 +192,9 @@ export function mapView(G) {
   world,
   debug,
   raw: G, // the façade itself, in world metres
+  // a <= b and a >= b for a grid value read back through the frame: exact at the default placement, within
+  // ROTATED_TOL when the map is rotated (the only place a test allows for the frame's rounding)
+  le: (a, b) => a <= b + tol,
+  ge: (a, b) => a >= b - tol,
  });
 }

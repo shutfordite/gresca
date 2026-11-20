@@ -139,6 +139,9 @@ export async function load(opts = {}) {
     fire(type, ev) { (wl[type] || []).forEach((fn) => fn(Object.assign({ preventDefault() {} }, ev))); },
     get game() { return G(); },
     get raw() { return raw; },
+    // a <= b, a >= b for a value read back through the map frame (map-view.js: exact unless the map is rotated)
+    le: (a, b) => G().le(a, b),
+    ge: (a, b) => G().ge(a, b),
     get world() { return G().world; },
     get debug() { return G().debug; },
     get config() { return G().config; },

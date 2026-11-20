@@ -107,10 +107,10 @@ describe('riding physics', () => {
   it('keeps the rider inside the map', () => {
     g.place({ x: 3, vy: 5 });
     g.sim(0.1);
-    assert.ok(st().x >= 6);
+    assert.ok(g.ge(st().x, 6), `x ${st().x}`);
     g.place({ x: 1005, vy: 5 });
     g.sim(0.1);
-    assert.ok(st().x <= 994);
+    assert.ok(g.le(st().x, 994), `x ${st().x}`);
   });
 });
 

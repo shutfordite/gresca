@@ -10,7 +10,9 @@ const DT = 1 / 120;        // s per sim step
 const STEPS = 120 * 25;    // steps, 25 s of riding from s 250 through the first kickers and rails
 const START_S = 250;       // m along the course
 const START_SPEED = 12;    // m/s straight down the map
-const ROTATED_DEG = MAP_ROTATION_DEG || 37; // deg, the second placement
+// deg, the other placements: the suite's own (37 when it runs unrotated) and 123, where a clamp at the map edge reads
+// back an ulp past it
+const ROTATED = [...new Set([MAP_ROTATION_DEG || 37, 123])];
 const TOL = 1e-9;          // m, m/s, rad: the most any compared value may differ
 
 // Input by step number only (no feedback, so both rides get exactly the same input): carve left and right in turn,
@@ -45,11 +47,19 @@ async function ride(rotationDeg) {
  return rows;
 }
 
-test(`the same ride at 0 and ${ROTATED_DEG} degrees: the same s, d, speed, heading, events, score`, async () => {
- const [a, b] = [await ride(0), await ride(ROTATED_DEG)];
- assert.ok(a.length > 1000, 'the ride lasts');
- assert.ok(a.some((r) => r.events.includes('land')) && a.some((r) => r.score > 0), 'the ride jumps and scores');
- assert.equal(b.length, a.length, 'steps');
+const zero = ride(0);
+for (const deg of ROTATED) {
+ test(`the same ride at 0 and ${deg} degrees: the same s, d, speed, heading, events, score`, async () => {
+  const [a, b] = [await zero, await ride(deg)];
+  assert.ok(a.length > 1000, 'the ride lasts');
+  assert.ok(a.some((r) => r.events.includes('land')) && a.some((r) => r.score > 0), 'the ride jumps and scores');
+  assert.equal(b.length, a.length, 'steps');
+  compare(a, b);
+ });
+}
+
+// Every step of ride b matches ride a within TOL (events and score exactly).
+function compare(a, b) {
  a.forEach((r, n) => {
   const q = b[n];
   const dRel = Math.abs(Math.atan2(Math.sin(r.rel - q.rel), Math.cos(r.rel - q.rel)));
@@ -58,4 +68,4 @@ test(`the same ride at 0 and ${ROTATED_DEG} degrees: the same s, d, speed, headi
   assert.equal(q.score, r.score, `step ${n} score`);
   assert.deepEqual(q.events, r.events, `step ${n} events`);
  });
-});
+}
