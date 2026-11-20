@@ -8,7 +8,7 @@ function project(wx,wy,h){const ox=wx-cam.px,oy=wy-cam.py,f=ox*cam.dx+oy*cam.dy;
 
 let flagsDrawn=0;
 // Orange flags on both sides of every kicker lip, and a flag at the start of each rail, so features can be spotted from far up the slope.
-function pole(wx,wy,hgt,color){const gh=H[(wy|0)*W0+(wx|0)],A=project(wx,wy,gh),T=project(wx,wy,gh+hgt);if(!A||!T)return;
+function pole(wx,wy,hgt,color){const gh=terrain.height(wx,wy),A=project(wx,wy,gh),T=project(wx,wy,gh+hgt);if(!A||!T)return;
  ctx.strokeStyle='#3a3f58';ctx.lineWidth=Math.max(1,A.s*.08);ctx.beginPath();ctx.moveTo(A.X,A.Y);ctx.lineTo(T.X,T.Y);ctx.stroke();
  const fw=Math.max(5,A.s*.9),fh=Math.max(4,A.s*.55);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(T.X,T.Y);ctx.lineTo(T.X+fw,T.Y+fh*.5);ctx.lineTo(T.X,T.Y+fh);ctx.closePath();ctx.fill();flagsDrawn++}
 function drawFlags(){flagsDrawn=0;
@@ -23,7 +23,7 @@ function drawRails(){
  for(const r of RAILS){
   if(r.y1<cam.py-5||r.y0>cam.py+260)continue;
   let prev=null;
-  for(let t=0;t<=r.len+.01;t+=1.5){const tt=Math.min(t,r.len),wx=r.x0+r.dx*tt,wy=r.y0+r.dy*tt,gh=H[(wy|0)*W0+(wx|0)],P=project(wx,wy,gh+r.h);
+  for(let t=0;t<=r.len+.01;t+=1.5){const tt=Math.min(t,r.len),wx=r.x0+r.dx*tt,wy=r.y0+r.dy*tt,gh=terrain.height(wx,wy),P=project(wx,wy,gh+r.h);
    if(P&&prev){ctx.strokeStyle=r.t==='box'?'#6fcfa0':'#c9372c';ctx.lineWidth=Math.max(r.t==='box'?5:3,P.s*(r.t==='box'?1.3:.5));ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(prev.X,prev.Y);ctx.lineTo(P.X,P.Y);ctx.stroke();n++}
    if(P&&t%6<1.5){const G=project(wx,wy,gh);if(G){ctx.strokeStyle='#3a3f58';ctx.lineWidth=Math.max(1,P.s*.12);ctx.beginPath();ctx.moveTo(P.X,P.Y);ctx.lineTo(G.X,G.Y);ctx.stroke()}}

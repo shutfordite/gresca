@@ -4,13 +4,10 @@
 let stance='regular';
 try{if(localStorage.getItem(HANGA.rider.stance.storageKey)==='goofy')stance='goofy'}catch(_){}
 let anim=null,animPrev=null,riderList=null,riderYaw=0;
-// Ground height between cells, so the feet feel the terrain smoothly rather than in 1 m steps.
-function hAt(px,py){const ix=Math.max(0,Math.min(W0-2,px|0)),iy=Math.max(0,Math.min(H0-2,py|0)),fx=px-ix,fy=py-iy,i=iy*W0+ix;
- return H[i]*(1-fx)*(1-fy)+H[i+1]*fx*(1-fy)+H[i+W0]*(1-fx)*fy+H[i+W0+1]*fx*fy}
 // Everything the animation needs from the game, measured once per drawn frame.
 function animInput(dt){
  const x=drawn.x,y=drawn.y,jz=drawn.z; // the drawn rider pose (interpolated), not the simulation's
- const s=Math.hypot(vx,vy),air=!grind&&jz>.05,dir=s>.5?Math.atan2(vy,vx):a,g=hAt(x,y);
+ const s=Math.hypot(vx,vy),air=!grind&&jz>.05,dir=s>.5?Math.atan2(vy,vx):a,g=terrain.height(x,y); // ground under the feet, smooth between cells
  let p=animPrev;
  if(!p||Math.hypot(x-p.x,y-p.y)>8)p=animPrev={x,y,dir,g,gv:0,ga:0,n:landN,air:true}; // first frame, or the run restarted
  const k=dt>0?Math.min(1,dt/.05):0,wr=d=>Math.atan2(Math.sin(d),Math.cos(d));
@@ -21,13 +18,12 @@ function animInput(dt){
  const turn=dt>0&&s>1&&!air?wr(dir-p.dir)/dt:0;
  // The rider's facing: the board heading, turned round for goofy because the spec mirrors that rig in z.
  const aR=a+(rig==='board'&&stance==='goofy'?Math.PI:0),side=Math.cos(aR-dir)>=0?1:-1;
- const i=(y|0)*W0+(x|0),gx=(H[i+1]-H[i-1])/2,gy=(H[i+W0]-H[i-W0])/2;
  const landed=landN!==p.n&&!air&&crash<=0;
  animPrev={x,y,dir,g,gv,ga,n:landN,air:air||!!grind};
  riderYaw=wr(aR-camA)*180/Math.PI;
  return{wiped:crash>0,grinding:!!grind,airborne:air,braking:!!B,landed,impact:landV,speed:s,pathTurn:turn,riderSide:side,
   approach:!air&&s>4&&Math.abs(x-cx(y))<9&&KICK.some(k=>y>=k-14&&y<k),
-  feetAccelUp:ga,slopeDeg:Math.atan(Math.hypot(gx,gy))*180/Math.PI,meanSlopeDeg:HANGA.maps.procedural.meanSlopeDeg}}
+  feetAccelUp:ga,slopeDeg:terrain.slopeDeg(x,y),meanSlopeDeg:HANGA.maps.procedural.meanSlopeDeg}}
 function animTick(dt){
  const r=rig==='ski'?'ski':'board';
  if(!anim||anim.rig!==r){anim=RiderAnim.create(r);animPrev=null}

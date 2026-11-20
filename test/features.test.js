@@ -166,7 +166,7 @@ describe('camera', () => {
     g.place({ vy: 10 });
     frames(240);
     const s = st(), c = s.camera;
-    const gR = W.height(s.x, s.y);
+    const gR = W.cellHeight(s.x, s.y);
     assert.ok(c.height - gR > 5, 'camera should be well above the rider');
     assert.ok(c.horizonPx / c.renderH <= 0.2, 'horizon should sit near the top of the screen');
     const back = Math.hypot(c.x - s.x, c.y - s.y);
@@ -176,7 +176,7 @@ describe('camera', () => {
   it('puts a small rider in the lower third, centred', () => {
     g.place({ vy: 10 });
     frames(240);
-    const s = st(), P = D.project(s.x, s.y, W.height(s.x, s.y));
+    const s = st(), P = D.project(s.x, s.y, W.cellHeight(s.x, s.y));
     const RHpx = s.camera.renderH * s.camera.pixelScale, Wpx = D.screen().width;
     assert.ok(P.Y / RHpx > 0.6 && P.Y / RHpx < 0.85, `rider at ${(P.Y / RHpx).toFixed(2)} of screen height`);
     assert.ok(Math.abs(P.X - Wpx / 2) < 3, 'rider should be centred');
