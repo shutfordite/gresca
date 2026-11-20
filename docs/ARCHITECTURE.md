@@ -2,6 +2,22 @@
 
 Audit of `shutfordite/gresca` at `main` 9928948 (after PR #3, D1 fog and sky), 20 Nov 2026. PR #4 (D2 camera) has since been merged. The open branch `design/02-camera` (391c3da) was also read. All 146 tests pass on main (`npm test`, about 104 s).
 
+## 0. Status (20 Nov 2026, main a8931c5)
+
+| Package | State |
+|---|---|
+| A1 test façade | done, PR #6 |
+| A2 faster tests | done, PR #7 (suite about 13 s on CI) |
+| A3 fixed 120 Hz step, seeded RNG | done, PR #8 |
+| PR previews on GitHub Pages | done, PR #9 (not in the original plan) |
+| **B1 `src/` + build** | **next** |
+| B2, B3, C1–C4, D1–D3 | to do. Phase C and B3 are amended by `docs/REAL-WORLD-DATA.md` (R1–R5) |
+
+Follow-ups from the A reviews, to fold into the package named:
+- B1: pin Node with `"engines": {"node": ">=22.8"}` and make the README match (L1, A2 review). Replace the `debug.drawSource()` test (it reads `draw.toString()`) with call-order recording in the harness's ctx stub.
+- B2: `Gresca.sim()` should call the same `simTick()` as the loop; `Gresca.set()` must reset interpolation when it writes the position; record input per sim step (for replays and ghosts later).
+- B3: rename `world.height` (raw cell) to `world.cellHeight` and add an interpolated `height`.
+
 ## 1. Summary
 
 The game works and has strong behaviour tests, but its architecture is a prototype's: one 370-line script full of shared globals, a world defined by the formula `cx(y)`, and a renderer reading a pre-painted 1000 × 2450 colour image. **None of that can take a real mountain.** Gresca's main promise (riding real terrain from elevation and OpenStreetMap data) needs three things the code does not have yet:
@@ -156,14 +172,14 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - The façade (A1) now maps directly onto these objects; the tests should not need to change.
 - Accept when: `world/` and `sim/` load in Node with `require` and **no DOM stub**. Add one test that does exactly that.
 
-**B3. Terrain interface** ∥ with B2's UI work, after B1
+**B3. Terrain interface** ∥ with B2's UI work, after B1. *Amended by R1: design the interface as a layer stack (base, sculpt, features, detail) from the start, bicubic base.*
 - `Terrain { bounds, cellM, height(x,y), normal(x,y), slopeDeg(x,y), surface(x,y) }`, bilinear by default, bicubic option.
 - Physics gravity uses the interpolated gradient, written as g·sinθ (M3). If the feel changes, tune it to the existing tests; don't loosen them.
 - Every `H[(y|0)*W0+(x|0)]` outside `world/` becomes `terrain.height(x,y)`. Add a grep test that bans `W0`/`H0` outside `world/`.
 
 ### Phase C: data-driven maps (the core of the product)
 
-**C1. Course as polyline** *(after B2, B3)*
+**C1. Course as polyline** *(after B2, B3)*. *Amended by R4: include `Course.fromRun(ways)` (join, resample, curvature-limited smoothing, width) and start/end `s` for checkpoints.*
 - `Course` from a centreline polyline: `project(x,y) → {s, d, tangent}`, `point(s, d)`, `widthAt(s)`, `length`, `finishS`.
 - Re-express the procedural map: sample `cx(y)` into a polyline; kickers, rails and the finish placed in (s, d). The kicker launch test, "m to go", the autopilot, the minimap and the *460–740 empty stretch* invariant all move to s.
 - Accept when: the existing park and physics tests pass against the polyline version, and a new test rides a course that runs **north-east then turns back west** (impossible with `cx(y)`).
@@ -172,12 +188,12 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - Flip to x east, y north, z up. Delete `camCompass()`'s special case. The sun comes from `HANGA.maps[id].sun`. The camera heading is compass degrees at the spec boundary only.
 - Tests that check the sun on screen and the camera heading must still pass unchanged.
 
-**C3. Map format `gresca-map-1`, validator and baker v2** ∥ with C1
+**C3. Map format `gresca-map-1`, validator and baker v2** ∥ with C1. *Amended by R2 and R3: split baked `<id>.terrain.json` from authored `<id>.course.json`; pluggable DEM sources (Terrarium tiles from Mapterhorn or AWS, local GeoTIFF) and pistes from OpenSkiMap GeoJSON with Overpass as fallback; raw-download cache; provenance and per-source attribution in the file; maps are ODbL.*
 - Schema: origin (lat/lon), `cellM`, heights (int16 decimetres, base64, or a PNG Terrarium blob), the chosen piste polyline in local ENU metres, `meanSlopeDeg`, sun (az, el), `horizon` profile (spec `mountains.real`), `treeSet`, park layout in (s, d), credits and attribution.
 - `tools/validate-map.js` plus a test that every file in `maps/` validates.
 - Baker v2 as a Node 22 script (`tools/bake-map.mjs`, built-in `fetch`), keeping the browser page as a fallback. It chooses the piste by OSM id or name, converts Mercator pixels to local ENU metres (not one mid-latitude scale for the whole box), computes `meanSlopeDeg` and the horizon profile, and writes `maps/<id>.json`. Note: the agents' sandbox may block the tile and Overpass hosts; if so, the owner runs the bake and commits the JSON.
 
-**C4. Map loading and corridor-only detail** *(after C1–C3)*
+**C4. Map loading and corridor-only detail** *(after C1–C3)*. *Amended by R1 and R5: the corridor cache holds the composed layers; slope limits and DEM defect checks become gameplay rules and validator checks.*
 - Load one map (embedded JSON for `file://`, `fetch` when served). Build in chunks with progress, or in a Worker, so the menu never freezes (M2).
 - Keep the coarse baked grid (about 14 m) for the whole map, for the backdrop and far field. Upsample to 2 m (bicubic) **only within a corridor** (piste plus about 150 m each side), in tiles made on demand along s. Memory budget: under 60 MB total on El Tarter.
 - Accept when: El Tarter loads and is rideable start to finish with the autopilot, and the procedural map still passes everything.
