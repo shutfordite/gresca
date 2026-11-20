@@ -1,6 +1,9 @@
 /*
- * Gresca · Hanga Dawn art spec  v1.3.0
+ * Gresca · Hanga Dawn art spec  v1.4.0
  * Standalone, data-only module. No drawing code and no dependencies.
+ * v1.4.0 (additive): rider twist, head yaw with the face vector, body pitch and the real camera pitch as an options
+ * argument to projectRider; brake, switch-ski and flip-tuck poses; true-scale rider guidance. Calls without the new
+ * options or state fields give exactly the v1.3 result. Notes: docs/art/HANGA-v1.4.md in the game repo.
  * Loads in the browser (window.HANGA) and in Node (require), so the test harness can check against it.
  *
  * Units: metres, angles in degrees, colours as sRGB hex. Code should refer to palette ROLE names
@@ -10,7 +13,7 @@
 'use strict';
 var HANGA = {
  "name": "Gresca · Hanga Dawn",
- "version": "1.3.0",
+ "version": "1.4.0",
  "contrastTargets": [
   {
    "a": "kickSide",
@@ -162,7 +165,8 @@ var HANGA = {
    "riderMarginDeg": 6,
    "note": "Recommended change: the camera pitch follows the slope only partly. Aim at the ground 30 m ahead, then set pitch = levelPitch + 0.55 × (fullPitch − levelPitch), where levelPitch looks at that point as if the ground were level and fullPitch looks at the real ground. Clamp it so the rider stays at least 6° inside the bottom of the frame. On a steep pitch the ground then visibly drops away and the backdrop rises into view; with full tilt (1.0, the current rule) every gradient looks like flat ground. Tune on a phone between 0.4 and 0.7."
   },
-  "note": "Pitch is how far the camera looks down on the rider, after allowing for the slope. 20 deg suits CAMBACK=10 / CAMH=7.6 on a typical piste."
+  "note": "Pitch is how far the camera looks down on the rider, after allowing for the slope. 20 deg suits CAMBACK=10 / CAMH=7.6 on a typical piste.",
+  "riderPitch": "v1.4 (F1). chasePitchDeg is only the default for projectRider callers that pass no pitch. The game passes the camera's real look-down at the rider each frame as options.cameraPitchDeg (rider.rotations.cameraPitch), so the rider is not seen side-on while the ground is seen from above."
  },
  "rider": {
   "widths": {
@@ -1126,6 +1130,434 @@ var HANGA = {
        -0.1
       ]
      }
+    },
+    "brakeL": {
+     "label": "Brake, skis turned left (hockey stop)",
+     "roll": 0,
+     "lift": 0,
+     "twistDeg": -80,
+     "headYawDeg": 0,
+     "move": {
+      "hipL": [
+       -0.08,
+       -0.22,
+       0
+      ],
+      "hipR": [
+       -0.08,
+       -0.22,
+       0
+      ],
+      "kneeL": [
+       -0.07,
+       -0.12,
+       0.06
+      ],
+      "kneeR": [
+       -0.07,
+       -0.12,
+       0.06
+      ],
+      "hipC": [
+       0,
+       -0.22,
+       -0.08
+      ],
+      "neck": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "head": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "shL": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "shR": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "elbL": [
+       -0.04,
+       -0.2,
+       0.06
+      ],
+      "elbR": [
+       0.04,
+       -0.2,
+       0.06
+      ],
+      "hanL": [
+       -0.06,
+       -0.16,
+       0.1
+      ],
+      "hanR": [
+       0.06,
+       -0.16,
+       0.1
+      ],
+      "poleL": [
+       0,
+       0,
+       -0.05
+      ],
+      "poleR": [
+       0,
+       0,
+       -0.05
+      ]
+     }
+    },
+    "brakeR": {
+     "label": "Brake, skis turned right (hockey stop)",
+     "roll": 0,
+     "lift": 0,
+     "twistDeg": 80,
+     "headYawDeg": 0,
+     "move": {
+      "hipL": [
+       0.08,
+       -0.22,
+       0
+      ],
+      "hipR": [
+       0.08,
+       -0.22,
+       0
+      ],
+      "kneeL": [
+       0.07,
+       -0.12,
+       0.06
+      ],
+      "kneeR": [
+       0.07,
+       -0.12,
+       0.06
+      ],
+      "hipC": [
+       0,
+       -0.22,
+       -0.08
+      ],
+      "neck": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "head": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "shL": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "shR": [
+       0,
+       -0.24,
+       -0.02
+      ],
+      "elbL": [
+       -0.04,
+       -0.2,
+       0.06
+      ],
+      "elbR": [
+       0.04,
+       -0.2,
+       0.06
+      ],
+      "hanL": [
+       -0.06,
+       -0.16,
+       0.1
+      ],
+      "hanR": [
+       0.06,
+       -0.16,
+       0.1
+      ],
+      "poleL": [
+       0,
+       0,
+       -0.05
+      ],
+      "poleR": [
+       0,
+       0,
+       -0.05
+      ]
+     }
+    },
+    "switchL": {
+     "label": "Switch, looking over the left shoulder",
+     "roll": 0,
+     "lift": 0,
+     "twistDeg": 35,
+     "headYawDeg": -90,
+     "move": {
+      "hipL": [
+       0,
+       -0.1,
+       -0.1
+      ],
+      "hipR": [
+       0,
+       -0.1,
+       -0.1
+      ],
+      "hipC": [
+       0,
+       -0.1,
+       -0.1
+      ],
+      "kneeL": [
+       0,
+       -0.06,
+       -0.04
+      ],
+      "kneeR": [
+       0,
+       -0.06,
+       -0.04
+      ],
+      "neck": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "head": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "shL": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "shR": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "elbL": [
+       -0.06,
+       -0.06,
+       -0.06
+      ],
+      "elbR": [
+       0.06,
+       -0.06,
+       -0.06
+      ],
+      "hanL": [
+       -0.1,
+       -0.02,
+       -0.12
+      ],
+      "hanR": [
+       0.1,
+       -0.02,
+       -0.12
+      ]
+     }
+    },
+    "switchR": {
+     "label": "Switch, looking over the right shoulder",
+     "roll": 0,
+     "lift": 0,
+     "twistDeg": -35,
+     "headYawDeg": 90,
+     "move": {
+      "hipL": [
+       0,
+       -0.1,
+       -0.1
+      ],
+      "hipR": [
+       0,
+       -0.1,
+       -0.1
+      ],
+      "hipC": [
+       0,
+       -0.1,
+       -0.1
+      ],
+      "kneeL": [
+       0,
+       -0.06,
+       -0.04
+      ],
+      "kneeR": [
+       0,
+       -0.06,
+       -0.04
+      ],
+      "neck": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "head": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "shL": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "shR": [
+       0,
+       -0.1,
+       -0.08
+      ],
+      "elbL": [
+       -0.06,
+       -0.06,
+       -0.06
+      ],
+      "elbR": [
+       0.06,
+       -0.06,
+       -0.06
+      ],
+      "hanL": [
+       -0.1,
+       -0.02,
+       -0.12
+      ],
+      "hanR": [
+       0.1,
+       -0.02,
+       -0.12
+      ]
+     }
+    },
+    "tuck": {
+     "label": "Flip tuck",
+     "roll": 0,
+     "lift": 0.5,
+     "move": {
+      "hipL": [
+       0,
+       -0.05,
+       -0.08
+      ],
+      "hipR": [
+       0,
+       -0.05,
+       -0.08
+      ],
+      "hipC": [
+       0,
+       -0.05,
+       -0.08
+      ],
+      "kneeL": [
+       0,
+       0.67,
+       0.04
+      ],
+      "kneeR": [
+       0,
+       0.67,
+       0.04
+      ],
+      "ankL": [
+       0,
+       0.66,
+       0
+      ],
+      "ankR": [
+       0,
+       0.66,
+       0
+      ],
+      "neck": [
+       0,
+       -0.12,
+       0.1
+      ],
+      "head": [
+       0,
+       -0.14,
+       0.15
+      ],
+      "shL": [
+       0,
+       -0.11,
+       0.1
+      ],
+      "shR": [
+       0,
+       -0.11,
+       0.1
+      ],
+      "elbL": [
+       0.03,
+       -0.06,
+       0.12
+      ],
+      "elbR": [
+       -0.03,
+       -0.06,
+       0.12
+      ],
+      "hanL": [
+       0.14,
+       0.06,
+       -0.04
+      ],
+      "hanR": [
+       -0.14,
+       0.06,
+       -0.04
+      ],
+      "poleL": [
+       0.02,
+       0.45,
+       -0.45
+      ],
+      "poleR": [
+       -0.02,
+       0.45,
+       -0.45
+      ],
+      "skiLt": [
+       0,
+       0.66,
+       0
+      ],
+      "skiLn": [
+       0,
+       0.66,
+       0
+      ],
+      "skiRt": [
+       0,
+       0.66,
+       0
+      ],
+      "skiRn": [
+       0,
+       0.66,
+       0
+      ]
+     }
     }
    },
    "board": {
@@ -1468,6 +1900,246 @@ var HANGA = {
        -0.1
       ]
      }
+    },
+    "brakeHeel": {
+     "label": "Brake, heel-side skid",
+     "roll": 22,
+     "lift": 0,
+     "twistDeg": 0,
+     "headYawDeg": 0,
+     "move": {
+      "hipF": [
+       -0.1,
+       -0.2,
+       0
+      ],
+      "hipB": [
+       -0.1,
+       -0.2,
+       0
+      ],
+      "hipC": [
+       -0.1,
+       -0.2,
+       0
+      ],
+      "kneeF": [
+       0.04,
+       -0.1,
+       0
+      ],
+      "kneeB": [
+       0.04,
+       -0.1,
+       0
+      ],
+      "neck": [
+       -0.04,
+       -0.2,
+       0
+      ],
+      "head": [
+       -0.04,
+       -0.2,
+       0
+      ],
+      "shF": [
+       -0.04,
+       -0.2,
+       0
+      ],
+      "shB": [
+       -0.04,
+       -0.2,
+       0
+      ],
+      "elbF": [
+       0.04,
+       -0.16,
+       0
+      ],
+      "elbB": [
+       0.04,
+       -0.16,
+       0
+      ],
+      "hanF": [
+       0.1,
+       -0.14,
+       0
+      ],
+      "hanB": [
+       0.1,
+       -0.14,
+       0
+      ]
+     }
+    },
+    "brakeToe": {
+     "label": "Brake, toe-side skid",
+     "roll": -20,
+     "lift": 0,
+     "twistDeg": 0,
+     "headYawDeg": -45,
+     "move": {
+      "hipF": [
+       0.06,
+       -0.16,
+       0
+      ],
+      "hipB": [
+       0.06,
+       -0.16,
+       0
+      ],
+      "hipC": [
+       0.06,
+       -0.16,
+       0
+      ],
+      "kneeF": [
+       0.1,
+       -0.1,
+       0
+      ],
+      "kneeB": [
+       0.1,
+       -0.1,
+       0
+      ],
+      "neck": [
+       0.1,
+       -0.16,
+       0
+      ],
+      "head": [
+       0.1,
+       -0.16,
+       0
+      ],
+      "shF": [
+       0.1,
+       -0.16,
+       0
+      ],
+      "shB": [
+       0.1,
+       -0.16,
+       0
+      ],
+      "elbF": [
+       0.08,
+       -0.1,
+       0
+      ],
+      "elbB": [
+       0.08,
+       -0.1,
+       0
+      ],
+      "hanF": [
+       0.08,
+       -0.06,
+       0
+      ],
+      "hanB": [
+       0.08,
+       -0.06,
+       0
+      ]
+     }
+    },
+    "tuck": {
+     "label": "Flip tuck",
+     "roll": 0,
+     "lift": 0.5,
+     "move": {
+      "hipF": [
+       -0.06,
+       -0.04,
+       0
+      ],
+      "hipB": [
+       -0.06,
+       -0.04,
+       0
+      ],
+      "hipC": [
+       -0.06,
+       -0.04,
+       0
+      ],
+      "kneeF": [
+       0.17,
+       0.58,
+       0
+      ],
+      "kneeB": [
+       0.17,
+       0.58,
+       0
+      ],
+      "ankF": [
+       0.05,
+       0.62,
+       0
+      ],
+      "ankB": [
+       0.05,
+       0.62,
+       0
+      ],
+      "neck": [
+       0.16,
+       -0.1,
+       0
+      ],
+      "head": [
+       0.2,
+       -0.13,
+       0
+      ],
+      "shF": [
+       0.15,
+       -0.1,
+       0
+      ],
+      "shB": [
+       0.15,
+       -0.1,
+       0
+      ],
+      "elbF": [
+       0.24,
+       -0.03,
+       -0.08
+      ],
+      "elbB": [
+       0.22,
+       -0.04,
+       0.08
+      ],
+      "hanF": [
+       0.28,
+       -0.1,
+       -0.34
+      ],
+      "hanB": [
+       0.22,
+       -0.1,
+       0.28
+      ],
+      "tail": [
+       0.05,
+       0.62,
+       0
+      ],
+      "nose": [
+       0.05,
+       0.62,
+       0
+      ]
+     }
     }
    }
   },
@@ -1480,7 +2152,12 @@ var HANGA = {
     "air",
     "land",
     "grind",
-    "wipeout"
+    "wipeout",
+    "brakeL",
+    "brakeR",
+    "switchL",
+    "switchR",
+    "tuck"
    ],
    "board": [
     "ride",
@@ -1490,7 +2167,10 @@ var HANGA = {
     "air",
     "land",
     "grind",
-    "wipeout"
+    "wipeout",
+    "brakeHeel",
+    "brakeToe",
+    "tuck"
    ]
   },
   "timing": {
@@ -1499,17 +2179,111 @@ var HANGA = {
     "air": 0.08,
     "land": 0.04,
     "wipeout": 0,
-    "grind": 0.06
+    "grind": 0.06,
+    "brakeL": 0.1,
+    "brakeR": 0.1,
+    "brakeHeel": 0.1,
+    "brakeToe": 0.1,
+    "switchL": 0.25,
+    "switchR": 0.25,
+    "tuck": 0.1
    },
    "hold": {
     "land": 0.22
    },
    "after": {
-    "land": "ride"
+    "land": "ride",
+    "tuck": "air"
    },
    "spin": "Spinning in the air reuses the air pose. Only yaw changes, taken from the accumulated rot.",
    "grind": "One grind pose (50-50) for both rails and boxes.",
-   "note": "\"land\" is entered on touchdown, held for 0.22 s, then blended to the riding pose over defaultBlend. Wipeout snaps in with no blend."
+   "note": "\"land\" is entered on touchdown, held for 0.22 s, then blended to the riding pose over defaultBlend. Wipeout snaps in with no blend.",
+   "brake": "v1.4. A brake pose blends in over 0.1 s, a little faster than defaultBlend, so a stop reads at once. Its twistDeg and headYawDeg blend over the same time as the joints.",
+   "switch": "v1.4. Turning round to ski switch blends over 0.25 s: the shoulders open and the head comes round together. Going back to ride uses defaultBlend.",
+   "tuck": "v1.4. The flip tuck blends in over 0.1 s once the flip starts and goes back to air (timing.after.tuck) when the flip ends, over defaultBlend. bodyPitchDeg is never blended: it is the flip angle from the simulation, every frame.",
+   "angles": "Blend a pose's twistDeg and headYawDeg as angles, the short way round, over the same time as its joints. A pose without them counts as 0."
+  },
+  "rotations": {
+   "units": "degrees",
+   "sign": "Yaw-type angles (twistDeg, headYawDeg) are clockwise seen from above, the same sense as compass headings and as projectRider's yaw: + turns toward the rider's right (+x in rider space).",
+   "order": "projectRider builds the pose joints (with the goofy mirror), then turns the lower body by twist about the vertical axis through the rider-space origin, turns the head and face vector by head yaw about the vertical axis through the neck, then flips the whole rider by bodyPitch about the rider's own left-right axis through hipC (bodyPitch.axis). After that comes the v1.3 projection: pose roll plus rollExtra, lift, yaw, camera pitch.",
+   "twist": {
+    "lower": {
+     "ski": [
+      "ankL",
+      "ankR",
+      "kneeL",
+      "kneeR",
+      "hipL",
+      "hipR",
+      "skiLt",
+      "skiLn",
+      "skiRt",
+      "skiRn"
+     ],
+     "board": [
+      "ankF",
+      "ankB",
+      "kneeF",
+      "kneeB",
+      "hipF",
+      "hipB",
+      "tail",
+      "nose"
+     ]
+    },
+    "pivot": "The vertical axis through the rider-space origin, the feet's ground point, so the skis or board turn under the rider and the shadow stays put.",
+    "meaning": "How far the legs, boots and equipment are turned relative to the upper body. hipC, the torso, arms, poles and head stay with the upper body. With a twist, projectRider's yaw is the upper body's heading (rider-space +z) and the equipment's heading is yaw + twist. With twist 0 they are the same, as in v1.3.",
+    "goofy": "Given in the regular-stance frame and mirrored with the joints, so the same value turns a goofy board the same way relative to its nose.",
+    "rangeDeg": [
+     -100,
+     100
+    ],
+    "note": "F5: braking turns the equipment, not the rider. A hockey stop is about 80 deg with the upper body still facing down the fall line; carving counter-rotation is 5 to 20 deg."
+   },
+   "headYaw": {
+    "group": [
+     "head"
+    ],
+    "pivot": "The vertical axis through the neck. The face vector (rider.face) turns with the head, so the goggles follow it.",
+    "meaning": "How far the head is turned relative to the shoulders.",
+    "goofy": "Mirrored with the joints, like twist.",
+    "rangeDeg": [
+     -110,
+     110
+    ],
+    "fakieDeg": [
+     80,
+     100
+    ],
+    "note": "F7: riding ski switch, look 80 to 100 deg over the downhill-side shoulder (+ for the right shoulder)."
+   },
+   "bodyPitch": {
+    "pivot": "The rider's own left-right axis through the posed hipC, as in a somersault (axis).",
+    "axis": {
+     "ski": "x",
+     "board": "z"
+    },
+    "meaning": "Flip rotation of the whole rider, equipment included. + is a front flip (chest and face first), - a backflip (back first). Skis: about rider-space x, the head goes toward +z (the heading). Board: the rider stands sideways, so the axis is the board's long axis (rider-space z) and the head goes toward +x, the toe edge and chest. Goofy riders also face +x, so the sign is the same in both stances.",
+    "wrap": "Taken modulo 360, so 360 draws exactly like 0.",
+  "equipInFront": {
+   "fromDeg": 45,
+   "toDeg": 315,
+   "marginM": 0.1,
+   "note": "The draw list normally puts the equipment under the body. While the body pitch is between fromDeg and toDeg and a ski or the board is more than marginM nearer the camera than the torso, that piece is drawn after the body instead, so the bases of the skis or board cover the rider in a flip."
+  },
+    "note": "F3: pass the simulation's flip angle every frame, with the tuck pose while flipping. The shadow does not pitch."
+   },
+   "cameraPitch": {
+    "meaning": "How far the camera looks down at the rider below the horizontal, in degrees, + = down. Pass the pitch the terrain is actually drawn with this frame, slope tilt included, so the rider and the ground are seen from the same angle (F1).",
+    "default": "camera.chasePitchDeg (20), the v1.3 fixed value, when neither the pitch argument nor options.cameraPitchDeg is given."
+   },
+   "lean": "F6 conventions for RiderAnim (no pose needed): lean is roll about rider-space z through the feet, + toward the rider's -x (so leaning to the right of travel is -lean x riderSide); edge-driven lean takes its target from the edge angle and carve rate, and angulation keeps the upper body nearer upright. Unweighting is a joint offset (hips and upper body rise, then drop) on top of the blended pose, not a pose. Counter-rotation is twist; it never replaces lean.",
+   "defaults": "A pose may carry twistDeg and headYawDeg (the v1.4 brake, switch poses). options.twistDeg and options.headYawDeg replace the pose's values when given; they do not add to them. bodyPitchDeg and cameraPitchDeg come only from options."
+  },
+  "scale": {
+   "drawScale": 1,
+   "note": "v1.4 (F1). Draw the rider at true scale: 1.76 m tall with the same pixels per metre as the ground it stands on at its distance from the camera, and with the camera's real pitch (rotations.cameraPitch). Framing the rider (how big it looks on screen) is the camera's job: distance, height and field of view. v1.3 games drew it at 0.55 of true size (RSC); set that to 1 and move the camera instead."
   },
   "stance": {
    "options": [
@@ -1518,7 +2292,7 @@ var HANGA = {
    ],
    "default": "regular",
    "storageKey": "gresca-stance",
-   "goofy": "Mirror the snowboarder's joints and face vector in z (z → −z) before projecting. Toe and heel stay the same edges.",
+   "goofy": "Mirror the snowboarder's joints and face vector in z (z → −z) before projecting. Toe and heel stay the same edges. v1.4: twistDeg and headYawDeg are mirrored with the joints (rotations.twist.goofy).",
    "menu": "Shown only when Snowboard is picked: a Regular / Goofy segmented control under the picker."
   },
   "equipment": {
@@ -4174,7 +4948,7 @@ var HANGA = {
     ],
     "note": "Freestyle twin: 1.58 m, 250 mm waist, 292 mm at nose and tail, blunt rounded ends kicked up 60 mm over the last 12%. Vermilion topsheet, paper caps with a three-scallop wave edge (seigaiha), an indigo rising sun between the bindings, indigo baseplates and highbacks on the heel side."
    },
-   "space": "u = 0 at the tail to 1 at the nose; v = across in metres (+x in rider space, so −v is the snowboard heel side); h = up in metres. A point is tail + u·(nose − tail) + v·x̂ + h·ŷ in rider space, using the pose's tail and nose joints, then projected like any joint.",
+   "space": "u = 0 at the tail to 1 at the nose; v = across in metres (+x in rider space, so −v is the snowboard heel side); h = up in metres. A point is tail + u·(nose − tail) + v·x̂ + h·ŷ in rider space, using the pose's tail and nose joints, then projected like any joint. v1.4: x̂ and ŷ are taken before twist and body pitch, and the whole point is then turned with the lower body (rotations.order), so the equipment keeps its shape when it is twisted or flipped.",
    "draw": "Draw shapes in list order: edge (the base and sidewall, offset down by the thickness), top with keyline, then the graphics, then the bindings. Colour names \"equip\" and \"equipAccent\" come from the rider's colourway; the rest are palette roles."
   },
   "height": 1.76
@@ -4300,7 +5074,7 @@ var HANGA = {
    "method": "bicubic",
    "shadePer": "render pixel",
    "normals": "bilinear between upsampled cells",
-   "note": "Real data at about 14 m per cell is upsampled to 2 m (bicubic) before normals are taken. The tone is chosen per render pixel from the interpolated normal, so tone edges are crisp but never blockier than one render pixel (about 2 screen px at RSC .55). The stepping on the v1.0 board 06 swatches was a drawing artefact and is not intended."
+   "note": "Real data at about 14 m per cell is upsampled to 2 m (bicubic) before normals are taken. The tone is chosen per render pixel from the interpolated normal, so tone edges are crisp but never blockier than one render pixel (about 2 screen px at the game's render resolution). The stepping on the v1.0 board 06 swatches was a drawing artefact and is not intended."
   },
   "surfaces": {
    "piste": {
@@ -5088,20 +5862,114 @@ function poseJoints(rig, pose, stance) {
 }
 HANGA.poseJoints = poseJoints;
 
+/* v1.4 rider rotations (rider.rotations). Angles in degrees; a zero angle leaves points untouched, so v1.3 calls
+   give exactly the v1.3 result. */
+var D2R = Math.PI / 180;
+
+/* Angle taken modulo 360 into 0..360, so 360 and 0 give the same (exact) result. */
+function wrapDeg(deg) {
+  const a = deg % 360;
+  return a < 0 ? a + 360 : a;
+}
+
+/* Turns p about the vertical axis through (px, pz) by deg, clockwise from above (the yaw formula). New array. */
+function turnAbout(p, deg, px, pz) {
+  const a = deg * D2R;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const x = p[0] - px;
+  const z = p[2] - pz;
+  return [px + x * c + z * s, p[1], pz - x * s + z * c];
+}
+
+/* Board flips: rolls p about the board's long axis (z) through (px, py) by deg; + moves points above the pivot toward
+   +x (the toe edge and chest). New array. */
+function rollAbout(p, deg, px, py) {
+  const a = deg * D2R;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const x = p[0] - px;
+  const y = p[1] - py;
+  return [px + x * c + y * s, py - x * s + y * c, p[2]];
+}
+
+/* Pitches p about the across axis (x) through (py, pz) by deg; + moves points above the pivot toward +z. New array. */
+function pitchAbout(p, deg, py, pz) {
+  const a = deg * D2R;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const y = p[1] - py;
+  const z = p[2] - pz;
+  return [p[0], py + y * c - z * s, pz + y * s + z * c];
+}
+
+/*
+ * The rider's own rotations for one projection: returns place(point, group), which moves a posed rider-space point
+ * by twist ('lower'), head yaw ('head') and body pitch (every group), or returns it unchanged when all are zero.
+ * J: posed joints (goofy already mirrored). twist and headYaw are in the regular frame, so goofy flips their sign.
+ */
+function riderRotations(J, stance, rig, twistDeg, headYawDeg, bodyPitchDeg) {
+  const mirror = rig === 'board' && stance === 'goofy' ? -1 : 1;
+  const twist = wrapDeg(twistDeg * mirror);
+  const headYaw = wrapDeg(headYawDeg * mirror);
+  const pitch = wrapDeg(bodyPitchDeg);
+  const neck = J.neck;
+  const hip = J.hipC;
+  return function place(p, group) {
+    let q = p;
+    if (group === 'lower' && twist !== 0) q = turnAbout(q, twist, 0, 0);
+    if (group === 'head' && headYaw !== 0) q = turnAbout(q, headYaw, neck[0], neck[2]);
+    if (pitch !== 0 && rig === 'board') q = rollAbout(q, pitch, hip[0], hip[1]);
+    else if (pitch !== 0) q = pitchAbout(q, pitch, hip[1], hip[2]);
+    return q;
+  };
+}
+
+/* Which rotation group each joint of a rig is in: 'lower' (rotations.twist.lower), 'head', or none (upper body). */
+function jointGroups(rig) {
+  const groups = { head: 'head' };
+  HANGA.rider.rotations.twist.lower[rig].forEach(function (j) { groups[j] = 'lower'; });
+  return groups;
+}
+
+/* v1.4: the equipment items to draw after the body in a flip (rotations.bodyPitch.equipInFront); none otherwise. */
+function equipInFront(eq, torsoDepth, bodyPitchDeg) {
+  const rule = HANGA.rider.rotations.bodyPitch.equipInFront;
+  const pitch = wrapDeg(bodyPitchDeg);
+  if (pitch <= rule.fromDeg || pitch >= rule.toDeg) return [];
+  return eq.filter(function (it) { return it.depth < torsoDepth - rule.marginM; });
+}
+
+/* An option if it is given (a finite number), otherwise the fallback. */
+function optionOr(options, key, fallback) {
+  const v = options ? options[key] : null;
+  return v != null && isFinite(v) ? v : fallback;
+}
+
 /*
  * Reference projection (pure maths, no canvas). It is the same code that drew spec sheets 03 and 04.
  * rig: 'ski' | 'board'   pose: one of rider.poseOrder   yaw: board heading minus camera heading (degrees)
  * pitch: camera look-down (default camera.chasePitchDeg)   rollExtra: extra lean, e.g. from turn rate
  * stance: 'regular' (default) or 'goofy' (snowboard only: mirrors z)
+ * options (v1.4, optional, degrees; see rider.rotations): {
+ *   cameraPitchDeg  the camera's real look-down at the rider this frame; replaces pitch when given
+ *   twistDeg        lower body and equipment turned relative to the upper body, + clockwise from above; replaces
+ *                   the pose's twistDeg. With a twist, yaw is the upper body's heading
+ *   headYawDeg      head (and face vector, so the goggles) turned relative to the shoulders; replaces the pose's
+ *   bodyPitchDeg    flip angle about the rider's own left-right axis through hipC (skis: x; board: the board's
+ *                   long axis z), + = front flip (chest first); modulo 360
+ * }
+ * Without options (or with zero angles and cameraPitchDeg = pitch) the result is exactly the v1.3 one.
  * Returns the draw list, back to front. pts are screen metres with +y up and the origin at the feet's ground point.
  * Skis and board come back as {kind:'equip', shapes:[{id, kind:'poly'|'line', pts, colour, keyline?|width?}]}: draw the shapes in order.
  * Multiply by pixels per metre and flip y to draw. Items: {id, kind, pts, width, colour, depth, accent?, goggles?, strap?}
  * kind: 'ellipse' (shadow: c, rx, ry) | 'equip' (shapes) | 'limb' | 'torso' (capsule strokes) | 'circle' | 'head' (radius = width)
  */
-HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance) {
+HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance, options) {
   pose = pose || 'ride'; yaw = yaw || 0; rollExtra = rollExtra || 0;
   if (pitch == null) pitch = HANGA.camera.chasePitchDeg;
   var R = HANGA.rider, ps = R.poses[rig][pose], D = Math.PI / 180;
+  pitch = optionOr(options, 'cameraPitchDeg', pitch);
   var lam = (ps.roll + rollExtra) * D, phi = yaw * D, th = pitch * D, lift = ps.lift;
   var cl = Math.cos(lam), sl = Math.sin(lam), cp = Math.cos(phi), sp = Math.sin(phi), ct = Math.cos(th), stt = Math.sin(th);
   function T(p, ground) {
@@ -5111,7 +5979,10 @@ HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance) {
     return [x2, y * ct + z2 * stt, z2 * ct - y * stt];
   }
   var J = poseJoints(rig, pose, stance), TJ = {}, k;
-  for (k in J) TJ[k] = T(J[k]);
+  var place = riderRotations(J, stance, rig, optionOr(options, 'twistDeg', ps.twistDeg || 0),
+    optionOr(options, 'headYawDeg', ps.headYawDeg || 0), optionOr(options, 'bodyPitchDeg', 0));
+  var groupOf = jointGroups(rig);
+  for (k in J) TJ[k] = T(place(J[k], groupOf[k]));
   var cw = R.colourways[rig], torsoDep = (TJ.neck[2] + TJ.hipC[2]) / 2, W = R.widths;
   var g = T([0, 0, 0], true), sc = 1 / (1 + lift);
   var out = [{ id: 'shadow', kind: 'ellipse', c: [g[0], g[1]], rx: 0.62 * sc, ry: (0.62 * stt + 0.05) * sc, colour: 'powderShade', depth: 99 }];
@@ -5124,7 +5995,7 @@ HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance) {
     var item = { id: part.id, kind: part.kind, pts: pts.map(function (p) { return [p[0], p[1]]; }), width: W[part.width],
                  colour: far ? (R.shadeOf[col] || col) : col, depth: dep, order: order };
     if (part.kind === 'boot') {
-      var a = J[part.joints[0]], toe = T([a[0], a[1] - 0.05, a[2] + 0.10]);
+      var a = J[part.joints[0]], toe = T(place([a[0], a[1] - 0.05, a[2] + 0.10], groupOf[part.joints[0]]));
       item.kind = 'limb'; item.pts = [[pts[0][0], pts[0][1] - 0.03], [toe[0], toe[1]]];
     }
     if (part.kind === 'equip') {
@@ -5132,7 +6003,7 @@ HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance) {
       var A = J[part.joints[0]], B = J[part.joints[1]];
       item.shapes = R.equipment[rig].shapes.map(function (sh) {
         var tp = sh.pts.map(function (q) {
-          return T([A[0] + q[0] * (B[0] - A[0]) + q[1], A[1] + q[0] * (B[1] - A[1]) + q[2], A[2] + q[0] * (B[2] - A[2])]);
+          return T(place([A[0] + q[0] * (B[0] - A[0]) + q[1], A[1] + q[0] * (B[1] - A[1]) + q[2], A[2] + q[0] * (B[2] - A[2])], 'lower'));
         });
         var o = { id: sh.id, kind: sh.kind, pts: tp.map(function (p) { return [p[0], p[1]]; }), colour: cw[sh.colour] || sh.colour };
         if (sh.kind === 'line') o.width = sh.width; else o.keyline = sh.keyline;
@@ -5142,7 +6013,7 @@ HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance) {
       eq.push(item);
     } else if (part.kind === 'head') {
       var f = R.face[rig].slice(); if (rig === 'board' && stance === 'goofy') f[2] = -f[2];
-      var hj = J.head, ft = T([hj[0] + f[0], hj[1] + f[1], hj[2] + f[2]]);
+      var hj = J.head, ft = T(place([hj[0] + f[0], hj[1] + f[1], hj[2] + f[2]], 'head'));
       var fx = ft[0] - pts[0][0], fdep = ft[2] - dep, r = W.head;
       if (fdep < 0.25) {
         var v = Math.max(0, Math.min(1, (0.25 - fdep) / 1.25)), cx = pts[0][0] + fx * r * 0.5, cy = pts[0][1] - 0.015, hl = r * (0.38 + 0.3 * v);
@@ -5157,18 +6028,34 @@ HANGA.projectRider = function (rig, pose, yaw, pitch, rollExtra, stance) {
   // Far to near; parts at the same depth (within 1e-9 m) keep their order in rider.parts.
   var byDepth = function (a, b) { var d = b.depth - a.depth; return Math.abs(d) < 1e-9 ? a.order - b.order : d; };
   eq.sort(byDepth); body.sort(byDepth);
-  return out.concat(eq, body);
+  var front = equipInFront(eq, torsoDep, optionOr(options, 'bodyPitchDeg', 0));
+  return out.concat(eq.filter(function (it) { return front.indexOf(it) < 0; }), body, front);
 };
+
+/* v1.4: the brake pose for st.brakeSide, or null when it names none for this rig (then braking stays 'crouch'). */
+var BRAKE_POSES = { ski: { left: 'brakeL', right: 'brakeR' }, board: { heel: 'brakeHeel', toe: 'brakeToe' } };
+function brakePose(st) {
+  const byRig = BRAKE_POSES[st.rig === 'board' ? 'board' : 'ski'];
+  return st.brakeSide && byRig.hasOwnProperty(st.brakeSide) ? byRig[st.brakeSide] : null;
+}
 
 /* Pick a pose from game state. Thresholds are a starting point to tune on a phone. */
 HANGA.poseFor = function (st) {
   // st: {rig, wiped, grinding, airborne, landedAgo, braking, approach, turn, goofy}
   // turn: -1..1 (left..right, in travel direction). landedAgo: seconds since touchdown (undefined if not landing).
+  // v1.4, all optional (leaving them out picks exactly the v1.3 pose):
+  //   flipping   true while a flip is under way in the air: 'tuck' instead of 'air'
+  //   brakeSide  with braking: skis 'left' | 'right' (where the ski tips turn, brakeL | brakeR),
+  //              board 'heel' | 'toe' (brakeHeel | brakeToe). Any other value keeps 'crouch'
+  //   isSwitch   skis riding backwards: switchL | switchR in place of ride and the carves
+  //   lookSide   'left' | 'right' (default), the shoulder a switch skier looks over
   if (st.wiped) return 'wipeout';
   if (st.grinding) return 'grind';
-  if (st.airborne) return 'air';
+  if (st.airborne) return st.flipping ? 'tuck' : 'air';
   if (st.landedAgo != null && st.landedAgo < HANGA.rider.timing.hold.land) return 'land';
+  if (st.braking && brakePose(st)) return brakePose(st);
   if (st.braking || st.approach) return 'crouch';
+  if (st.isSwitch && st.rig !== 'board') return st.lookSide === 'left' ? 'switchL' : 'switchR';
   var t = st.turn || 0;
   if (Math.abs(t) <= 0.25) return 'ride';
   if (st.rig === 'board') {
