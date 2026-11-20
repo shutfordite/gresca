@@ -5547,12 +5547,18 @@ let L=0,R=0,B=0,JU=0,state='load',x,y,vx,vy,a,crash,crashes,time,spin,camA=1.57,
 const TAU=Math.PI*2;
 // Equipment. Both are twin tip. Skis carve a little quicker and grip better; the board spins a little slower.
 const RIGS={board:{turn:1,grip:5,spin:7},ski:{turn:1.12,grip:6.5,spin:8}};
+// ---- seeded random numbers ----
+// Everything random in the simulation draws from rnd(), never Math.random(), so a run replays exactly from its seed.
+// mulberry32: 32 bits of state, uniform in [0,1). start() reseeds from rngSeed; Gresca.seed(n) changes the seed.
+let rngSeed=1,rngS=1;
+function reseed(){rngS=rngSeed>>>0}
+function rnd(){let t=rngS=(rngS+0x6D2B79F5)|0;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296}
 const parts=[],MAXP=160;
-function emit(n,px_,py_,pz,spread,up,dvx,dvy){for(let k=0;k<n&&parts.length<MAXP;k++)parts.push({x:px_,y:py_,z:pz,vx:dvx+(Math.random()-.5)*spread,vy:dvy+(Math.random()-.5)*spread,vz:up*(.4+Math.random()*.6),t:0,life:.45+Math.random()*.4})}
+function emit(n,px_,py_,pz,spread,up,dvx,dvy){for(let k=0;k<n&&parts.length<MAXP;k++)parts.push({x:px_,y:py_,z:pz,vx:dvx+(rnd()-.5)*spread,vy:dvy+(rnd()-.5)*spread,vz:up*(.4+rnd()*.6),t:0,life:.45+rnd()*.4})}
 function stepParts(dt){for(let k=parts.length-1;k>=0;k--){const p=parts[k];p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vz-=6*dt;p.vx*=.96;p.vy*=.96;if(p.t>p.life||p.z<-.2)parts.splice(k,1)}}
 
-function start(){x=cx(60);y=60;vx=0;vy=2;a=Math.PI/2;crash=0;crashes=0;time=0;spin=0;score=0;popT=0;airT=0;kick=false;parts.length=0;jz=jv=JU=0;rot=0;both=false;grind=null;grindD=0;
- col.set(col0);camA=1.57;cam.s=.26;camH=H[60*W0+(x|0)]+CAMH+cam.s*CAMBACK;state='run';msg.hidden=true}
+function start(){x=cx(60);y=60;vx=0;vy=2;a=Math.PI/2;crash=0;crashes=0;time=0;spin=0;score=0;popT=0;airT=0;kick=false;parts.length=0;jz=jv=JU=0;rot=0;both=false;grind=null;grindD=0;reseed();
+ col.set(col0);camA=1.57;cam.s=.26;camH=H[60*W0+(x|0)]+CAMH+cam.s*CAMBACK;state='run';msg.hidden=true;simAcc=0;ipSnap()}
 
 function jumpStep(dt){
  if(crash>0){jz=0;jv=0;airT=0;return}
@@ -5591,7 +5597,7 @@ function grindStep(dt){
  x=r.x0+r.dx*t;y=r.y0+r.dy*t;vx=r.dx*spd;vy=r.dy*spd;jz=r.h;jv=0;
  const phi=Math.atan2(r.dy,r.dx),tgt=Math.cos(a-phi)>=0?phi:phi+Math.PI;
  a+=Math.atan2(Math.sin(tgt-a),Math.cos(tgt-a))*Math.min(1,dt*10);
- if(Math.random()<.7)emit(1,x,y,r.h,1.2,1.2,0,0);
+ if(rnd()<.7)emit(1,x,y,r.h,1.2,1.2,0,0);
  if(JU)endGrind(true);else if(grind.t>=r.len)endGrind(false)}
 function endGrind(jump){const r=grind.r,pts=Math.round(grindD*3);
  score+=pts;popTxt='+'+pts+'p '+(r.t==='box'?'Box':'Rail');popT=1.6;
@@ -5694,6 +5700,7 @@ function hAt(px,py){const ix=Math.max(0,Math.min(W0-2,px|0)),iy=Math.max(0,Math.
  return H[i]*(1-fx)*(1-fy)+H[i+1]*fx*(1-fy)+H[i+W0]*(1-fx)*fy+H[i+W0+1]*fx*fy}
 // Everything the animation needs from the game, measured once per drawn frame.
 function animInput(dt){
+ const x=drawn.x,y=drawn.y,jz=drawn.z; // the drawn rider pose (interpolated), not the simulation's
  const s=Math.hypot(vx,vy),air=!grind&&jz>.05,dir=s>.5?Math.atan2(vy,vx):a,g=hAt(x,y);
  let p=animPrev;
  if(!p||Math.hypot(x-p.x,y-p.y)>8)p=animPrev={x,y,dir,g,gv:0,ga:0,n:landN,air:true}; // first frame, or the run restarted
@@ -5740,7 +5747,11 @@ function drawRider(c,m,list){
   stroke(it.pts,it.width,it.colour,true)} // limb, torso and boot capsules
 }
 
-function draw(dt){
+// dt: s since the last drawn frame (camera smoothing and animation). alpha: 0..1, how far the shown rider is from the
+// step before the latest one to the latest one (see the fixed timestep below); 1, the default, shows the current state.
+function draw(dt,alpha=1){
+ riderPose(alpha);
+ const x=drawn.x,y=drawn.y,jz=drawn.z; // the rider as drawn; draw() reads the simulation but never writes it
  const RW=Math.min(360,Math.round(cv.clientWidth/1.6)),RH=Math.round(RW*Hh/W);
  if(lo.width!==RW||lo.height!==RH){lo.width=RW;lo.height=RH}
  // The camera follows the direction of travel, not the nose: when riding switch it still looks down the
@@ -5812,10 +5823,36 @@ function draw(dt){
  pop.textContent=popTxt;pop.style.opacity=Math.min(1,popT*2);
  dot.style.left=x/W0*42+'px';dot.style.top=y/H0*103+'px'}
 
+// ---- fixed timestep ----
+// The simulation always advances in steps of SIM_DT, whatever the display's frame rate, so jumps, landings, crashes and
+// grinds come out the same at 30, 60, 120 or 144 Hz. Each frame adds its real duration to simAcc and runs as many whole
+// steps as fit, at most SIM_MAX in one frame; after a longer stall (background tab, slow device, GC pause) the rest is
+// dropped, so the game slows down rather than spiralling. draw() shows the rider interpolated between the last two
+// steps by the leftover fraction (alpha), so motion stays smooth when frames and steps don't line up.
+const SIM_DT=1/120, // s, one simulation step (120 Hz)
+ SIM_MAX=8,         // steps, the most run in one frame (8/120 s = 67 ms of simulation)
+ SIM_EPS=1e-9;      // s, slack so frame times that are exact multiples of SIM_DT don't lose a step to rounding
+let simAcc=0,        // s of real time not yet simulated
+ ipX=0,ipY=0,ipZ=0;  // m, rider x, y and height above the ground before the latest step (where interpolation starts)
+// The rider pose the view shows: m, m, m above the ground, and the alpha it was blended with. View state, not sim state.
+const drawn={x:0,y:0,z:0,alpha:1};
+function ipSnap(){ipX=x;ipY=y;ipZ=jz} // no interpolation across a teleport (new run, place)
+function riderPose(alpha){
+ // alpha 1, or a jump no step could make (more than 8 m), shows the current state as it is
+ if(alpha>=1||Math.abs(x-ipX)+Math.abs(y-ipY)>8){drawn.x=x;drawn.y=y;drawn.z=jz;drawn.alpha=1;return}
+ drawn.x=ipX+(x-ipX)*alpha;drawn.y=ipY+(y-ipY)*alpha;drawn.z=ipZ+(jz-ipZ)*alpha;drawn.alpha=alpha}
+// One simulation step: physics, spray and the popup timer.
+function simTick(){ipX=x;ipY=y;ipZ=jz;step(SIM_DT);stepParts(SIM_DT);popT=Math.max(0,popT-SIM_DT)}
 let last=0;
-function loop(ts){const dt=Math.min(.033,(ts-last)/1000||0);last=ts;
- if(state==='run'){step(dt/2);step(dt/2);stepParts(dt);popT=Math.max(0,popT-dt)}
- if(state!=='load')draw(dt);requestAnimationFrame(loop)}
+function loop(ts){const dt=Math.max(0,(ts-last)/1000||0);last=ts;let alpha=1;
+ if(state==='run'){simAcc+=dt;let n=0;
+  while(state==='run'&&n<SIM_MAX&&simAcc>=SIM_DT-SIM_EPS){simTick();simAcc-=SIM_DT;n++}
+  if(state!=='run'||simAcc>=SIM_DT)simAcc=0; // run ended, or a stall longer than SIM_MAX steps: drop the rest
+  simAcc=Math.max(0,simAcc);
+  if(state==='run')alpha=simAcc/SIM_DT}
+ else simAcc=0;
+ // the camera and animation get the real frame time, capped like the simulation
+ if(state!=='load')draw(Math.min(dt,SIM_MAX*SIM_DT),alpha);requestAnimationFrame(loop)}
 setTimeout(()=>{build();state='ready';x=cx(60);y=60;vx=vy=0;a=1.57;crash=0;crashes=0;time=0;spin=0;camA=1.57;camH=H[60*W0+(x|0)]+CAMH;
  msgT.textContent='Ride from the Encampadors ridge down to Pas de la Casa. Hold the left or right side of the screen to turn. Press both sides together to jump, then tap left or right in the air to spin. Swipe down to brake. Avoid the trees.';go.hidden=false},60);
 requestAnimationFrame(loop);
@@ -5893,8 +5930,12 @@ window.Gresca=(()=>{
   // stretch), x on the piste centreline, at rest, heading straight down. Clears crashes and all input.
   place(o={}){for(const k in o)if(!(k in PLACE))throw new Error('Gresca.place: unknown field '+k);
    const d=Object.assign({},PLACE,o);
-   start();x=d.x===null?cx(d.y):d.x;y=d.y;vx=d.vx;vy=d.vy;a=d.heading;jz=d.z;jv=d.vz;crash=0;crashes=0;B=0;L=0;R=0;JU=0},
+   start();x=d.x===null?cx(d.y):d.x;y=d.y;vx=d.vx;vy=d.vy;a=d.heading;jz=d.z;jv=d.vz;crash=0;crashes=0;B=0;L=0;R=0;JU=0;ipSnap()},
+  // The seed of the simulation's random numbers (spray today). seed(n) sets it and reseeds now; every start() (and so
+  // place()) reseeds from it, so the same seed and the same input give the same run. Returns the seed. Default 1.
+  seed(n){if(n!==undefined){rngSeed=n>>>0;reseed()}return rngSeed},
   // Advance the simulation sec seconds at a fixed timestep dt (physics, then spray, each step).
+  // The real game loop steps at config.fixedStep (1/120 s) with the popup timer too; drive it with requestAnimationFrame.
   sim(sec,dt=1/120){const n=Math.round(sec/dt);for(let i=0;i<n;i++){step(dt);stepParts(dt)}},
   step(dt){step(dt)},               // one physics step only
   stepParticles(dt){stepParts(dt)}, // one spray step only
@@ -5903,8 +5944,9 @@ window.Gresca=(()=>{
   input(o){set({input:o})},         // {left,right,brake,jump}, any subset; bypasses touch and keyboard
   resetInput(){ptrs.clear();kb.L=kb.R=kb.B=0;L=R=B=JU=0;both=false}, // lift every finger and key
   clearParticles(){parts.length=0},
+  particles(){return parts.map(p=>({x:p.x,y:p.y,z:p.z,vx:p.vx,vy:p.vy,vz:p.vz,t:p.t,life:p.life}))}, // copies of the live spray: m, m/s, s
   emitParticles(n,px,py,pz,spread,up,dvx,dvy){emit(n,px,py,pz,spread,up,dvx,dvy)}, // m, m, m, m/s, m/s, m/s, m/s
-  config:Object.freeze({maxParticles:MAXP,camBack:CAMBACK,riderScale:RSC}), // particle cap; camera m behind the rider; rider draw scale
+  config:Object.freeze({maxParticles:MAXP,camBack:CAMBACK,riderScale:RSC,fixedStep:SIM_DT,maxStepsPerFrame:SIM_MAX}), // particle cap; camera m behind the rider; rider draw scale; s per simulation step; steps the loop runs per frame at most
   world:Object.freeze({
    size:Object.freeze({x:W0,y:H0}), // m, map extent (one height cell per metre)
    finishY:FIN,                    // m, the finish line
@@ -5935,7 +5977,10 @@ window.Gresca=(()=>{
    fillColourMap:v=>{col.fill(v)}, // until the next start()
    drawSource:()=>draw.toString(),
    anim:()=>anim&&{rig:anim.rig,pose:anim.pose,comp:anim.comp,roll:anim.roll},
-   animTick:dt=>{animTick(dt)},   // advance the rider animation one frame without drawing
+   animTick:dt=>{riderPose(1);animTick(dt)}, // advance the rider animation one frame without drawing (current pose)
+   // The rider pose the last frame drew (m; z above the ground), the alpha it was blended with, and the physics state
+   // before the latest step it was blended from (the current state is the other end).
+   view:()=>({x:drawn.x,y:drawn.y,z:drawn.z,alpha:drawn.alpha,from:{x:ipX,y:ipY,z:ipZ}}),
    riderList:()=>riderList&&JSON.parse(JSON.stringify(riderList)), // last rider draw list
    riderYaw:()=>riderYaw          // deg, rider facing relative to the camera
   })
