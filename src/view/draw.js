@@ -175,8 +175,10 @@ function drawTrees(ctx, view, camera, terrain, hanga, treeArr, RW) {
   const X = P.X;
   const Y = P.Y;
   const hh = hs * kx;
-  ctx.fillStyle = `rgb(${(TREE_RGB[0] + (FOG[0] - TREE_RGB[0]) * fg) | 0},${(TREE_RGB[1] + (FOG[1] - TREE_RGB[1]) * fg) | 0},` +
-   `${(TREE_RGB[2] + (FOG[2] - TREE_RGB[2]) * fg) | 0})`;
+  const r = (TREE_RGB[0] + (FOG[0] - TREE_RGB[0]) * fg) | 0;
+  const gn = (TREE_RGB[1] + (FOG[1] - TREE_RGB[1]) * fg) | 0;
+  const b = (TREE_RGB[2] + (FOG[2] - TREE_RGB[2]) * fg) | 0;
+  ctx.fillStyle = `rgb(${r},${gn},${b})`;
   for (let j = 0; j < 3; j++) {
    const by = Y - hh * (0.12 + 0.27 * j);
    const w = hh * (0.34 - 0.07 * j);

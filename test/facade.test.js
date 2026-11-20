@@ -10,10 +10,11 @@ import { load } from './harness.js';
 // createGame(env) call made, and the only way in is the façade that call returned. So the rules are:
 // 1. A g.run('...') string evaluates in a scope with only the art modules and this game's storage stub in it. It may
 //    name only these roots (and names it binds itself, such as an arrow function's parameter): no game state.
-// 2. A test file imports nothing from src/ except the pure layers (core/, world/, sim/), which get direct unit tests.
+// 2. A test file imports nothing from src/ except the pure layers (core/, world/, sim/, and input/input.js, the input
+//    state without its DOM binding), which get direct unit tests.
 //    Only the harness imports the game's wiring (src/app.js); nothing imports main.js, view/, ui/, input/ or debug.js.
 const RUN_ROOTS = new Set(['HANGA', 'RiderAnim', 'localStorage', 'Math', 'globalThis']);
-const PURE = /^src\/(core|world|sim)\//;
+const PURE = /^src\/(core|world|sim)\/|^src\/input\/input\.js$/;
 const HARNESS_ONLY = new Set(['src/app.js']);
 
 // ---- a tiny scanner for JavaScript source: enough for this game script and the tests, no parser package ----
@@ -143,7 +144,8 @@ describe('tests use the façade, not game state', () => {
 
   it('catches a test that imports the game\'s modules other than the pure layers', () => {
     for (const planted of ["import { createGame } from '../src/app.js';", "await import('../src/view/draw.js')",
-      "const d = require('../src/debug.js');", "import '../src/main.js';", "import { x } from '../src/ui/hud.js';"])
+      "const d = require('../src/debug.js');", "import '../src/main.js';", "import { x } from '../src/ui/hud.js';",
+      "import { bindInput } from '../src/input/bind-input.js';"])
       assert.ok(importLint('x.test.js', planted).length > 0, `import lint missed ${planted}`);
     assert.deepEqual(importLint('x.test.js', "import { Terrain } from '../src/world/terrain.js';\nimport fs from 'node:fs';" +
       "\nimport { rnd } from '../src/core/rng.js';\nimport { load } from './harness.js';"), []);
@@ -260,5 +262,29 @@ describe('Gresca façade', async () => {
     assert.throws(() => G.set({ jz: 1 }), /unknown field jz/);
     assert.throws(() => G.set({ camera: { camA: 1 } }), /unknown field camera.camA/);
     assert.throws(() => G.place({ a: 1 }), /unknown field a/);
+  });
+});
+
+describe('Gresca.set() and render interpolation', async () => {
+  const g = await load();
+
+  it('writing the position restarts interpolation there, so a teleport is not drawn as a slide', () => {
+    g.place({ vy: 10 });
+    g.sim(0.5); // the physics moved on; interpolation still starts where place() put the rider
+    assert.ok(g.debug.view().from.y < g.state().y - 1);
+    g.set({ x: g.state().x + 1 });
+    const s = g.state();
+    assert.deepEqual({ ...g.debug.view().from }, { x: s.x, y: s.y, z: s.z });
+    g.sim(0.2);
+    g.set({ z: 1.5 });
+    assert.equal(g.debug.view().from.z, 1.5);
+  });
+
+  it('writing anything else leaves interpolation alone', () => {
+    g.place({ vy: 10 });
+    g.sim(0.5);
+    const from = { ...g.debug.view().from };
+    g.set({ vx: 3, score: 5, heading: 1.2, camera: { heading: 1 } });
+    assert.deepEqual({ ...g.debug.view().from }, from);
   });
 });

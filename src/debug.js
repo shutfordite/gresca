@@ -18,8 +18,8 @@ import { project } from './view/sprites.js';
 import { riderPose } from './view/draw.js';
 import { animTick } from './view/rider-animation.js';
 
-const READ_ONLY = new Set(['speed', 'crashed', 'grinding', 'particles']);
-const POSITION = new Set(['x', 'y', 'z']); // writing any of these restarts render interpolation
+const READ_ONLY = Object.freeze(['speed', 'crashed', 'grinding', 'particles']);
+const POSITION = Object.freeze(['x', 'y', 'z']); // writing any of these restarts render interpolation
 const PLACE = Object.freeze({ x: null, y: 500, vx: 0, vy: 0, heading: Math.PI / 2, z: 0, vz: 0 });
 
 function cameraSnapshot(camera) {
@@ -103,7 +103,8 @@ function writers(g) {
   }),
   camera: nested('camera', {
    heading: (v) => { c.heading = v; }, height: (v) => { c.height = v; }, x: (v) => { c.x = v; }, y: (v) => { c.y = v; },
-   dirX: (v) => { c.dirX = v; }, dirY: (v) => { c.dirY = v; }, slope: (v) => { c.slope = v; }, tilt: (v) => { c.tilt = v; },
+   dirX: (v) => { c.dirX = v; }, dirY: (v) => { c.dirY = v; },
+   slope: (v) => { c.slope = v; }, tilt: (v) => { c.tilt = v; },
    pitchPx: (v) => { c.pitchPx = v; }, focalPx: (v) => { c.focalPx = v; }, horizonPx: (v) => { c.horizonPx = v; },
    renderW: (v) => { c.renderW = v; }, renderH: (v) => { c.renderH = v; }, pixelScale: (v) => { c.pixelScale = v; },
   }),
@@ -189,10 +190,10 @@ export function createFacade(g) {
  function set(p) {
   let moved = false;
   for (const k in p) {
-   if (READ_ONLY.has(k)) continue;
+   if (READ_ONLY.includes(k)) continue;
    if (!WRITE[k]) throw new Error('Gresca.set: unknown field ' + k);
    WRITE[k](p[k]);
-   if (POSITION.has(k)) moved = true;
+   if (POSITION.includes(k)) moved = true;
   }
   if (moved) snapInterpolation(timestep, rider);
  }
@@ -230,7 +231,8 @@ export function createFacade(g) {
    return g.rng.seed;
   },
   // Advance the simulation sec seconds at a fixed timestep dt (physics, then spray, each step).
-  // The real game loop steps at config.fixedStep (1/120 s) with the popup timer too; drive it with requestAnimationFrame.
+  // The real game loop steps at config.fixedStep (1/120 s) with the popup timer too; drive it with
+  // requestAnimationFrame.
   sim(sec, dt = 1 / 120) {
    const n = Math.round(sec / dt);
    for (let i = 0; i < n; i++) {
@@ -246,7 +248,9 @@ export function createFacade(g) {
   resetInput() { resetInput(input); },  // lift every finger and key
   clearParticles() { spray.particles.length = 0; },
   // copies of the live spray: m, m/s, s
-  particles() { return spray.particles.map((p) => ({ x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, t: p.t, life: p.life })); },
+  particles() {
+   return spray.particles.map((p) => ({ x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, t: p.t, life: p.life }));
+  },
   // m, m, m, m/s, m/s, m/s, m/s
   emitParticles(n, px, py, pz, spread, up, dvx, dvy) { emit(spray, n, px, py, pz, spread, up, dvx, dvy); },
   // particle cap; camera m behind the rider; rider draw scale; s per simulation step; steps the loop runs per frame

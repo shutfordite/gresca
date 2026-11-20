@@ -14,7 +14,8 @@ export function vn(x, y) {
  const fy = y - j;
  const u = fx * fx * (3 - 2 * fx);
  const v = fy * fy * (3 - 2 * fy);
- return hash(i, j) * (1 - u) * (1 - v) + hash(i + 1, j) * u * (1 - v) + hash(i, j + 1) * (1 - u) * v + hash(i + 1, j + 1) * u * v;
+ return hash(i, j) * (1 - u) * (1 - v) + hash(i + 1, j) * u * (1 - v) +
+  hash(i, j + 1) * (1 - u) * v + hash(i + 1, j + 1) * u * v;
 }
 
 /** 0..1, three octaves of value noise at map point (x, y) in m (90, 40 and 17 m features). */

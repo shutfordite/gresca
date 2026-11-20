@@ -80,7 +80,8 @@ export function drawFlags(ctx, camera, terrain) {
  }
  for (const r of RAILS) {
   if (r.y1 < cy || r.y0 > cy + DRAW_AHEAD_M) continue;
-  n += pole(ctx, camera, terrain, r.x0 + (r.x0 > cx(r.y0) ? 3 : -3), r.y0, 1.8, r.t === 'box' ? BOX_COLOUR : RAIL_COLOUR);
+  const colour = r.t === 'box' ? BOX_COLOUR : RAIL_COLOUR;
+  n += pole(ctx, camera, terrain, r.x0 + (r.x0 > cx(r.y0) ? 3 : -3), r.y0, 1.8, colour);
  }
  return n;
 }

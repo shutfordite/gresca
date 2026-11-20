@@ -12,11 +12,11 @@ const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs
  * fog (spec terrain.fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), the rider
  * animation (anim, animPrev, riderList, riderYaw deg) and counts of what the last frame drew.
  */
-export function createView(document, hanga) {
- const map = document.createElement('canvas');
+export function createView(doc, hanga) {
+ const map = doc.createElement('canvas');
  map.width = W0;
  map.height = H0;
- const lo = document.createElement('canvas');
+ const lo = doc.createElement('canvas');
  return {
   W: 0,
   Hh: 0,
@@ -39,8 +39,8 @@ export function createView(document, hanga) {
 }
 
 /** Sizes the screen canvas to its CSS size times the pixel ratio (at most 2) and records it in view.W, view.Hh. */
-export function resizeScreen(view, canvas, devicePixelRatio) {
- const d = Math.min(MAX_PIXEL_RATIO, devicePixelRatio || 1);
+export function resizeScreen(view, canvas, pixelRatio) {
+ const d = Math.min(MAX_PIXEL_RATIO, pixelRatio || 1);
  canvas.width = canvas.clientWidth * d;
  canvas.height = canvas.clientHeight * d;
  view.W = canvas.width;

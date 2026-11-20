@@ -37,7 +37,8 @@ export function railCheck(rider, input, spray) {
   if (t < -1 || t > r.len - 4 || perp > GRIND_REACH_M) continue;
   const phi = Math.atan2(r.dy, r.dx);
   const bd = ((rider.heading - phi) % Math.PI + Math.PI) % Math.PI;
-  if (wrapAbs(Math.atan2(rider.vy, rider.vx) - phi) > GRIND_MAX_ALIGN || Math.min(bd, Math.PI - bd) > GRIND_MAX_ALIGN) continue;
+  const travelOff = wrapAbs(Math.atan2(rider.vy, rider.vx) - phi);
+  if (travelOff > GRIND_MAX_ALIGN || Math.min(bd, Math.PI - bd) > GRIND_MAX_ALIGN) continue;
   rider.grind = { r, t: Math.max(0, t) };
   rider.grindDist = 0;
   rider.z = r.h;

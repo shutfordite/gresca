@@ -45,7 +45,9 @@ export function createGame(env) {
  const timestep = createTimestep();
  const clock = { lastMs: 0 }; // ms, the last frame's timestamp
  // What step() reads and writes (sim/step.js). gradient: scratch for the slope under the rider, so no allocation.
- const sim = { rider, input, session, terrain: world.terrain, trees: world.trees, spray, gradient: { gx: 0, gy: 0 }, view, ui };
+ const sim = {
+  rider, input, session, terrain: world.terrain, trees: world.trees, spray, gradient: { gx: 0, gy: 0 }, view, ui,
+ };
  // What draw() reads (view/draw.js).
  const scene = {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, treeArr: world.treeArr,
@@ -122,5 +124,7 @@ export function createGame(env) {
  env.setTimeout(boot, BOOT_DELAY_MS);
  env.requestAnimationFrame(loop);
 
- return createFacade({ rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, hanga, startRun, frame });
+ return createFacade({
+  rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, hanga, startRun, frame,
+ });
 }

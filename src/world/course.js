@@ -28,7 +28,8 @@ function makeRail([ya, n, off, t]) {
  const x1 = cx(yb) + off;
  const len = Math.hypot(x1 - x0, yb - ya);
  return Object.freeze({
-  y0: ya, y1: yb, x0, x1, len, dx: (x1 - x0) / len, dy: (yb - ya) / len, h: t === 'box' ? BOX_HEIGHT_M : RAIL_HEIGHT_M, t,
+  y0: ya, y1: yb, x0, x1, len, dx: (x1 - x0) / len, dy: (yb - ya) / len,
+  h: t === 'box' ? BOX_HEIGHT_M : RAIL_HEIGHT_M, t,
  });
 }
 

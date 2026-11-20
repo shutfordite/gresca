@@ -5,7 +5,7 @@ import { camCompass } from './camera.js';
 /** 0..1, how much fog at z m from the camera (spec terrain.fog, full at the far edge of the render). */
 export const fogAt = (hanga, z) => hanga.fogAmount(z, RAY_FAR);
 
-/** Sun disc on screen, {X, Y, r, on} in canvas px: at the map's sun azimuth, a little above the horizon (spec sky.sun). */
+/** Sun disc on screen, {X, Y, r, on} in canvas px: at the map's sun azimuth, just above the horizon (spec sky.sun). */
 export function sunDisc(hanga, camera, W, Hh) {
  const S = hanga.sky.sun;
  const az = hanga.maps[MAP_ID].sun.azimuthDeg;

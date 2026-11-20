@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -82,4 +83,67 @@ test('every module in src/ is reached from src/main.js through static imports, a
 test('the import scanner finds static imports and re-exports', () => {
   assert.deepEqual(staticImports("import { a } from './a.js';\nimport * as b from \"../b.js\";\nimport './c.js';\n" +
     "export { d } from './d.js';\nconst x = 'import y from \"./no.js\"';"), ['./a.js', '../b.js', './c.js', './d.js']);
+});
+
+// ---- module rules (ADR 0002) ----
+const BROWSER = ['window', 'document', 'HANGA', 'RiderAnim', 'localStorage', 'requestAnimationFrame', 'setTimeout',
+  'setInterval', 'devicePixelRatio', 'addEventListener', 'globalThis', 'self', 'navigator', 'location'];
+// Uses of BROWSER names as free identifiers: not a property (after a dot), not an object key (before a colon).
+export function browserGlobals(src) {
+  const code = codeOnly(src), found = [];
+  const re = new RegExp(`(?<![\\w$.])(${BROWSER.join('|')})(?![\\w$])(?!\\s*:)`, 'g');
+  for (const m of code.matchAll(re)) found.push(`line ${code.slice(0, m.index).split('\n').length}: ${m[1]}`);
+  return found;
+}
+
+// Top-level declarations that hold mutable state: let/var, and a const made from [..], {..} or new X() without
+// Object.freeze(...). (A const function, number, string or frozen object is fine.)
+export function moduleState(src) {
+  const code = codeOnly(src), found = [];
+  let depth = 0;
+  const lines = code.split('\n');
+  lines.forEach((line, i) => {
+    if (depth === 0) {
+      const m = /^(?:export\s+)?(let|var|const)\s+(?:[\w$]+|\{[^}]*\}|\[[^\]]*\])\s*=\s*(.*)$/.exec(line);
+      if (m && m[1] !== 'const') found.push(`line ${i + 1}: top-level ${m[1]}`);
+      else if (m && /^(\[|\{|new\s)/.test(m[2].trim())) found.push(`line ${i + 1}: top-level const holding a mutable ${m[2].trim()[0] === 'n' ? 'object' : 'container'}`);
+    }
+    for (const c of line) { if ('([{'.includes(c)) depth++; else if (')]}'.includes(c)) depth--; }
+  });
+  return found;
+}
+
+test('the scanners find browser globals and module state, and ignore properties, keys and locals', () => {
+  assert.deepEqual(browserGlobals("const a = document.getElementById('c'); if (window) setTimeout(f);"),
+    ['line 1: document', 'line 1: window', 'line 1: setTimeout']);
+  assert.deepEqual(browserGlobals("const d = env.document, h = env.HANGA; const o = { localStorage: 1 }; // window\n"), []);
+  assert.deepEqual(moduleState('let n = 0;\nexport const parts = [];\nconst cache = new Map();\nconst o = {a: 1};\n'),
+    ['line 1: top-level let', 'line 2: top-level const holding a mutable container', 'line 3: top-level const holding a mutable object',
+      'line 4: top-level const holding a mutable container']);
+  assert.deepEqual(moduleState('const A = Object.freeze([1]);\nexport const f = (x) => x;\nexport function g() {\n let t = [];\n}\n'), []);
+});
+
+test('only src/main.js reads browser globals or the art modules; every other module gets them through env', () => {
+  for (const f of listJs('src')) {
+    if (f === ENTRY) continue;
+    assert.deepEqual(browserGlobals(fs.readFileSync(path.join(ROOT, f), 'utf8')), [], `${f} reads a browser global`);
+  }
+  assert.ok(browserGlobals(fs.readFileSync(path.join(ROOT, ENTRY), 'utf8')).length > 0, 'main.js builds env from the browser');
+});
+
+test('no module holds state: no top-level let/var or unfrozen containers, and every export is a function, a ' +
+  'primitive or deeply frozen', async () => {
+  const deepFrozen = (v, seen = new Set()) => {
+    if (v === null || typeof v !== 'object' || seen.has(v)) return true;
+    seen.add(v);
+    return Object.isFrozen(v) && Object.values(v).every((w) => deepFrozen(w, seen));
+  };
+  for (const f of listJs('src')) {
+    const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.deepEqual(moduleState(src), [], `${f} holds module-level state`);
+    if (f === ENTRY) continue; // runs the game on import, in a browser
+    const mod = await import(pathToFileURL(path.join(ROOT, f)).href);
+    for (const [name, v] of Object.entries(mod))
+      assert.ok(typeof v === 'function' || deepFrozen(v), `${f} exports ${name}, which is mutable`);
+  }
 });

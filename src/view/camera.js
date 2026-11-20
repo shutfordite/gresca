@@ -91,7 +91,8 @@ export function followRider(camera, terrain, hanga, pose, rider, renderW, render
  const gR = terrain.height(x, y);
  const ahead = (gR - terrain.height(x + dx * SLOPE_AHEAD_M, y + dy * SLOPE_AHEAD_M)) / SLOPE_AHEAD_M;
  camera.slope += (Math.max(SLOPE_MIN, Math.min(SLOPE_MAX, ahead)) - camera.slope) * Math.min(1, dt * SLOPE_RATE);
- const wantH = Math.max(gR + CAM_HEIGHT + camera.slope * CAM_BACK + jz * JUMP_FOLLOW, terrain.height(px, py) + MIN_CLEARANCE_M);
+ const overRider = gR + CAM_HEIGHT + camera.slope * CAM_BACK + jz * JUMP_FOLLOW;
+ const wantH = Math.max(overRider, terrain.height(px, py) + MIN_CLEARANCE_M);
  camera.height += (wantH - camera.height) * Math.min(1, dt * HEIGHT_RATE);
  const hz = renderH * HORIZON_FRAC;
  const sc = renderH * FOCAL_FRAC;

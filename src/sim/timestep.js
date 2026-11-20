@@ -8,7 +8,7 @@ import { SIM_DT, SIM_MAX, SIM_EPS } from '../core/config.js';
 import { step } from './step.js';
 import { stepParticles } from './particles.js';
 
-/** A new timestep state: acc (s of real time not yet simulated), fromX, fromY, fromZ (m, the rider before the latest step). */
+/** A new timestep: acc (s not yet simulated), fromX, fromY, fromZ (m, the rider before the latest step). */
 export function createTimestep() {
  return { acc: 0, fromX: 0, fromY: 0, fromZ: 0 };
 }
@@ -47,6 +47,8 @@ export function advance(sim, timestep, dt) {
   if (session.phase !== 'run' || timestep.acc >= SIM_DT) timestep.acc = 0;
   timestep.acc = Math.max(0, timestep.acc);
   if (session.phase === 'run') alpha = timestep.acc / SIM_DT;
- } else timestep.acc = 0;
+ } else {
+  timestep.acc = 0;
+ }
  return alpha;
 }
