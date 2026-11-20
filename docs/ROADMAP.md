@@ -63,11 +63,15 @@ S3 meet through `Look.rider.project`. All of these are fixed in B2b, B2c and P4.
 - **The Playwright ADR becomes 0003**, because 0002 records the ES modules and `createGame(env)` convention from B2a.
 - **The status table moves to `docs/STATUS.md` in P1**, after B2a (which edits `ARCHITECTURE.md`), so the two don't conflict.
 
-## Decisions needed
-1. Flip controls: drag up and down in the air (recommended), or another scheme?
-2. Brake direction: toward the side the equipment already points (recommended), or always heel-side for a board?
-3. Who updates the art spec to v1.4 (twist, head yaw, new poses)?
-4. Is Playwright OK as a dev-only dependency for screenshots (ADR 0003)?
-5. Is a code freeze OK for B2b, B2c and C2, one PR at a time?
-6. Repo docs canonical, project docs as pointers? (Recommended.)
-7. Later, from C4 onwards: may the game fetch map data at runtime (D0 in `docs/REAL-WORLD-DATA.md`)?
+## Decisions (owner, 20 Nov)
+1. **Flips:** in the air, drag up = front flip and drag down = backflip, on **either** half of the screen (left or
+   right). Holding keeps rotating; flips combine with left and right spins. Keyboard: Up/W and Down/S in the air.
+2. **Brake direction:** the equipment turns toward the side it already points.
+3. **Art spec v1.4** (body twist, head yaw with the face vector, brake, switch-ski and flip-tuck poses, camera pitch
+   for the rider): written by an agent in `art/`, additive and backward compatible, recorded in `docs/art/`.
+   The design canvas copy of the spec is synced afterwards.
+4. **Playwright** as a dev-only dependency for screenshots: yes by default (ADR 0003). It runs only in tests and CI
+   and never ships to players.
+5. **Code freeze** for B2b, B2c and C2: yes.
+6. **Repo docs are canonical**; the project docs point to them.
+7. Still open, from C4 onwards: may the game fetch map data at runtime (D0 in `docs/REAL-WORLD-DATA.md`)?
