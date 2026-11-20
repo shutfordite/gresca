@@ -35,7 +35,9 @@ merges PRs, and makes product decisions.
 Launch it in the background, and include:
 - **Setup:** the worktree command, branch name, and the base (`origin/main`, or the branch it depends on, with the
   PR opened as a draft).
-- **Read first:** `AGENTS.md`, plus the exact doc sections for the package (not whole docs).
+- **Read first:** `AGENTS.md` (loaded already through `CLAUDE.md`), `docs/STYLE.md` if it writes code, plus the exact
+  doc sections for the package as line ranges (not whole docs).
+- **Model:** Sonnet unless the package settles a shared contract, frame or interface.
 - **Goal:** one sentence. **Do:** numbered, concrete steps, including which files may change.
 - **Constraints:** no weakened assertions; which test changes are allowed; behaviour changes listed and measured;
   layering (`world/` and `sim/` pure, `view/` read-only on the sim, only `main.js` reads globals); no module-level state.
@@ -67,5 +69,13 @@ Launch it in the background, and include:
 - Existing bugs found in review get their own small PR, with a test that fails on `main`.
 - Product questions go to the owner with a recommendation. Pure engineering choices you make yourself, with the
   reasons recorded (in the review, `docs/ROADMAP.md` or an ADR).
-- Keep tokens low: no full-file reads when a `grep` or `sed -n` range will do, short reports from agents, and no
-  repeating long docs back to the owner.
+- Keep tokens low (the rules agents follow are in `AGENTS.md`, "Token budget"):
+  - No full-file reads when a `grep` or `sed -n` range will do. For the art spec, `node tools/outline.mjs <file> 2`.
+  - Use the quiet `npm test`; rerun one file verbosely only to debug it.
+  - Pick the cheapest agent that can do the job: Sonnet for implementation packages, Haiku or the read-only
+    Explore agent for searches, Opus for the coordinator, reviews and contract or frame decisions.
+  - Screenshots cost about 1.5k tokens each: at most two per check (`smoke.cjs` takes them at scale 1), none for
+    no-behaviour-change refactors whose proof is a trace or a digest.
+  - Short reports from agents (set a word limit in the brief) and no repeating long docs back to the owner.
+  - One thread per package: when a package is merged, update `docs/STATUS.md` and start the next one in a new
+    thread ("continue from docs/STATUS.md") instead of carrying the old context along.
