@@ -2,7 +2,10 @@
   "name": "gresca",
   "version": "0.1.0",
   "private": true,
-  "description": "A fan-made freestyle ski and snowboard game for the browser, with tests that run the real game script in Node",
+  "engines": {
+    "node": ">=22.8"
+  },
+  "description": "A fan-made freestyle ski and snowboard game for the browser, with tests that run the real game scripts in Node",
   "scripts": {
     "test": "node --test test/*.test.js"
   }

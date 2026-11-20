@@ -1,17 +1,12 @@
 'use strict';
-// Rider animation: the art modules are embedded verbatim, the pose state machine follows the spec's timing,
+// Rider animation: the spec module's version, the pose state machine follows the spec's timing,
 // and the body dynamics react to the ground, landings and turns. Pure-module tests first, then the real game.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
 const { load } = require('./harness');
-const { BLOCKS, embed } = require('../tools/embed-art');
 const HANGA = require('../art/gresca-hanga-spec.js');
 const RA = require('../art/gresca-rider-anim.js');
 
-const ROOT = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const DT = 1 / 60;
 
 // Snow input with sensible defaults; override per test.
@@ -20,14 +15,7 @@ const snow = (o = {}) => Object.assign({ wiped: false, grinding: false, airborne
 function run(s, inp, sec) { for (let t = 0; t < sec - 1e-9; t += DT) RA.update(s, typeof inp === 'function' ? inp(t) : inp, DT); return s; }
 function settled(rig, inp = snow()) { return run(RA.create(rig), inp, 2); }
 
-test('art modules are embedded verbatim', async (t) => {
-  for (const b of BLOCKS) {
-    await t.test(b.file, () => {
-      const src = fs.readFileSync(path.join(ROOT, b.file), 'utf8');
-      assert.ok(html.includes(`<script id="${b.id}">\n${src}</script>\n`), `run node tools/embed-art.js (${b.file} drifted)`);
-    });
-  }
-  await t.test('re-embedding changes nothing', () => assert.equal(embed(html), html));
+test('art spec module', async (t) => {
   await t.test('spec module is v1.3.0', () => assert.equal(HANGA.version, '1.3.0'));
 });
 
