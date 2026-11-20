@@ -2206,7 +2206,7 @@ var HANGA = {
   "rotations": {
    "units": "degrees",
    "sign": "Yaw-type angles (twistDeg, headYawDeg) are clockwise seen from above, the same sense as compass headings and as projectRider's yaw: + turns toward the rider's right (+x in rider space).",
-   "order": "projectRider builds the pose joints (with the goofy mirror), then turns the lower body by twist about the vertical axis through the rider-space origin, turns the head and face vector by head yaw about the vertical axis through the neck, then pitches the whole rider by bodyPitch about the across axis (x) through hipC. After that comes the v1.3 projection: pose roll plus rollExtra, lift, yaw, camera pitch.",
+   "order": "projectRider builds the pose joints (with the goofy mirror), then turns the lower body by twist about the vertical axis through the rider-space origin, turns the head and face vector by head yaw about the vertical axis through the neck, then flips the whole rider by bodyPitch about the rider's own left-right axis through hipC (bodyPitch.axis). After that comes the v1.3 projection: pose roll plus rollExtra, lift, yaw, camera pitch.",
    "twist": {
     "lower": {
      "ski": [
@@ -2259,8 +2259,12 @@ var HANGA = {
     "note": "F7: riding ski switch, look 80 to 100 deg over the downhill-side shoulder (+ for the right shoulder)."
    },
    "bodyPitch": {
-    "pivot": "The across axis (rider-space x) through the posed hipC.",
-    "meaning": "Flip rotation of the whole rider, equipment included. + is a front flip (the head goes toward rider-space +z, the heading), - a backflip. For the board, x is across the board, so this is a nose-over-tail flip; a flip about the board's long axis is roll (rollExtra).",
+    "pivot": "The rider's own left-right axis through the posed hipC, as in a somersault (axis).",
+    "axis": {
+     "ski": "x",
+     "board": "z"
+    },
+    "meaning": "Flip rotation of the whole rider, equipment included. + is a front flip (chest and face first), - a backflip (back first). Skis: about rider-space x, the head goes toward +z (the heading). Board: the rider stands sideways, so the axis is the board's long axis (rider-space z) and the head goes toward +x, the toe edge and chest. Goofy riders also face +x, so the sign is the same in both stances.",
     "wrap": "Taken modulo 360, so 360 draws exactly like 0.",
   "equipInFront": {
    "fromDeg": 45,
@@ -5878,6 +5882,17 @@ function turnAbout(p, deg, px, pz) {
   return [px + x * c + z * s, p[1], pz - x * s + z * c];
 }
 
+/* Board flips: rolls p about the board's long axis (z) through (px, py) by deg; + moves points above the pivot toward
+   +x (the toe edge and chest). New array. */
+function rollAbout(p, deg, px, py) {
+  const a = deg * D2R;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const x = p[0] - px;
+  const y = p[1] - py;
+  return [px + x * c + y * s, py - x * s + y * c, p[2]];
+}
+
 /* Pitches p about the across axis (x) through (py, pz) by deg; + moves points above the pivot toward +z. New array. */
 function pitchAbout(p, deg, py, pz) {
   const a = deg * D2R;
@@ -5904,7 +5919,8 @@ function riderRotations(J, stance, rig, twistDeg, headYawDeg, bodyPitchDeg) {
     let q = p;
     if (group === 'lower' && twist !== 0) q = turnAbout(q, twist, 0, 0);
     if (group === 'head' && headYaw !== 0) q = turnAbout(q, headYaw, neck[0], neck[2]);
-    if (pitch !== 0) q = pitchAbout(q, pitch, hip[1], hip[2]);
+    if (pitch !== 0 && rig === 'board') q = rollAbout(q, pitch, hip[0], hip[1]);
+    else if (pitch !== 0) q = pitchAbout(q, pitch, hip[1], hip[2]);
     return q;
   };
 }
@@ -5940,7 +5956,8 @@ function optionOr(options, key, fallback) {
  *   twistDeg        lower body and equipment turned relative to the upper body, + clockwise from above; replaces
  *                   the pose's twistDeg. With a twist, yaw is the upper body's heading
  *   headYawDeg      head (and face vector, so the goggles) turned relative to the shoulders; replaces the pose's
- *   bodyPitchDeg    flip angle about the rider's across axis through hipC, + = front flip; modulo 360
+ *   bodyPitchDeg    flip angle about the rider's own left-right axis through hipC (skis: x; board: the board's
+ *                   long axis z), + = front flip (chest first); modulo 360
  * }
  * Without options (or with zero angles and cameraPitchDeg = pitch) the result is exactly the v1.3 one.
  * Returns the draw list, back to front. pts are screen metres with +y up and the origin at the feet's ground point.

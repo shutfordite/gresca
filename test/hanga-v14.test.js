@@ -252,19 +252,32 @@ test('body pitch flips the whole rider', async (t) => {
       }
     });
   }
-  await t.test('+ is a front flip: at 90 the head goes toward the heading (away from a chase camera)', () => {
-    for (const rig of RIGS) {
-      const head = byId(project(rig, 'air', 0, 'regular', { bodyPitchDeg: 90 }), 'head');
-      const torso = byId(project(rig, 'air', 0, 'regular'), 'torso');
-      assert.ok(head.depth > torso.depth + 0.4, `${rig}: the head is farther from the camera`);
+  await t.test('ski: + is a front flip, at 90 the head goes toward the heading (away from a chase camera)', () => {
+    const head = byId(project('ski', 'air', 0, 'regular', { bodyPitchDeg: 90 }), 'head');
+    const torso = byId(project('ski', 'air', 0, 'regular'), 'torso');
+    assert.ok(head.depth > torso.depth + 0.4, 'the head is farther from the camera');
+  });
+  await t.test('board: flips about the board\'s long axis, + toward the toe edge, in both stances', () => {
+    // Yaw 90 turns the toe side (+x) toward the camera; the board's long axis then runs across the screen.
+    for (const stance of STANCES) {
+      const flipped = project('board', 'air', 90, stance, { bodyPitchDeg: 90 });
+      const upright = project('board', 'air', 90, stance);
+      assert.ok(byId(flipped, 'head').depth < byId(upright, 'torso').depth - 0.4, `${stance}: head toward the toe side`);
+      const back = project('board', 'air', 90, stance, { bodyPitchDeg: -90 });
+      assert.ok(byId(back, 'head').depth > byId(upright, 'torso').depth + 0.4, `${stance}: backflip toward the heels`);
+      // The nose and tail stay where they were along the board's long axis (screen x at yaw 90).
+      const ends = (list) => byId(list, 'board').shapes[1].pts.map((p) => p[0]);
+      const span = (xs) => Math.max(...xs) - Math.min(...xs);
+      close(span(ends(flipped)), span(ends(upright)), `${stance}: board length on screen unchanged`);
     }
   });
   await t.test('the shadow does not pitch', () => {
     assert.deepEqual(project('ski', 'tuck', 30, 'regular', { bodyPitchDeg: 123 })[0], project('ski', 'tuck', 30, 'regular')[0]);
   });
   await t.test('mid-flip, equipment nearer the camera than the torso is drawn over the body', () => {
-    for (const rig of RIGS) {
-      const list = project(rig, 'tuck', 0, 'regular', { bodyPitchDeg: 90 });
+    // Skis seen from behind in a front flip; a board seen from its toe side in a backflip: the feet come toward the camera.
+    for (const [rig, yaw, bodyPitchDeg] of [['ski', 0, 90], ['board', 90, -90]]) {
+      const list = project(rig, 'tuck', yaw, 'regular', { bodyPitchDeg });
       assert.equal(list[list.length - 1].kind, 'equip', `${rig}: equipment last`);
       assert.ok(list.every((it) => numbers(it).every(Number.isFinite)));
     }

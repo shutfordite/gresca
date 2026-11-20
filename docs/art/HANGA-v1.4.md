@@ -14,7 +14,7 @@ it is now out of date and must be copied again from the repo before anyone desig
 | **F5** braking turns the equipment, not the rider | There was no way to turn the skis or board without turning the whole body. | `options.twistDeg` turns the lower body and equipment relative to the upper body. New brake poses: ski `brakeL` / `brakeR` (hockey stop) and board `brakeHeel` / `brakeToe` (skid stops). |
 | **F6** natural movement | Edge-driven lean and unweighting belong in RiderAnim. | No new pose. `rider.rotations.lean` sets out the conventions for twist, lean and unweighting that RiderAnim should follow. |
 | **F7** ski fakie | The face vector was fixed, so the head could not look over a shoulder. | `options.headYawDeg` turns the head **and the face vector**, so the goggles move with it. New poses `switchL` / `switchR`: shoulders open 35°, head 90° over that shoulder, weight on the tails. |
-| **F3** flips | There was no tuck and no way to pitch the rider. | `options.bodyPitchDeg` pitches the whole rider about its across axis. New `tuck` pose for both rigs (knees to the chest, hands on the shins). |
+| **F3** flips | There was no tuck and no way to pitch the rider. | `options.bodyPitchDeg` flips the whole rider about its own left–right axis (owner decision: skis about x, the board about its long axis). New `tuck` pose for both rigs (knees to the chest, hands on the shins). |
 
 ## API
 
@@ -31,7 +31,7 @@ not given. The data is in `HANGA.rider.rotations`.
 | `cameraPitchDeg` | How far the camera looks down at the rider below the horizontal, + = down. Pass the pitch the terrain is drawn with this frame, slope tilt included. Replaces the positional `pitch`. | `pitch`, or else `camera.chasePitchDeg` (20) |
 | `twistDeg` | How far the lower body and equipment are turned relative to the upper body. + is clockwise seen from above (toward the rider's right). Pivot: the vertical axis through the feet's ground point. With a twist, `yaw` is the heading of the upper body and the equipment heading is `yaw + twist`. | the pose's `twistDeg`, or else 0 |
 | `headYawDeg` | How far the head is turned relative to the shoulders, with the same sign as twist. Pivot: the vertical axis through the neck. The face vector turns too, so the goggles or strap follow it. | the pose's `headYawDeg`, or else 0 |
-| `bodyPitchDeg` | Flip angle about the rider-space across axis (x) through `hipC`. + is a front flip (the head moves toward the heading), − a backflip. Taken modulo 360. Equipment is included; the shadow is not. | 0 |
+| `bodyPitchDeg` | Flip angle about the rider's own left–right axis through `hipC`, as in a somersault. + is a front flip (chest and face first), − a backflip. Skis: rider-space x, so the head moves toward the heading. Board: the rider stands sideways, so the axis is the board's long axis (rider-space z) and + rolls toward the toe edge. Taken modulo 360. Equipment is included; the shadow is not. | 0 |
 
 - **Options replace pose values; they do not add to them.** A brake or switch pose has its own twist and head yaw
   for when nothing else gives one. When the game gives its own values (for example the twist the simulation
@@ -40,8 +40,8 @@ not given. The data is in `HANGA.rider.rotations`.
   board it is the ankles, knees, `hipF`/`hipB`, `tail` and `nose`. `hipC`, the torso, arms, gloves, poles and head stay
   with the upper body.
 - **Goofy:** twist and head yaw are given in the regular-stance frame and mirrored with the joints, so a value means the
-  same thing relative to the board's nose in either stance. Body pitch is applied after the mirror, so + is always a
-  front flip toward the heading.
+  same thing relative to the board's nose in either stance. Body pitch is applied after the mirror; a goofy rider also
+  faces +x, so + is a front flip (toward the toe edge on a board) in both stances.
 - **Order:** pose joints (with the goofy mirror), then twist, then head yaw, then body pitch, then the v1.3 projection
   (roll + rollExtra, lift, yaw, camera pitch). Equipment shape offsets (v across, h up) are added before twist and
   pitch, so skis and the board keep their shape when they turn or flip.
