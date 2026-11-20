@@ -247,6 +247,18 @@ describe('snow look', () => {
     })();
     assert.ok(braked < 0.9, 'braking should cut a deeper groove');
   });
+
+  it('does not keep darkening a cell the rider stays over (no black tracks at low speed)', () => {
+    // Crawling at 0.3 m/s the rider spends over 3 s on each 1 m cell: hundreds of steps.
+    g.place({ vy: 0.3 });
+    g.input({ brake: 1 });
+    g.sim(2);
+    const s = st();
+    for (let dy = -2; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const c = D.colourAt(s.x + dx, s.y + dy), b = D.baseColourAt(s.x + dx, s.y + dy);
+      for (let k = 0; k < 3; k++) assert.ok(c[k] >= Math.floor(b[k] * 0.8) - 1, `cell ${dx},${dy} channel ${k}: ${c[k]} vs base ${b[k]}`);
+    }
+  });
 });
 
 describe('spray particles', () => {
