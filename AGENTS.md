@@ -14,7 +14,9 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
   what to try in the preview (for example "jump the second big kicker and land switch").
 
 ## Files
-- `art/gresca-hanga-spec.js` belongs to the art spec. Change it only to sync a new spec version, byte for byte.
+- `art/gresca-hanga-spec.js` is the art spec, authored in this repo (since v1.4.0). Change it only as a new spec
+  version: bump `version` and the header, keep changes additive (old calls give exactly the old result, checked
+  against the previous version kept in `test/fixtures/`), and document them in `docs/art/HANGA-v<version>.md`.
 - `index.html` is only HTML: its CSS is in `styles/*.css`, linked with `<link rel="stylesheet">` (no inline
   `<style>`). It loads `art/*.js` as classic `<script src>` tags, then the game as one ES
   module, `<script type="module" src="src/main.js">`. Every other file in `src/` is reached from `main.js` through

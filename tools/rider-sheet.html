@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- Rider contact sheet: every Hanga pose for both rigs, drawn with the game's own drawRider (src/view/rider-draw.js).
+     Serve the repo root over http (for example `python3 -m http.server`) and open /tools/rider-sheet.html.
+     ?sheet=poses (default) | head | pitch | brake. Not loaded by the game. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gresca rider contact sheet</title>
+<link rel="stylesheet" href="rider-sheet.css">
+</head>
+<body>
+<canvas id="sheet"></canvas>
+<script src="../art/gresca-hanga-spec.js"></script>
+<script type="module" src="rider-sheet.js"></script>
+</body>
+</html>
