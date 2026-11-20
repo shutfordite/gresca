@@ -1,8 +1,8 @@
 # src/view: drawing the game (stream S4; the rider files are S3)
 
 - Read-only on the sim: `view/` reads `rider`, `session` and `world` and never writes them.
-- The camera is advanced in the loop, not in `draw()`. `draw.js` still calls `followRider()`: that is
-  `TODO(B2b)`; don't add more state changes inside draw.
+- The camera is advanced in the loop (`updateCamera()`, called from `app.js` before `draw()`), never inside `draw()`.
+- Ski tracks are the view's (`ski-tracks.js`), marked from RiderState after each sim step (a bus step hook).
 - Colours and sizes come from `HANGA` palette roles and values (passed in as `env.HANGA`), never copied hex or
   numbers. Some hex is still hard-coded in `sprites.js`; P4 moves it into the Look.
 - No per-frame allocations in the raycast, tree or sprite loops: reuse the buffers in `view-state.js`.

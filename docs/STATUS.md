@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 20 Nov 2026, main after PR #22.
+Updated 20 Nov 2026, main after PR #23.
 
 ## Done
 | Package | PR |
@@ -19,19 +19,20 @@ Updated 20 Nov 2026, main after PR #22.
 | Art spec v1.4: twist, head yaw, body pitch (board flips about its long axis), camera pitch, brake/switch/tuck poses; additive, unused by the game until S3/S4 | #18 |
 | Coordinator skill (`.claude/skills/gresca-architect`) and this file | #20 |
 | P0 token budget: quiet `npm test`, `tools/outline.mjs`, `docs/STYLE.md`, token rules | #22 |
+| P1 docs: code map and stream ownership in `AGENTS.md`, per-folder `AGENTS.md` in `src/sim`, `src/view`, `art` | #23 |
 
 ## Open PRs
-- **P1 docs** (`docs/p1-code-map`): code map and stream ownership table in `AGENTS.md`; short `AGENTS.md` (loaded
-  through a one-line `CLAUDE.md`) in `src/sim`, `src/view` and `art`.
+- **B2b state contracts and events** (`refactor/b2b-contracts-events`, PR #24): `core/contracts.js` (InputState,
+  RiderState, SimEvent with the stream fields pre-added), `step(state, input, world, dt) -> events` on a bus made by
+  `createGame`; finish screen and popup are `ui/` subscribers, ski tracks are the view's, the camera moves in the
+  loop; `Gresca.sim()` runs `simTick()`; input recorded per step (`Gresca.record/replay`); façade split per area;
+  `Gresca.events`.
 
 ## Next, in order (the freeze: one code PR at a time)
-1. **B2b state contracts and events:** see the roadmap, phase 1 row 3. Pre-add the fields the streams need.
-   Also: `Gresca.sim()` uses the loop's `simTick()`; record input per sim step; split the façade so each area
-   registers its own fields; resolve the four `TODO(B2b)` markers in `src/`.
-2. **B2c world seams:** the `Course` interface (procedural implementation first), the fall line, `sim/anim-input.js`,
+1. **B2c world seams:** the `Course` interface (procedural implementation first), the fall line, `sim/anim-input.js`,
    and a ban on "+y is downhill".
-3. **C2 ENU frame**, proven by the whole suite passing on a rotated procedural map.
-4. Then phase 2 (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map compiler)
+2. **C2 ENU frame**, proven by the whole suite passing on a rotated procedural map.
+3. Then phase 2 (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map compiler)
    and the five streams. All are in `docs/ROADMAP.md`.
 
 ## Known issues (not yet fixed)

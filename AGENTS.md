@@ -23,9 +23,10 @@ definitions: `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3. 
   `<style>`). It loads `art/*.js` as classic `<script src>` tags, then the game as one ES
   module, `<script type="module" src="src/main.js">`. Every other file in `src/` is reached from `main.js` through
   static imports (`test/page.test.js` checks there are no orphans).
-- `src/` is laid out by layer: `core/` (tunables, RNG), `world/` (terrain, course, build), `sim/` (rider state,
-  step, jump, grind, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites, rider, sky), `ui/` (HUD,
-  menu), `app.js` (`createGame(env)`: state objects, wiring, loop), `debug.js` (the façade), `main.js` (entry).
+- `src/` is laid out by layer: `core/` (tunables, RNG, contracts, event bus), `world/` (terrain, course, build),
+  `sim/` (rider state, step, jump, grind, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites,
+  rider, sky, ski tracks), `ui/` (HUD, menu), `app.js` (`createGame(env)`: state objects, wiring, loop), `debug.js`
+  (the façade; each area adds its fields in its own `fields.js`), `main.js` (entry).
   The full list is in `docs/ARCHITECTURE.md` section 4.
 - **No module-level mutable state** (ADR 0002). Modules export functions and frozen constants only. All state lives
   in objects that `createGame(env)` makes; put new state there and pass it in.
@@ -44,28 +45,31 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 |---|---|---|
 | Tunables (speeds, grip, camera distances, render size) | `src/core/config.js` | `physics`, `camera`, `sim` |
 | Seeded randomness | `src/core/rng.js` | `sim`, `timestep` |
+| Contracts: InputState, RiderState, SimEvent | `src/core/contracts.js` (its own PR in phase 3) | `contracts`, `events` |
+| Event bus, input recording | `src/core/events.js`, `src/core/input-log.js` | `contracts`, `events` |
 | Terrain heights, layers, sampling | `src/world/terrain.js`, `noise.js` | `terrain`, `build` |
 | Course: centreline, finish, kickers, rails | `src/world/course.js` | `sim`, `park`, `physics` |
 | Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
-| Riding physics: steer, grip, brake, trees, finish | `src/sim/step.js` | `physics`, `sim` |
+| Riding physics: steer, grip, brake, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
 | Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
 | Rails and boxes | `src/sim/grind.js` | `park`, `sim` |
 | Snow spray | `src/sim/particles.js` | `features`, `sim` |
 | Fixed timestep and interpolation | `src/sim/timestep.js` | `timestep`, `facade` |
-| Rider and session state fields | `src/sim/state.js` (+ `src/debug.js` to expose them) | `facade`, `sim` |
-| Touch and key controls | `src/input/input.js` (logic), `bind-input.js` (DOM) | `features`, `sim`, `facade` |
+| Rider and session state fields | `src/sim/state.js` (+ `src/sim/fields.js` to expose them) | `facade`, `sim` |
+| Touch and key controls | `src/input/input.js` (logic), `bind-input.js` (DOM) | `features`, `sim`, `contracts` |
 | Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
+| Ski tracks | `src/view/ski-tracks.js` | `features`, `games` |
 | Snow, rock, park colours (until D2) | `src/view/colour-map.js` | `features`, `build` |
 | Sky, sun, fog | `src/view/sky.js` | `look` |
 | Flags, poles, rails on screen | `src/view/sprites.js` | `park` |
 | Rider pose and body motion | `art/gresca-rider-anim.js`, `src/view/rider-animation.js` | `rider-anim` |
 | Drawing the rider | `src/view/rider-draw.js` | `rider-anim` |
 | Rider shapes, poses, palette (spec) | `art/gresca-hanga-spec.js` (new version only) | `hanga-v14` |
-| HUD, popup, minimap | `src/ui/hud.js`, `styles/hud.css` | `facade`, `features` |
-| Menu, rig and stance picker | `src/ui/menu.js`, `styles/menu.css`, `index.html` | `park`, `page` |
+| HUD, popup, minimap | `src/ui/hud.js`, `styles/hud.css` | `facade`, `features`, `events` |
+| Menu, rig and stance picker, finish screen | `src/ui/menu.js`, `styles/menu.css`, `index.html` | `park`, `page`, `events` |
 | State wiring, boot, frame loop | `src/app.js` | `games`, `facade`, `timestep` |
-| What tests can read and set | `src/debug.js` | `facade` |
+| What tests can read and set | each area's `fields.js` (`sim/`, `view/`, `ui/`, `input/`, `world/`); `src/debug.js` composes them | `facade` |
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
 
 Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.

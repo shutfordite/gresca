@@ -5,9 +5,9 @@
 - Deterministic: randomness only through `rnd(rng)` (`core/rng.js`), time only through the `dt` the fixed
   120 Hz step (`timestep.js`) passes in. No `Math.random()`, `Date` or `performance`.
 - State lives in the objects `state.js` makes (`createRider()`, `createSession()`); add new fields there with a unit
-  comment, and expose them in `src/debug.js` if tests need them. No module-level state.
-- Talk outwards through returned events (from B2b), not by writing the DOM or the view. Today `step.js` still
-  writes the finish screen and paints ski tracks: both are `TODO(B2b)`; don't add more of that.
+  comment, and expose them in `src/sim/fields.js` if tests need them. No module-level state.
+- Talk outwards only through the SimEvents `step()` returns (`core/contracts.js`, pushed with `pushEvent()`) and the
+  RiderState it leaves; `ui/` and `view/` subscribe on the bus (`core/events.js`). Never write the DOM, ui or view.
 - No new "+y is downhill": ask the terrain (`terrain.gradient`) and the course. The heading clamp (`CARVE_LIMIT` in `step.js`)
   goes in F6.
 - Tunables go in `core/config.js` (later `sim/tuning.js`), each with its unit.

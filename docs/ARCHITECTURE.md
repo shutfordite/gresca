@@ -89,39 +89,52 @@ The terrain is a voxel-style column raycaster (152 samples × up to 360 columns,
 
 A static site with no build step and no runtime dependencies (ADR 0001): `index.html` loads `art/` as classic scripts and then one ES module, `src/main.js`, and (from C4) fetches `maps/`. Since B2a every file in `src/` is a native ES module with no state of its own: `createGame(env)` makes all of a game's state objects, and `env` carries everything from the browser (ADR 0002).
 
-The layout as it is after B2a (files to come in later packages are marked):
+The layout as it is after B2b (files to come in later packages are marked):
 
 ```
 src/
   main.js        entry: builds env from the browser (document, window, localStorage, rAF, setTimeout, pixel ratio,
                  HANGA, RiderAnim) and calls createGame(env). The only file that reads browser globals.
   app.js         createGame(env): makes the state objects, wires the modules, the boot and the frame loop
-  debug.js       the window.Gresca test and debug façade over one game's objects
+  debug.js       the window.Gresca test and debug façade: composes each area's fields.js, adds the actions,
+                 Gresca.events (the SimEvent log) and record / recording / replay (input per sim step)
   package.json   {"type": "module"} so Node loads src/*.js as ES modules (the browser ignores it)
   core/          config.js (tunables, units in comments), rng.js (seeded mulberry32 on an {seed, state} object)
-                 later: math.js, events.js (B2b)
+                 contracts.js  InputState, RiderState, SimEvent: typedefs, field lists, validators (B2b)
+                 events.js     the event bus: SimEvent subscribers by type, per-step hooks
+                 input-log.js  input recorded per sim step, for exact replays
+                 facade-fields.js  how an area registers its façade fields
+                 later: math.js
   world/         terrain.js   Terrain interface, layer stack, bicubic grid (B3)
                  course.js    the procedural course: map size, centreline cx(), finish, kickers, rails (C1: polyline)
                  noise.js     value noise, fbm, row-wise fbm
                  build.js     createWorld() (grids, trees, terrain) and buildWorld() (fills them)
+                 fields.js    Gresca.world
                  later: trees.js, maps/procedural.js, maps/loader.js (C3, C4)
-  sim/           state.js     createRider(), createSession()
-                 step.js      step(sim, dt): steering, gravity, grip, friction, braking, trees, finish
+  sim/           state.js     createRider() (RiderState), createSession() (with the step's events), pushEvent()
+                 step.js      step(state, input, world, dt) -> SimEvents: steering, gravity, grip, friction,
+                              braking, trees, finish
                  jump.js      take-off, flight, landing, crash and air scoring
                  grind.js     rails and boxes
                  particles.js snow spray on a {particles, rng} object
-                 timestep.js  fixed 120 Hz accumulator, simTick, interpolation start
-                 later: rules.js and events (B2b)
+                 timestep.js  fixed 120 Hz accumulator; simTick: record input, step, spray, publish events
+                 fields.js    the rider and session in Gresca.state() / set()
+                 later: rules.js, anim-input.js (B2c)
   input/         input.js       InputState from pointers and keys (pure)
                  bind-input.js  the DOM event listeners for it
+                 fields.js      Gresca.state().input
   view/          view-state.js  createView(): screen size, render buffers, colour map, drawn pose, animation
                  camera.js      camera state, followRider(), cameraTilt(), camCompass()
-                 draw.js        draw(): terrain raycast, trees, spray, rider; riderPose()
+                 draw.js        updateCamera() (the loop calls it before drawing), draw(): terrain raycast,
+                                trees, spray, rider; riderPose()
+                 ski-tracks.js  the track buffer (the live colour map), marked after each sim step
                  sky.js         sky gradient, sun disc, fog
                  sprites.js     project(), flags, rails
                  colour-map.js  paints the colour map from the built world (D2 removes it)
                  rider-animation.js, rider-draw.js  RiderAnim glue and the Hanga rider
-  ui/            dom.js (the page's elements), hud.js, menu.js (rig picker, stance, menu text)
+                 fields.js      the camera in Gresca.state(), and Gresca.debug
+  ui/            dom.js (the page's elements), hud.js (HUD; the popup subscribes to score events),
+                 menu.js (rig picker, stance, menu text; the finish screen subscribes to finish), fields.js (popup)
 art/             unchanged (HANGA, RiderAnim), UMD classic scripts
 styles/          base.css, hud.css, menu.css (index.html links them; no inline CSS)
 maps/            later: el-tarter.json (gresca-map-1)
