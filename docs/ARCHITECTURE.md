@@ -89,7 +89,7 @@ The terrain is a voxel-style column raycaster (152 samples × up to 360 columns,
 
 A static site with no build step and no runtime dependencies (ADR 0001): `index.html` loads `art/` as classic scripts and then one ES module, `src/main.js`, and (from C4) fetches `maps/`. Since B2a every file in `src/` is a native ES module with no state of its own: `createGame(env)` makes all of a game's state objects, and `env` carries everything from the browser (ADR 0002).
 
-The layout as it is after B2b (files to come in later packages are marked):
+The layout as it is after B2c (files to come in later packages are marked):
 
 ```
 src/
@@ -100,16 +100,18 @@ src/
                  Gresca.events (the SimEvent log) and record / recording / replay (input per sim step)
   package.json   {"type": "module"} so Node loads src/*.js as ES modules (the browser ignores it)
   core/          config.js (tunables, units in comments), rng.js (seeded mulberry32 on an {seed, state} object)
-                 contracts.js  InputState, RiderState, SimEvent: typedefs, field lists, validators (B2b)
+                 contracts.js  InputState, RiderState, SimEvent (B2b), Course and AnimInput (B2c): typedefs, field
+                               lists, validators
                  events.js     the event bus: SimEvent subscribers by type, per-step hooks
                  input-log.js  input recorded per sim step, for exact replays
                  facade-fields.js  how an area registers its façade fields
                  later: math.js
   world/         terrain.js   Terrain interface, layer stack, bicubic grid (B3)
-                 course.js    the procedural course: map size, centreline cx(), finish, kickers, rails (C1: polyline)
+                 course.js    the procedural course: map size, centreline cx(), finish, kickers, rails, and
+                              createProceduralCourse(terrain), its Course (s = y, d = x - cx(y); C1: polyline)
                  noise.js     value noise, fbm, row-wise fbm
-                 build.js     createWorld() (grids, trees, terrain) and buildWorld() (fills them)
-                 fields.js    Gresca.world
+                 build.js     createWorld() (grids, trees, terrain, course) and buildWorld() (fills them)
+                 fields.js    Gresca.world (and Gresca.world.course)
                  later: trees.js, maps/procedural.js, maps/loader.js (C3, C4)
   sim/           state.js     createRider() (RiderState), createSession() (with the step's events), pushEvent()
                  step.js      step(state, input, world, dt) -> SimEvents: steering, gravity, grip, friction,
@@ -118,8 +120,9 @@ src/
                  grind.js     rails and boxes
                  particles.js snow spray on a {particles, rng} object
                  timestep.js  fixed 120 Hz accumulator; simTick: record input, step, spray, publish events
+                 anim-input.js  animInput(rider, session, course, out): AnimInput for the rider animation
                  fields.js    the rider and session in Gresca.state() / set()
-                 later: rules.js, anim-input.js (B2c)
+                 later: rules.js
   input/         input.js       InputState from pointers and keys (pure)
                  bind-input.js  the DOM event listeners for it
                  fields.js      Gresca.state().input
@@ -150,9 +153,9 @@ Rules the layers keep:
 - `sim` talks outwards only through returned events (`land`, `crash`, `grindStart`, `grindEnd`, `finish`, `score`). `ui` and `view` subscribe.
 - `view` reads sim state and never writes it. The camera is updated in the app loop, not inside `draw()`.
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians internally and compass degrees only at the spec boundary.
-- The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it.
+- The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural map (`world/course.js`, `world/build.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
 
-Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame; (3) course as polyline (s, d); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
+Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame; (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline in C1); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
 
 ## 5. Work packages for agents
 

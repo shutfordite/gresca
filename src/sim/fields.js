@@ -1,12 +1,11 @@
 // The sim's façade fields (debug.js state() and set()): the rider, the session and the spray, by their state() names.
-import { RAILS } from '../world/course.js';
 import { field, prop } from '../core/facade-fields.js';
 
 /**
- * The sim's fields, in state() order. r: RiderState, s: the session, spray: {particles}. Units: m, m/s, s, rad.
- * Map axes: +x across the map, +y down the run.
+ * The sim's fields, in state() order. r: RiderState, s: the session, spray: {particles}, course: the Course (its rails
+ * are what grind.rail indexes). Units: m, m/s, s, rad. Map axes: +x across the map, +y down the run.
  */
-export function simFields(r, s, spray) {
+export function simFields(r, s, spray, course) {
  return {
   phase: prop(s, 'phase'),           // 'load' | 'ready' | 'run' | 'done'
   x: prop(r, 'x', true),             // m, rider position on the map
@@ -28,12 +27,13 @@ export function simFields(r, s, spray) {
   time: prop(s, 'time'),             // s since the drop
   grinding: field(() => !!r.grind),  // read only
   // rail index into world.rails, m along it, m ground so far
-  grind: field(() => (r.grind ? { rail: RAILS.indexOf(r.grind.r), t: r.grind.t, dist: r.grindDist } : null), (v) => {
+  grind: field(() => (r.grind ? { rail: course.rails.indexOf(r.grind.r), t: r.grind.t, dist: r.grindDist } : null),
+   (v) => {
    if (v === null) {
     r.grind = null;
     return;
    }
-   r.grind = { r: RAILS[v.rail], t: v.t };
+   r.grind = { r: course.rails[v.rail], t: v.t };
    if ('dist' in v) r.grindDist = v.dist;
   }),
   landings: prop(r, 'landings'),     // count of touchdowns since the page loaded
@@ -50,5 +50,7 @@ export function simFields(r, s, spray) {
   spinRot: field(() => r.spinRot),   // rad, spin this jump
   isSwitch: field(() => r.isSwitch), // riding tail first
   isBraking: field(() => r.isBraking), // the brake was held on the last step
+  fallLine: field(() => r.fallLine), // rad, heading of the fall line under the rider
+  downhillSide: field(() => r.downhillSide), // +1 fall line counter-clockwise of the board, -1 clockwise, 0 flat
  };
 }

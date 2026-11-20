@@ -1,6 +1,7 @@
 // The view's state: the screen size, the low-res terrain render, the colour map, the drawn rider pose and animation.
 import { RAY_SAMPLES } from '../core/config.js';
 import { W0, H0 } from '../world/course.js';
+import { createAnimInput } from '../sim/anim-input.js';
 
 const MAX_RENDER_COLUMNS = 400; // the occlusion buffer has room for this many render columns (draw.js uses <= 360)
 const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs fill rate for nothing visible)
@@ -35,6 +36,9 @@ export function createView(doc, hanga) {
   animPrev: null,
   riderList: null,
   riderYaw: 0,
+  animIn: createAnimInput(), // the sim's AnimInput for the rider animation, refilled each drawn frame
+  where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the camera projected on the course (sprites.js)
+  point: { x: 0, y: 0 }, // scratch: a course point on the map (sprites.js)
   flagsDrawn: 0,
   railsDrawn: 0,
  };

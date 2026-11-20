@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 20 Nov 2026, main after PR #23.
+Updated 20 Nov 2026, main after PR #24.
 
 ## Done
 | Package | PR |
@@ -20,19 +20,17 @@ Updated 20 Nov 2026, main after PR #23.
 | Coordinator skill (`.claude/skills/gresca-architect`) and this file | #20 |
 | P0 token budget: quiet `npm test`, `tools/outline.mjs`, `docs/STYLE.md`, token rules | #22 |
 | P1 docs: code map and stream ownership in `AGENTS.md`, per-folder `AGENTS.md` in `src/sim`, `src/view`, `art` | #23 |
+| B2b state contracts (InputState, RiderState, SimEvent), `step() -> events` on a bus, input recording, façade per area | #24 |
 
 ## Open PRs
-- **B2b state contracts and events** (`refactor/b2b-contracts-events`, PR #24): `core/contracts.js` (InputState,
-  RiderState, SimEvent with the stream fields pre-added), `step(state, input, world, dt) -> events` on a bus made by
-  `createGame`; finish screen and popup are `ui/` subscribers, ski tracks are the view's, the camera moves in the
-  loop; `Gresca.sim()` runs `simTick()`; input recorded per step (`Gresca.record/replay`); façade split per area;
-  `Gresca.events`.
+- **B2c world seams** (`refactor/b2c-world-seams`): the `Course` interface in `core/contracts.js` with the procedural
+  course (`s = y`, `d = x - cx(y)`, ADR 0004) on `world.course`; the sim, sprites, HUD, app and façade use it;
+  `RiderState.fallLine` and `downhillSide`; `sim/anim-input.js` (`AnimInput`); `test/frame.test.js` bans `cx`, the
+  park constants, `H[` and "+y is downhill" outside the procedural map; `test/golden.test.js` proves no change.
 
 ## Next, in order (the freeze: one code PR at a time)
-1. **B2c world seams:** the `Course` interface (procedural implementation first), the fall line, `sim/anim-input.js`,
-   and a ban on "+y is downhill".
-2. **C2 ENU frame**, proven by the whole suite passing on a rotated procedural map.
-3. Then phase 2 (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map compiler)
+1. **C2 ENU frame**, proven by the whole suite passing on a rotated procedural map.
+2. Then phase 2 (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map compiler)
    and the five streams. All are in `docs/ROADMAP.md`.
 
 ## Known issues (not yet fixed)
@@ -46,7 +44,7 @@ Updated 20 Nov 2026, main after PR #23.
   board's toe-side brake looks like kneeling at yaw 90.
 
 ## Decisions on record
-In `docs/ROADMAP.md` ("Decisions"), ADRs 0001–0002, and `docs/REAL-WORLD-DATA.md` (R1–R6). Still open:
+In `docs/ROADMAP.md` ("Decisions"), ADRs 0001, 0002 and 0004 (0003 is reserved for Playwright), and `docs/REAL-WORLD-DATA.md` (R1–R6). Still open:
 **D0** (may the game fetch map data at runtime; matters from C4).
 
 ## How the work is run

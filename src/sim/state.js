@@ -7,7 +7,7 @@
  * vz (m/s, + up), airTime (s), rotation (rad turned in the air this jump), fromKicker, crashTimer (s of wipeout left),
  * wipeoutSpin (rad), grind (null or {r: rail, t: m along it}), grindDist (m ground this grind), landings (count),
  * landingSpeed (m/s); derived after each step: travelHeading, boardHeading (rad), skid (m/s), spinRot (rad), isSwitch,
- * isBraking; pre-added for S2 (0): edge, flipRot (rad).
+ * isBraking, fallLine (rad), downhillSide (+1, -1, 0); pre-added for S2 (0): edge, flipRot (rad).
  * Values before the first run are placeholders (0); the boot and start() set them.
  */
 export function createRider() {
@@ -15,6 +15,7 @@ export function createRider() {
   x: 0, y: 0, vx: 0, vy: 0, heading: 0, z: 0, vz: 0, airTime: 0, rotation: 0, fromKicker: false,
   crashTimer: 0, wipeoutSpin: 0, grind: null, grindDist: 0, landings: 0, landingSpeed: 0,
   travelHeading: 0, boardHeading: 0, edge: 0, skid: 0, flipRot: 0, spinRot: 0, isSwitch: false, isBraking: false,
+  fallLine: 0, downhillSide: 0,
  };
 }
 
@@ -28,6 +29,8 @@ export function resetDerived(rider) {
  rider.spinRot = 0;
  rider.isSwitch = false;
  rider.isBraking = false;
+ rider.fallLine = rider.heading; // until the first step measures it
+ rider.downhillSide = 0;
 }
 
 /**

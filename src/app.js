@@ -1,7 +1,6 @@
 // createGame(env): makes one game's state objects, wires the modules together, runs the boot and the frame loop.
 import { SIM_DT, SIM_MAX } from './core/config.js';
 import { createRng, reseed } from './core/rng.js';
-import { cx } from './world/course.js';
 import { createWorld, buildWorld } from './world/build.js';
 import { createEventBus, onStep } from './core/events.js';
 import { createInputLog } from './core/input-log.js';
@@ -19,7 +18,6 @@ import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
 import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
 import { createFacade } from './debug.js';
 
-const START_Y = 60;     // m, where a run starts, down from the top of the map
 const START_SPEED = 2;  // m/s down the slope at the drop
 const MENU_HEADING = 1.57; // rad, straight down the map
 const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
@@ -51,11 +49,11 @@ export function createGame(env) {
  const hud = createHud();
  const inputLog = createInputLog();
  // What simTick() reads and writes (sim/timestep.js): step(state, input, world, dt) and the event bus.
- // gradient: scratch for the slope under the rider, so no allocation.
+ // gradient (also the fall line's out) and where (the rider on the course): scratch, so no allocation.
  const sim = {
-  state: { rider, session, spray, gradient: { gx: 0, gy: 0 } },
+  state: { rider, session, spray, gradient: { gx: 0, gy: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } },
   input,
-  world: { terrain: world.terrain, trees: world.trees },
+  world: { terrain: world.terrain, trees: world.trees, course: world.course },
   bus,
   inputLog,
  };
@@ -64,14 +62,20 @@ export function createGame(env) {
  onStep(bus, () => markTrack(view, rider));
  // What draw() reads (view/draw.js).
  const scene = {
-  canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, treeArr: world.treeArr,
+  canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, course: world.course,
+  treeArr: world.treeArr,
   particles: spray.particles, timestep, hanga, riderAnim: env.RiderAnim,
  };
 
+ // The rider on the course's centreline at its start (m).
+ function placeAtStart() {
+  const course = world.course;
+  course.point(course.startS, 0, rider);
+ }
+
  // A new run from the top: what the Drop in button does.
  function startRun() {
-  rider.x = cx(START_Y);
-  rider.y = START_Y;
+  placeAtStart();
   rider.vx = 0;
   rider.vy = START_SPEED;
   rider.heading = Math.PI / 2;
@@ -93,7 +97,7 @@ export function createGame(env) {
   resetDerived(rider);
   reseed(rng);
   clearTracks(view);
-  resetCamera(camera, world.terrain.height(rider.x, START_Y));
+  resetCamera(camera, world.terrain.height(rider.x, rider.y));
   session.phase = 'run';
   ui.msg.hidden = true;
   timestep.acc = 0;
@@ -104,7 +108,7 @@ export function createGame(env) {
  function frame(dt, alpha) {
   updateCamera(view, scene, dt, alpha);
   draw(view, scene, dt);
-  updateHud(ui, hud, view.drawn, rider, session, world.terrain.bounds);
+  updateHud(ui, hud, view.drawn, rider, session, world.terrain.bounds, world.course);
  }
 
  function loop(ts) {
@@ -121,15 +125,14 @@ export function createGame(env) {
   buildWorld(world);
   buildColourMap(view, world, ui.minimap);
   session.phase = 'ready';
-  rider.x = cx(START_Y);
-  rider.y = START_Y;
+  placeAtStart();
   rider.vx = rider.vy = 0;
   rider.heading = MENU_HEADING;
   rider.crashTimer = 0;
   session.crashes = 0;
   session.time = 0;
   rider.wipeoutSpin = 0;
-  menuCamera(camera, world.terrain.height(rider.x, START_Y));
+  menuCamera(camera, world.terrain.height(rider.x, rider.y));
   ui.msgT.textContent = MENU_TEXT;
   ui.go.hidden = false;
  }
