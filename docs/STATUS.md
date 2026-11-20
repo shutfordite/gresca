@@ -22,7 +22,7 @@ Updated 20 Nov 2026, main after PR #23.
 | P1 docs: code map and stream ownership in `AGENTS.md`, per-folder `AGENTS.md` in `src/sim`, `src/view`, `art` | #23 |
 
 ## Open PRs
-- **B2b state contracts and events** (`refactor/b2b-contracts-events`, PR #B2B_PR): `core/contracts.js` (InputState,
+- **B2b state contracts and events** (`refactor/b2b-contracts-events`, PR #24): `core/contracts.js` (InputState,
   RiderState, SimEvent with the stream fields pre-added), `step(state, input, world, dt) -> events` on a bus made by
   `createGame`; finish screen and popup are `ui/` subscribers, ski tracks are the view's, the camera moves in the
   loop; `Gresca.sim()` runs `simTick()`; input recorded per step (`Gresca.record/replay`); façade split per area;
