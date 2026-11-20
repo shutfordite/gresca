@@ -9,6 +9,8 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
 - One work package per PR, on its own branch (`refactor/a1-test-facade`, `design/03-…`).
   PR title: `<package id>: <what>`. In the body, list the behaviour changes (or write "none") and the test changes.
 - Rebase on main before asking for review. Don't merge your own PR.
+- Every PR gets a playable preview link in a bot comment. If the change is visible or changes feel, say in the PR body
+  what to try in the preview (for example "jump the second big kicker and land switch").
 
 ## Files
 - `art/gresca-hanga-spec.js` belongs to the art spec. Change it only to sync a new spec version, byte for byte.

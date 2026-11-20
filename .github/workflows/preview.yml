@@ -1,0 +1,90 @@
+name: Preview
+
+# Publishes a playable copy of the game on GitHub Pages:
+#   main:          https://shutfordite.github.io/gresca/
+#   pull request:  https://shutfordite.github.io/gresca/pr/<number>/
+# and keeps one comment on each pull request with its link. The preview is removed when the pull request closes.
+# Pages must be set to "Deploy from a branch", branch gh-pages, folder / (Settings → Pages).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write       # push to gh-pages
+  pull-requests: write  # the preview comment
+
+# One deploy at a time, so pushes to gh-pages never race. Queued deploys all run (none are cancelled).
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Pull requests from forks get a read-only token, so they get no preview.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the game
+        if: github.event.action != 'closed'
+        uses: actions/checkout@v4
+        with:
+          path: game # for a pull request this is the merge with main, the same code the tests run on
+
+      - name: Check out gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: site
+
+      - name: Update the site
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = push ]; then
+            dir=site; what="main at ${SHA::7}"
+          else
+            dir="site/pr/$PR"; what="PR #$PR at ${SHA::7}"
+          fi
+          if [ "$ACTION" = closed ]; then
+            rm -rf "$dir"; what="remove preview for PR #$PR"
+          else
+            mkdir -p "$dir"
+            cp game/index.html "$dir/index.html"
+          fi
+          touch site/.nojekyll
+          cd site
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then echo 'Nothing to publish'; exit 0; fi
+          git commit -q -m "Preview: $what"
+          git push -q origin gh-pages
+
+      - name: Comment with the link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const marker = '<!-- gresca-preview -->';
+            const pr = context.payload.pull_request;
+            const base = `https://${context.repo.owner}.github.io/${context.repo.repo}`;
+            const sha = process.env.SHA.slice(0, 7);
+            const body = context.payload.action === 'closed'
+              ? `${marker}\nPreview removed now that this pull request is closed. The current game on main: ${base}/`
+              : `${marker}\n**▶ Play this version:** ${base}/pr/${pr.number}/?v=${sha}\n\n` +
+                `Built from ${sha}, merged with main as CI tests it. Updates on every push. ` +
+                `Allow a minute after this comment changes for Pages to publish. If you see an older build, reload.`;
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { ...context.repo, issue_number: pr.number, per_page: 100 });
+            const mine = comments.find(c => c.user.type === 'Bot' && c.body.startsWith(marker));
+            if (mine) await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ ...context.repo, issue_number: pr.number, body });
