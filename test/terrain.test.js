@@ -208,7 +208,10 @@ describe('the game\'s terrain (through Gresca.world)', async () => {
 // H (heights), M (groomed mask) and the grid size W0 × H0 belong to the files below. Everything else asks `terrain`.
 // Each entry: the names that file may use, and why. Keep it short: every name listed must still be used there.
 const OWNERS = new Map([
-  ['src/app.js', { names: ['H', 'M', 'W0', 'H0'], why: 'TEMPORARY (B2a): holds the former world, build and step scripts until they move into modules' }],
+  ['src/world/course.js', { names: ['W0', 'H0'], why: 'declares the procedural map\'s grid size (cells across and down)' }],
+  ['src/world/build.js', { names: ['H', 'M', 'W0', 'H0'], why: 'owns the height and groomed arrays, builds `terrain` from them and fills them' }],
+  ['src/view/colour-map.js', { names: ['H', 'M', 'W0', 'H0'], why: 'paints the colour map from the built arrays (D2 removes the colour map)' }],
+  ['src/app.js', { names: ['W0', 'H0'], why: 'TEMPORARY (B2a): the colour map canvas and ski tracks, until they move into modules' }],
 ]);
 // src/terrain.js may index its own grids, but it receives them as arguments and names none of these.
 
