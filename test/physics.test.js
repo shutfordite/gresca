@@ -17,8 +17,8 @@ describe('terrain', () => {
   });
 
   it('slopes down from the ridge to the village', () => {
-    const top = W.height(Math.round(W.centre(100)), 100);
-    const bottom = W.height(Math.round(W.centre(2300)), 2300);
+    const top = W.cellHeight(Math.round(W.centre(100)), 100);
+    const bottom = W.cellHeight(Math.round(W.centre(2300)), 2300);
     assert.ok(top - bottom > 400, `drop was only ${top - bottom} m`);
   });
 

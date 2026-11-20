@@ -20,12 +20,14 @@ const WANT = {
 const g = load();
 const W = g.world, D = g.debug;
 const { x: NX, y: NY } = W.size;
+// The raw cell heights. Before B3 the façade called this world.height, so fall back to it for older versions.
+const cellHeight = W.cellHeight || W.height;
 const sha = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 
 describe('build()', () => {
   it('makes the same height field as before', () => {
     const h = new Float32Array(NX * NY); // the game stores heights as float32, so this keeps every bit
-    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) h[y * NX + x] = W.height(x, y);
+    for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) h[y * NX + x] = cellHeight(x, y);
     assert.equal(sha(new Uint8Array(h.buffer)), WANT.height);
   });
 

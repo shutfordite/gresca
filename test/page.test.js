@@ -15,6 +15,7 @@ const ORDER = [
   'art/gresca-hanga-spec.js',
   'art/gresca-rider-anim.js',
   'src/config.js',
+  'src/terrain.js',
   'src/world.js',
   'src/dom.js',
   'src/camera.js',
