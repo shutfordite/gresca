@@ -3,7 +3,7 @@
 A freestyle ski and snowboard game for the browser. You ride a run of kickers, rails and boxes, spin in the air and
 land switch. It is a fan-made project inspired by mobile snow games, and is not affiliated with or endorsed by any
 game studio or ski resort. It is a static site with no build step: `index.html` loads the art modules from `art/` and
-the game from `src/` as native ES modules (entry `src/main.js`), and all art is drawn in code.
+the game from `src/` as native ES modules (entry `src/main.js`), and its CSS from `styles/`. All art is drawn in code.
 
 *Gresca* is Catalan for a lively, rowdy commotion. The first map is set in Grandvalira, Andorra (the El Tarter sector).
 
@@ -87,7 +87,8 @@ the files the browser loads. Tests read and drive whole games only through `wind
 `src/debug.js` (`state()`, `set()`, `place()`, `sim()`, `frame()`, `input()`, `world`, and `debug` for render
 internals). The pure layers (`core/`, `world/`, `sim/`, `input/input.js`) are also imported directly, with no stubs.
 
-- `test/page.test.js`: `index.html` has no inline code, loads the art scripts and then one module entry; every module
+- `test/page.test.js`: `index.html` has no inline code or CSS (stylesheets in `styles/` exist and are published by
+  the preview), loads the art scripts and then one module entry; every module
   in `src/` is reached from `src/main.js`; only `main.js` reads browser globals; no module holds state.
 - `test/facade.test.js`: a lint that fails if a test's `g.run('...')` string names anything but the art modules and
   storage, or if a test imports game modules other than the pure layers, plus round-trip checks of the façade.

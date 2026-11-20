@@ -147,3 +147,25 @@ test('no module holds state: no top-level let/var or unfrozen containers, and ev
       assert.ok(typeof v === 'function' || deepFrozen(v), `${f} exports ${name}, which is mutable`);
   }
 });
+
+// ---- styles ----
+const links = [...html.matchAll(/<link\b([^>]*)>/gi)].map((m) => m[1]);
+const sheets = links.filter((a) => /\brel="stylesheet"/.test(a)).map((a) => (/\bhref="([^"]+)"/.exec(a) || [])[1]);
+
+test('index.html has no inline <style> or style attributes, and links stylesheets from styles/', () => {
+  assert.doesNotMatch(html, /<style\b/i, 'CSS goes in styles/');
+  assert.doesNotMatch(html, /\sstyle="/i, 'CSS goes in styles/');
+  assert.ok(sheets.length > 0, 'no stylesheet linked');
+  for (const href of sheets) {
+    assert.ok(href && href.startsWith('styles/') && href.endsWith('.css'), `stylesheet ${href} is not in styles/`);
+    assert.ok(fs.existsSync(path.join(ROOT, href)), `${href} is missing`);
+  }
+  const onDisk = fs.readdirSync(path.join(ROOT, 'styles')).filter((f) => f.endsWith('.css')).map((f) => `styles/${f}`).sort();
+  assert.deepEqual([...sheets].sort(), onDisk, 'styles/ holds exactly the stylesheets the page links');
+});
+
+test('the preview publishes every folder the page loads files from', () => {
+  const yml = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'preview.yml'), 'utf8');
+  const site = (/^\s*SITE:\s*(.*)$/m.exec(yml) || [])[1].split(/\s+/);
+  for (const dir of ['src', 'art', 'styles']) assert.ok(site.includes(dir), `SITE in preview.yml is missing ${dir}`);
+});

@@ -136,6 +136,7 @@ src/
                  rider-animation.js, rider-draw.js  RiderAnim glue and the Hanga rider
   ui/            dom.js (the page's elements), hud.js, menu.js (rig picker, stance, menu text)
 art/             unchanged (HANGA, RiderAnim), UMD classic scripts
+styles/          base.css, hud.css, menu.css (index.html links them; no inline CSS)
 maps/            later: el-tarter.json (gresca-map-1)
 tools/           map compiler (pure JS core + Node CLI + bake page), validate-map.js
 docs/adr/        one short decision record per choice below

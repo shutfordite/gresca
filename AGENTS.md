@@ -15,7 +15,8 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
 
 ## Files
 - `art/gresca-hanga-spec.js` belongs to the art spec. Change it only to sync a new spec version, byte for byte.
-- `index.html` is only HTML and CSS. It loads `art/*.js` as classic `<script src>` tags, then the game as one ES
+- `index.html` is only HTML: its CSS is in `styles/*.css`, linked with `<link rel="stylesheet">` (no inline
+  `<style>`). It loads `art/*.js` as classic `<script src>` tags, then the game as one ES
   module, `<script type="module" src="src/main.js">`. Every other file in `src/` is reached from `main.js` through
   static imports (`test/page.test.js` checks there are no orphans).
 - `src/` is laid out by layer: `core/` (tunables, RNG), `world/` (terrain, course, build), `sim/` (rider state,
