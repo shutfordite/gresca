@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const HANGA = require('../art/gresca-hanga-spec.js');
 const V13 = require('./fixtures/hanga-spec-v1.3.0.cjs');
+const RA = require('../art/gresca-rider-anim.js');
 
 const RIGS = ['ski', 'board'];
 const STANCES = ['regular', 'goofy'];
@@ -324,3 +325,15 @@ test('poseFor', async (t) => {
   });
 });
 
+test('RiderAnim.project forwards the options', async (t) => {
+  await t.test('options reach projectRider; without them the list is unchanged', () => {
+    const s = RA.create('ski');
+    RA.update(s, { speed: 10, slopeDeg: 17, meanSlopeDeg: 17 }, 1 / 60);
+    const plain = RA.project(s, 30, null, 'regular');
+    assert.deepEqual(RA.project(s, 30, null, 'regular', undefined), plain);
+    const opts = { cameraPitchDeg: 37, twistDeg: 20, headYawDeg: -40, bodyPitchDeg: 15 };
+    const withOpts = RA.project(s, 30, null, 'regular', opts);
+    assert.deepEqual(withOpts, HANGA.projectRider('ski', '__live', 30, null, 0, 'regular', opts));
+    assert.notDeepEqual(withOpts, plain);
+  });
+});
