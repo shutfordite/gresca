@@ -105,11 +105,15 @@ internals). The pure layers (`core/`, `world/`, `sim/`, `input/input.js`) are al
 - `test/build.test.js`, `test/camera.test.js`, `test/look.test.js`, `test/timestep.test.js`: the built world bit for
   bit, the camera's slope follow, fog and sky, and the fixed timestep.
 
-Run `npm test` after every change.
+Run `npm test` after every change. It prints a dot per test and the failures in full; `npm run test:verbose` prints
+every test name.
 
 ## Tools
 
 There is no build tool: the browser loads the files as they are in the repo.
+
+`node tools/outline.mjs art/gresca-hanga-spec.js 2` prints the art spec's sections with line ranges, so you can read
+one part of a 6,000-line file.
 
 `tools/bake-el-tarter.html` runs in your own browser, downloads elevation tiles and OpenStreetMap pistes and lifts for
 El Tarter, and saves a compact terrain file for the game. Wiring that data into the game is the next milestone.

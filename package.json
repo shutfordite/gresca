@@ -7,6 +7,7 @@
   },
   "description": "A fan-made freestyle ski and snowboard game for the browser, with tests that run the real game scripts in Node",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test --test-reporter=dot test/*.test.js",
+    "test:verbose": "node --test test/*.test.js"
   }
 }

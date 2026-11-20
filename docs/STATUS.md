@@ -20,11 +20,15 @@ Updated 20 Nov 2026, main after PR #20.
 | Coordinator skill (`.claude/skills/gresca-architect`) and this file | #20 |
 
 ## Open PRs
-None. (#18 art spec v1.4, #19 roadmap decisions and #20 coordinator skill are merged.)
+- **P0 token budget** (`docs/p0-token-budget`): quiet `npm test`, `tools/outline.mjs` for the art spec, Style moved
+  to `docs/STYLE.md`, a "Token budget" section in `AGENTS.md`, model and screenshot rules in the coordinator skill.
+
+(#18 art spec v1.4, #19 roadmap decisions and #20 coordinator skill are merged.)
 
 ## Next, in order (the freeze: one code PR at a time)
 1. **P1 docs:** code map in `AGENTS.md` ("to change X edit Y, tests Z"), folder ownership table (streams S1–S5 in
-   the roadmap), per-folder `AGENTS.md` for `src/sim`, `src/view`, `art/`, move the Style section to `docs/STYLE.md`.
+   the roadmap), per-folder `AGENTS.md` for `src/sim`, `src/view`, `art/` (keep each short: they load
+   into every agent working there). The Style section already moved to `docs/STYLE.md` in P0.
 2. **B2b state contracts and events:** see the roadmap, phase 1 row 3. Pre-add the fields the streams need.
    Also: `Gresca.sim()` uses the loop's `simTick()`; record input per sim step; split the façade so each area
    registers its own fields; resolve the four `TODO(B2b)` markers in `src/`.

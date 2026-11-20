@@ -7,7 +7,10 @@ const { chromium } = require(process.env.PLAYWRIGHT || '/opt/npm-tools/node_modu
 const [url = 'http://localhost:8123/', out = '/tmp/gresca-shot'] = process.argv.slice(2);
 (async () => {
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args: ['--no-sandbox'] });
-  const page = await browser.newPage({ viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  // iPad-sized viewport at scale 1: a 2x screenshot costs about twice the tokens to read and shows nothing new.
+  const page = await browser.newPage({
+    viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true,
+  });
   const problems = [];
   page.on('pageerror', (e) => problems.push('pageerror ' + e.message));
   page.on('response', (r) => { if (r.status() >= 400 && !r.url().endsWith('favicon.ico')) problems.push(r.status() + ' ' + r.url()); });
