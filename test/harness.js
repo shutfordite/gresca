@@ -83,14 +83,20 @@ function load(opts = {}) {
     setTimeout(fn) { timers.push(fn); },
     requestAnimationFrame(fn) { raf.push(fn); },
   };
-  sandbox.window = sandbox;
-  const ctx = vm.createContext(sandbox);
+  // DONT_CONTEXTIFY gives the scripts an ordinary global object, as in a browser. A contextified sandbox routes
+  // every global lookup (Math, the game's function declarations) through interceptors, which made the game run
+  // about ten times slower here than in a browser: build() alone took about 8.7 s.
+  // (Node 22.8+; older Nodes fall back to the slow contextified sandbox.)
+  const plain = vm.constants && vm.constants.DONT_CONTEXTIFY;
+  const ctx = plain ? vm.createContext(plain) : vm.createContext({});
+  Object.assign(ctx, sandbox);
+  ctx.window = ctx;
   // Top-level let/const are shared between classic scripts, as in a browser, so run them in one context.
   blocks.forEach((src, i) => vm.runInContext(src, ctx, { filename: `index.html#script${i}` }));
 
   // Everything below goes through the game's façade, window.Gresca (see the end of the game script), so tests never
   // name the game's globals. g.run stays for evaluating the art modules (HANGA, RiderAnim) in the game's realm.
-  const G = () => sandbox.Gresca;
+  const G = () => ctx.Gresca;
   const g = {
     ctx,
     run: (code) => vm.runInContext(code, ctx),
