@@ -1,6 +1,7 @@
 # Working on Gresca
 
-Gresca is a browser ski and snowboard game. Players get one `index.html` with nothing to build or install.
+Gresca is a browser ski and snowboard game: a static site on GitHub Pages with no build step and nothing to install
+(`docs/adr/0001-multi-file-site.md`). It is tested mainly on an iPad through each PR's preview link.
 The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3.
 
 ## Every change
@@ -14,14 +15,15 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
 
 ## Files
 - `art/gresca-hanga-spec.js` belongs to the art spec. Change it only to sync a new spec version, byte for byte.
-- `art/*.js` is embedded into `index.html`. After changing it, run `node tools/embed-art.js`; a test fails if they drift.
-- Until B1 lands, the game code is the last `<script>` in `index.html`. After B1, never hand-edit `index.html`:
-  edit `src/` or `art/`, then run `node tools/build.js`.
-- No npm packages and no build step for players. Changing that needs a decision record in `docs/adr/`.
+- Until B1 lands, the game code is the last `<script>` in `index.html` and `art/*.js` is embedded with
+  `node tools/embed-art.js`. After B1, `index.html` is only HTML and CSS; it loads `art/` and `src/` with `<script src>`.
+- No build step and no runtime npm packages. Changing that needs a decision record in `docs/adr/`.
+- Any new folder the game loads at runtime must be added to `SITE` in `.github/workflows/preview.yml`, or previews break.
+- Changes must work in Safari on iPad (the main test device): check the preview there for anything visible or touch-related.
 
 ## Code rules
 - Keep the layers apart: `world/` and `sim/` never touch `document`, `window`, canvas or HANGA colours,
-  and must load in Node with `require` and no stubs. `view/` reads sim state but never writes it.
+  and must load in Node with no stubs (after B2, as ES modules imported directly by tests). `view/` reads sim state but never writes it.
   The camera is not advanced inside a draw call.
 - Tests use the `window.Gresca` façade (after A1), not game globals.
 - Units: metres, seconds and radians internally; compass degrees only where the art spec needs them.
