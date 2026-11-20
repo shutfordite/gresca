@@ -1,6 +1,6 @@
 'use strict';
 // Runs the game's <script> inside a Node vm with just enough browser stubs,
-// so tests exercise the real game code with no refactoring or dependencies.
+// so tests exercise the real game code with no dependencies.
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -88,29 +88,35 @@ function load(opts = {}) {
   // Top-level let/const are shared between classic scripts, as in a browser, so run them in one context.
   blocks.forEach((src, i) => vm.runInContext(src, ctx, { filename: `index.html#script${i}` }));
 
+  // Everything below goes through the game's façade, window.Gresca (see the end of the game script), so tests never
+  // name the game's globals. g.run stays for evaluating the art modules (HANGA, RiderAnim) in the game's realm.
+  const G = () => sandbox.Gresca;
   const g = {
     ctx,
     run: (code) => vm.runInContext(code, ctx),
     el: (id) => document.getElementById(id),
     // dispatch a window-level event such as keydown
     fire(type, ev) { (wl[type] || []).forEach((fn) => fn(Object.assign({ preventDefault() {} }, ev))); },
-    speed: () => vm.runInContext('Math.hypot(vx,vy)', ctx),
+    get game() { return G(); },
+    get world() { return G().world; },
+    get debug() { return G().debug; },
+    get config() { return G().config; },
+    state: () => G().state(),
+    set: (patch) => G().set(patch),
+    input: (o) => G().input(o),
+    resetInput: () => G().resetInput(),
+    start: () => G().start(),
+    step: (dt) => G().step(dt),
+    stepParticles: (dt) => G().stepParticles(dt),
+    clearParticles: () => G().clearParticles(),
+    emitParticles: (...args) => G().emitParticles(...args),
+    // draw n frames of dt seconds each
+    frames(n, dt = 1 / 60) { for (let i = 0; i < n; i++) G().frame(dt); },
+    speed: () => G().state().speed,
     // advance the physics by `sec` seconds at a fixed timestep
-    sim(sec, dt = 1 / 120) {
-      vm.runInContext(
-        `(function(){const n=Math.round(${sec}/${dt});for(let i=0;i<n;i++){step(${dt});if(typeof stepParts==='function')stepParts(${dt})}})()`,
-        ctx
-      );
-    },
+    sim: (sec, dt = 1 / 120) => G().sim(sec, dt),
     // reset the run and put the rider somewhere known (centre of the piste by default)
-    place(o = {}) {
-      const d = Object.assign({ x: null, y: 500, vx: 0, vy: 0, a: Math.PI / 2, jz: 0, jv: 0 }, o);
-      const px = d.x === null ? `cx(${d.y})` : d.x;
-      vm.runInContext(
-        `start();x=${px};y=${d.y};vx=${d.vx};vy=${d.vy};a=${d.a};jz=${d.jz};jv=${d.jv};crash=0;crashes=0;B=0;L=0;R=0;JU=0;`,
-        ctx
-      );
-    },
+    place: (o = {}) => G().place(o),
   };
 
   while (timers.length) timers.shift()(); // runs build() and shows the start screen

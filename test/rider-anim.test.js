@@ -146,72 +146,75 @@ test('body dynamics', async (t) => {
 test('in the game', async (t) => {
   const g = load();
   // Advance physics and animation together, as the game loop does (two physics steps per frame).
-  const frames = (n) => g.run(`for(let i=0;i<${n};i++){step(${DT / 2});step(${DT / 2});stepParts(${DT});animTick(${DT})}`);
-  const pose = () => g.run('anim.pose');
+  const frames = (n) => { for (let i = 0; i < n; i++) { g.step(DT / 2); g.step(DT / 2); g.stepParticles(DT); g.debug.animTick(DT); } };
+  const pose = () => g.debug.anim().pose;
+  const st = () => g.state();
 
   await t.test('riding, then a jump: air, land, ride', () => {
     g.place({ y: 470, vy: 12 });
     frames(30);
     assert.equal(pose(), 'ride');
-    g.run('JU=1');
+    g.input({ jump: 1 });
     frames(6);
     assert.equal(pose(), 'air');
-    const n = g.run('landN');
-    for (let i = 0; i < 120 && g.run('landN') === n; i++) frames(1);
-    assert.equal(g.run('landN'), n + 1, 'landed');
-    assert.ok(g.run('landV') > 3, 'landing speed recorded');
+    const n = st().landings;
+    for (let i = 0; i < 120 && st().landings === n; i++) frames(1);
+    assert.equal(st().landings, n + 1, 'landed');
+    assert.ok(st().landingSpeed > 3, 'landing speed recorded');
     assert.equal(pose(), 'land');
-    assert.ok(g.run('anim.comp') > 0.02, 'the landing compresses the legs');
+    assert.ok(g.debug.anim().comp > 0.02, 'the landing compresses the legs');
     frames(30);
     assert.equal(pose(), 'ride');
   });
   await t.test('crash snaps to wipeout', () => {
     g.place({ y: 470, vy: 12 });
     frames(10);
-    g.run('crash=1.1');
+    g.set({ crashTimer: 1.1 });
     frames(1);
     assert.equal(pose(), 'wipeout');
   });
   await t.test('holding a side carves and leans into the turn', () => {
     g.place({ y: 470, vy: 12 });
     frames(10);
-    g.run('kb.R=1;applyInput()');
+    g.fire('keydown', { key: 'ArrowRight' }); // the real key handler: kb.R=1, then applyInput()
     frames(25);
-    g.run('kb.R=0;applyInput()');
+    g.fire('keyup', { key: 'ArrowRight' });
     assert.equal(pose(), 'carveToe', 'regular stance turning right is on the toe edge');
-    assert.ok(g.run('anim.roll') < -5, 'leaning toward the toe edge');
+    assert.ok(g.debug.anim().roll < -5, 'leaning toward the toe edge');
   });
   await t.test('crouches on the approach to a kicker', () => {
     g.place({ y: 734, vy: 14 }); // the next kicker lip is at 760
     let seen = false;
-    for (let i = 0; i < 90 && g.run('y') < 760; i++) { frames(1); if (pose() === 'crouch') seen = true; }
+    for (let i = 0; i < 90 && st().y < 760; i++) { frames(1); if (pose() === 'crouch') seen = true; }
     assert.ok(seen);
   });
   await t.test('grinding a rail uses the grind pose', () => {
     // the rail at y 285 sits 9 m left of the piste centreline
-    g.place({ x: 'cx(279)-9', y: 279, vy: 10 });
+    g.place({ x: g.world.centre(279) - 9, y: 279, vy: 10 });
     let seen = false;
     for (let i = 0; i < 90; i++) { frames(1); if (pose() === 'grind') { seen = true; break; } }
     assert.ok(seen);
   });
   await t.test('skis get the ski rig, and draw() renders the Hanga rider', () => {
-    g.run("setRig('ski')");
+    g.el('ps').fire('click'); // the Skis button: setRig('ski')
     g.place({ y: 470, vy: 12 });
-    g.run(`for(let i=0;i<5;i++)draw(${DT})`);
-    assert.equal(g.run('anim.rig'), 'ski');
-    assert.ok(g.run("riderList.some(i=>i.id==='skiL')&&riderList.some(i=>i.id==='poleR')"));
-    g.run("setRig('board')");
+    g.frames(5, DT);
+    assert.equal(g.debug.anim().rig, 'ski');
+    const list = g.debug.riderList();
+    assert.ok(list.some((i) => i.id === 'skiL') && list.some((i) => i.id === 'poleR'));
+    g.el('pb').fire('click');
   });
   await t.test('gresca-stance is read from storage (spec rider.stance)', () => {
-    assert.equal(g.run('stance'), 'regular');
+    assert.equal(st().stance, 'regular');
     const goofy = load({ store: { 'gresca-stance': 'goofy' } });
-    assert.equal(goofy.run('stance'), 'goofy');
+    assert.equal(goofy.state().stance, 'goofy');
+    const ticks = (n) => { for (let i = 0; i < n; i++) { goofy.step(DT); goofy.debug.animTick(DT); } };
     goofy.place({ y: 470, vy: 12 });
-    goofy.run(`for(let i=0;i<10;i++){step(${DT});animTick(${DT})}`);
+    ticks(10);
     // goofy faces the same way down the hill: the board is turned round because the spec mirrors the rig in z
-    assert.ok(Math.abs(Math.abs(goofy.run('riderYaw')) - 180) < 30);
-    goofy.run('kb.R=1;applyInput()');
-    goofy.run(`for(let i=0;i<25;i++){step(${DT});animTick(${DT})}`);
-    assert.equal(goofy.run('anim.pose'), 'carveHeel', 'goofy turning right is on the heel edge');
+    assert.ok(Math.abs(Math.abs(goofy.debug.riderYaw()) - 180) < 30);
+    goofy.fire('keydown', { key: 'ArrowRight' }); // kb.R=1, then applyInput()
+    ticks(25);
+    assert.equal(goofy.debug.anim().pose, 'carveHeel', 'goofy turning right is on the heel edge');
   });
 });
