@@ -46,7 +46,10 @@ describe('run start', () => {
   it('drops the rider at the top of the piste, ready to ride', () => {
     g.start();
     assert.equal(st().phase, 'run');
-    assert.equal(st().y, 60);
+    // on the course's centreline at its start, s 60 (in world metres: exact at any placement)
+    const R = g.raw, C = R.world.course, s = R.state();
+    assert.equal(C.startS, 60);
+    assert.deepEqual({ x: s.x, y: s.y }, C.point(C.startS, 0));
     assert.ok(Math.abs(st().x - W.centre(60)) < 1e-9);
     assert.equal(g.el('msg').hidden, true, 'menu should close on Drop in');
   });
