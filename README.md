@@ -61,7 +61,12 @@ npm test
 ```
 
 Needs Node 20 or newer, and no packages. The tests run the game's real `<script>` blocks inside a Node `vm` with stubbed
-browser APIs (`test/harness.js`), so no game code was refactored for testing.
+browser APIs (`test/harness.js`). Tests read and drive the game only through `window.Gresca`, a small façade at the
+end of the game script (`state()`, `set()`, `place()`, `sim()`, `frame()`, `input()`, `world`, and `debug` for render
+internals). They never name the game's globals, so its state can be reorganised without touching the tests.
+
+- `test/facade.test.js`: a lint that fails if any test's `g.run('...')` string names a top-level identifier of the
+  game script, plus round-trip checks of the façade.
 
 - `test/physics.test.js`: terrain, gravity, brake, steering, jumping, kickers, trees, finish.
 - `test/features.test.js`: touch and keyboard input, camera framing, snow look, spin and switch riding, rendering

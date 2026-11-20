@@ -5,31 +5,34 @@ const assert = require('node:assert/strict');
 const { load } = require('./harness');
 
 const g = load();
-const frames = (n, dt = 1 / 60) => g.run(`for(let i=0;i<${n};i++)draw(${dt})`);
-const arr = (code) => Array.from(g.run(code)); // copy out of the vm realm
+const frames = (n, dt = 1 / 60) => g.frames(n, dt);
+const D = g.debug;
+const sunAz = () => g.run('HANGA.maps')[D.mapId].sun.azimuthDeg;
 
 describe('fog (spec terrain.fog)', () => {
   it('FOG equals HANGA.terrain.fog.rgb', () => {
-    assert.deepEqual(arr('FOG'), arr('HANGA.terrain.fog.rgb'));
-    assert.deepEqual(arr('FOG'), [242, 213, 198]);
+    // Array.from copies out of the vm realm, so deepEqual compares values only
+    assert.deepEqual(Array.from(D.fog().rgb), Array.from(g.run('HANGA.terrain.fog.rgb')));
+    assert.deepEqual(Array.from(D.fog().rgb), [242, 213, 198]);
   });
 
   it('uses HANGA.fogAmount: none before 40 m, full at the far edge of the render', () => {
-    assert.equal(g.run('fogAt(30)'), 0);
-    assert.equal(g.run('fogAt(FAR)'), 1);
-    assert.equal(g.run('fogAt(120)'), g.run('HANGA.fogAmount(120,FAR)'));
+    assert.equal(D.fogAt(30), 0);
+    assert.equal(D.fogAt(D.fog().far), 1);
+    assert.equal(D.fogAt(120), g.run('HANGA').fogAmount(120, D.fog().far));
   });
 
   it('FAR is the distance of the last terrain sample', () => {
-    const far = g.run('(()=>{let z=3;for(let k=0;k<NS-1;k++)z+=1+z*.012;return z})()');
-    assert.ok(Math.abs(g.run('FAR') - far) < 1e-9);
+    const NS = D.fog().samples;
+    const far = (() => { let z = 3; for (let k = 0; k < NS - 1; k++) z += 1 + z * 0.012; return z; })();
+    assert.ok(Math.abs(D.fog().far - far) < 1e-9);
   });
 
   it('tints distant ground peach, more the farther it is', () => {
     g.place({ vy: 10 });
-    g.run('col.fill(0)');
+    D.fillColourMap(0);
     frames(60);
-    const RW = g.run('cam.RW'), RH = g.run('cam.RH'), px = g.run('lo._pix');
+    const { renderW: RW, renderH: RH } = g.state().camera, px = D.renderPixels();
     let top = 0;
     while (top < RH && px[(top * RW + (RW >> 1)) * 4 + 3] !== 255) top++;
     const at = (row) => { const o = (row * RW + (RW >> 1)) * 4; return [px[o], px[o + 1], px[o + 2]]; };
@@ -62,14 +65,14 @@ describe('sky (spec sky)', () => {
     frames(60);
     const gr = skyGrad();
     assert.equal(gr.y0, 0);
-    const hy = g.run('Math.max(1,(cam.hz-cam.pt)*cam.kx)');
+    const c = g.state().camera, hy = Math.max(1, (c.horizonPx - c.pitchPx) * c.pixelScale);
     assert.ok(Math.abs(gr.y1 - hy) < 1e-6, `gradient ends at ${gr.y1}, horizon at ${hy}`);
   });
 });
 
 describe('camera heading and the sun disc (spec maps[id].sun, sky.sun)', () => {
   it('reads camera heading in compass degrees (procedural: game +y is south)', () => {
-    const at = (camA) => g.run(`camA=${camA};camCompass()`);
+    const at = (camA) => { g.set({ camera: { heading: camA } }); return D.camCompass(); };
     assert.ok(Math.abs(at(Math.PI / 2) - 180) < 1e-9, 'downhill (+y) is south');
     assert.ok(Math.abs(at(0) - 90) < 1e-9, '+x is east');
     assert.ok(Math.abs(at(-Math.PI / 2) - 0) < 1e-9, '-y is north');
@@ -79,24 +82,24 @@ describe('camera heading and the sun disc (spec maps[id].sun, sky.sun)', () => {
   it('centres the sun when the camera looks along the sun azimuth', () => {
     g.place({ vy: 10 });
     frames(60);
-    const az = g.run('HANGA.maps[MAP_ID].sun.azimuthDeg');
+    const az = sunAz();
     // compass heading h -> game angle: dx = sin(h), dy = -cos(h)
-    g.run(`camA=Math.atan2(-Math.cos(${az}*Math.PI/180),Math.sin(${az}*Math.PI/180))`);
-    const s = g.run('sunDisc()');
-    assert.ok(Math.abs(s.X - g.run('W') / 2) < 1e-6, `sun X ${s.X}`);
-    assert.ok(Math.abs(s.r - g.run('W*HANGA.sky.sun.radiusFracOfWidth')) < 1e-9);
-    assert.ok(s.Y < g.run('(cam.hz-cam.pt)*cam.kx'), 'sun sits above the horizon line');
+    g.set({ camera: { heading: Math.atan2(-Math.cos(az * Math.PI / 180), Math.sin(az * Math.PI / 180)) } });
+    const s = D.sunDisc(), W = D.screen().width, c = g.state().camera;
+    assert.ok(Math.abs(s.X - W / 2) < 1e-6, `sun X ${s.X}`);
+    assert.ok(Math.abs(s.r - W * g.run('HANGA.sky.sun.radiusFracOfWidth')) < 1e-9);
+    assert.ok(s.Y < (c.horizonPx - c.pitchPx) * c.pixelScale, 'sun sits above the horizon line');
   });
 
   it('puts the sun off screen when it is 90 degrees from the view', () => {
     g.place({ vy: 10 });
     frames(60);
-    const az = g.run('HANGA.maps[MAP_ID].sun.azimuthDeg') + 90;
-    g.run(`camA=Math.atan2(-Math.cos(${az}*Math.PI/180),Math.sin(${az}*Math.PI/180))`);
-    assert.equal(g.run('sunDisc().on'), false);
+    const az = sunAz() + 90;
+    g.set({ camera: { heading: Math.atan2(-Math.cos(az * Math.PI / 180), Math.sin(az * Math.PI / 180)) } });
+    assert.equal(D.sunDisc().on, false);
   });
 
   it('draws the sun before the terrain, so ridges cover it', () => {
-    assert.match(g.run('draw.toString()'), /drawSun\([^)]*\)[\s\S]*drawImage\(lo/);
+    assert.match(D.drawSource(), /drawSun\([^)]*\)[\s\S]*drawImage\(lo/);
   });
 });
