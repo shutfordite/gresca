@@ -45,10 +45,12 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 |---|---|---|
 | Tunables (speeds, grip, camera distances, render size) | `src/core/config.js` | `physics`, `camera`, `sim` |
 | Seeded randomness | `src/core/rng.js` | `sim`, `timestep` |
-| Contracts: InputState, RiderState, SimEvent | `src/core/contracts.js` (its own PR in phase 3) | `contracts`, `events` |
+| Contracts: InputState, RiderState, SimEvent, Course, AnimInput | `src/core/contracts.js` (its own PR in phase 3) | `contracts`, `events` |
 | Event bus, input recording | `src/core/events.js`, `src/core/input-log.js` | `contracts`, `events` |
 | Terrain heights, layers, sampling | `src/world/terrain.js`, `noise.js` | `terrain`, `build` |
-| Course: centreline, finish, kickers, rails | `src/world/course.js` | `sim`, `park`, `physics` |
+| Course: centreline, finish, kickers, rails; the `Course` (s, d) the game asks | `src/world/course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
+| What the rider animation reads from the sim (`AnimInput`) | `src/sim/anim-input.js` | `course`, `rider-anim` |
+| The course seam lint (no `cx`, park constants, `H[`, "+y is downhill" outside the procedural map) | `test/frame.test.js` | `frame` |
 | Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
 | Riding physics: steer, grip, brake, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
 | Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
