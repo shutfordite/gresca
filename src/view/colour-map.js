@@ -2,12 +2,26 @@
 import { W0, H0, FIN, KICK, KBIG, RAILS, cx } from '../world/course.js';
 import { hash } from '../world/noise.js';
 
+const MINIMAP_W = 42;  // px, the minimap canvas (index.html #mc)
+const MINIMAP_H = 103;
+
+/**
+ * Paints the colour map of the built world into view.map, keeps its pixels as view.col (live, ski tracks go here)
+ * and view.col0 (as built), and draws the minimap from it.
+ */
+export function buildColourMap(view, world, minimap) {
+ paintColourMap(view.mx, world);
+ view.col = view.mx.getImageData(0, 0, W0, H0).data;
+ view.col0 = view.col.slice();
+ minimap.getContext('2d').drawImage(view.map, 0, 0, W0, H0, 0, 0, MINIMAP_W, MINIMAP_H);
+}
+
 /**
  * Paints the built world (world/build.js) into mx, the 2D context of a W0 × H0 canvas, one pixel per map metre:
  * lavender shadows, warm lit snow, grey rock, corduroy on the groomed piste, then the lift line, the trees and their
  * shadows, the kickers, the rails, the village and the finish. Reads world.H, world.M and world.treeArr.
  */
-export function paintColourMap(mx, world) {
+function paintColourMap(mx, world) {
  paintSnow(mx, world.H, world.M);
  paintLift(mx);
  paintTrees(mx, world.treeArr);
