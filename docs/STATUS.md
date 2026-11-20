@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 20 Nov 2026, main after PR #20.
+Updated 20 Nov 2026, main after PR #22.
 
 ## Done
 | Package | PR |
@@ -18,24 +18,20 @@ Updated 20 Nov 2026, main after PR #20.
 | Docs: AGENTS standards, roadmap, CLAUDE.md, PR template, decisions | #15, #16, #19 |
 | Art spec v1.4: twist, head yaw, body pitch (board flips about its long axis), camera pitch, brake/switch/tuck poses; additive, unused by the game until S3/S4 | #18 |
 | Coordinator skill (`.claude/skills/gresca-architect`) and this file | #20 |
+| P0 token budget: quiet `npm test`, `tools/outline.mjs`, `docs/STYLE.md`, token rules | #22 |
 
 ## Open PRs
-- **P0 token budget** (`docs/p0-token-budget`): quiet `npm test`, `tools/outline.mjs` for the art spec, Style moved
-  to `docs/STYLE.md`, a "Token budget" section in `AGENTS.md`, model and screenshot rules in the coordinator skill.
-
-(#18 art spec v1.4, #19 roadmap decisions and #20 coordinator skill are merged.)
+- **P1 docs** (`docs/p1-code-map`): code map and stream ownership table in `AGENTS.md`; short `AGENTS.md` (loaded
+  through a one-line `CLAUDE.md`) in `src/sim`, `src/view` and `art`.
 
 ## Next, in order (the freeze: one code PR at a time)
-1. **P1 docs:** code map in `AGENTS.md` ("to change X edit Y, tests Z"), folder ownership table (streams S1–S5 in
-   the roadmap), per-folder `AGENTS.md` for `src/sim`, `src/view`, `art/` (keep each short: they load
-   into every agent working there). The Style section already moved to `docs/STYLE.md` in P0.
-2. **B2b state contracts and events:** see the roadmap, phase 1 row 3. Pre-add the fields the streams need.
+1. **B2b state contracts and events:** see the roadmap, phase 1 row 3. Pre-add the fields the streams need.
    Also: `Gresca.sim()` uses the loop's `simTick()`; record input per sim step; split the façade so each area
    registers its own fields; resolve the four `TODO(B2b)` markers in `src/`.
-3. **B2c world seams:** the `Course` interface (procedural implementation first), the fall line, `sim/anim-input.js`,
+2. **B2c world seams:** the `Course` interface (procedural implementation first), the fall line, `sim/anim-input.js`,
    and a ban on "+y is downhill".
-4. **C2 ENU frame**, proven by the whole suite passing on a rotated procedural map.
-5. Then phase 2 (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map compiler)
+3. **C2 ENU frame**, proven by the whole suite passing on a rotated procedural map.
+4. Then phase 2 (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map compiler)
    and the five streams. All are in `docs/ROADMAP.md`.
 
 ## Known issues (not yet fixed)
