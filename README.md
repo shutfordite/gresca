@@ -55,8 +55,8 @@ turn rate), grip better and spin slightly faster.
 
 The rider is drawn from the Hanga Dawn art spec and animated by a small pose and body-dynamics layer:
 
-- `art/gresca-hanga-spec.js` is the art spec (v1.3.0), a byte-for-byte copy of the one on the design canvas. The
-  game uses its rider rig, poses, blend timings and `HANGA.projectRider`.
+- `art/gresca-hanga-spec.js` is the art spec (v1.4.0), authored in this repo; each version's changes are in
+  `docs/art/`. The game uses its rider rig, poses, blend timings and `HANGA.projectRider`.
 - `art/gresca-rider-anim.js` (`RiderAnim`) picks the pose with `HANGA.poseFor`, blends over `HANGA.blendTime`, holds
   the landing pose and snaps into a wipeout. On top of the pose it adds body dynamics, so the rider reacts to any
   terrain: the legs absorb the ground through a spring and squat deeper on harder landings, the rider leans into
