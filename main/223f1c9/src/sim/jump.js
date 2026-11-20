@@ -1,6 +1,7 @@
 // Jumps: take-off (the jump button or a kicker lip), flight, and the landing: clean and scored, or a crash.
 import { KICK, KBIG, cx } from '../world/course.js';
 import { emit } from './particles.js';
+import { pushEvent } from './state.js';
 
 const JUMP_GRAVITY = 15;    // m/s², in the air (stronger than real gravity, for snappy game jumps)
 const JUMP_SPEED = 6.5;     // m/s up, an ollie from the snow
@@ -13,11 +14,10 @@ const CRASH_TIME = 1.1;     // s of wipeout
 const CRASH_LAND_SPEED = -8; // m/s vertical, landing harder than this ...
 const CRASH_MISALIGN = 0.6; // rad ... with the board this far off the direction of travel is a crash
 const MIN_SCORED_AIR = 0.35; // s, shorter hops score nothing
-const POPUP_TIME = 1.6;     // s a trick popup stays on screen
 
 /**
  * One step of dt (s) of the rider's vertical motion: take-off, flight and landing. Mutates rider, input.jump (the
- * one-shot request it uses up), session (crashes, score, popup) and spray (landing snow).
+ * one-shot request it uses up), session (crashes, score, events: land, crash, score) and spray (landing snow).
  */
 export function jumpStep(rider, input, session, spray, dt) {
  if (rider.crashTimer > 0) {
@@ -60,7 +60,8 @@ function takeOff(rider, input, s) {
  }
 }
 
-// Touchdown. Twin tip: the board only has to line up with the direction of travel, nose first or tail first.
+// Touchdown (event land), then a crash or a score. Twin tip: the board only has to line up with the direction of
+// travel, nose first or tail first.
 function land(rider, session, spray) {
  const landV = rider.vz;
  rider.z = 0;
@@ -72,15 +73,16 @@ function land(rider, session, spray) {
  const ax = ((dv % Math.PI) + Math.PI) % Math.PI;
  const mis = Math.min(ax, Math.PI - ax);
  const rt = Math.round(Math.abs(rider.rotation) / Math.PI) * 180;
+ pushEvent(session, 'land', { speed: rider.landingSpeed, airTime: rider.airTime });
  if (Math.hypot(rider.vx, rider.vy) > 3 && landV < CRASH_LAND_SPEED && mis > CRASH_MISALIGN) {
   rider.crashTimer = CRASH_TIME;
   session.crashes++;
   rider.vx = rider.vy = 0;
   rider.airTime = 0;
+  pushEvent(session, 'crash', { cause: 'landing' });
  } else if (rider.airTime > MIN_SCORED_AIR) {
   const pts = Math.round(rider.airTime * 60 + (rider.fromKicker ? 20 : 0) + rt / 180 * 40);
   session.score += pts;
-  session.popup.text = '+' + pts + 'p ' + (rt ? rt + ' ' : '') + 'Air';
-  session.popup.t = POPUP_TIME;
+  pushEvent(session, 'score', { points: pts, kind: 'air', degrees: rt });
  }
 }

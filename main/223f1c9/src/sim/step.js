@@ -1,9 +1,10 @@
-// One physics step: steering, gravity, grip, friction, braking, jumps, rails, trees, snow tracks and the finish.
+// One physics step: steering, gravity, grip, friction, braking, jumps, rails, trees, spray and the finish; its events.
 import { TAU, RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
-import { W0, FIN } from '../world/course.js';
+import { FIN, RAILS } from '../world/course.js';
 import { emit } from './particles.js';
 import { jumpStep } from './jump.js';
 import { railCheck, grindStep } from './grind.js';
+import { pushEvent } from './state.js';
 
 const AIRBORNE_Z = 0.05;     // m above the snow, higher counts as in the air
 const WIPEOUT_SPIN_RATE = 14; // rad/s, tumble while crashed
@@ -25,42 +26,69 @@ const TREE_RADIUS_M = 2.4;   // m, closer to a trunk than this is a crash
 const TREE_TOP_M = 1.5;      // m above the snow, higher jumps clear the trees
 const TREE_BOUNCE_S = 0.12;  // s of motion undone when hitting a tree
 const CRASH_TIME = 1.1;      // s of wipeout
-// Colour map offsets of the 2 × 2 cells a ski track darkens (RGBA bytes, rows W0 cells apart).
-const TRACK_CELLS = Object.freeze([0, 4, W0 * 4, W0 * 4 + 4]);
+const SWITCH_SPEED = -1.5;    // m/s along the board, riding backwards faster than this is switch (as view/camera.js)
 
 /**
- * One step of dt (s). sim: {rider, input, session, terrain, trees, spray, gradient (a {gx,gy} scratch object),
- * view (colour maps col and col0, for ski tracks), ui (the menu, for the finish screen)}. Mutates rider, input.jump,
- * session, spray, view.col and the ui.
+ * One step of dt (s): step(state, input, world, dt) -> the step's SimEvents (core/contracts.js; the array is reused
+ * every step, copy what you keep). state: {rider, session, spray, gradient (a {gx,gy} scratch object)}; input: the
+ * InputState; world: {terrain, trees}. Mutates rider, input.jump (and jumpPressed), session and spray, nothing else.
  */
-export function step(sim, dt) {
- const rider = sim.rider;
- const session = sim.session;
+export function step(state, input, world, dt) {
+ const rider = state.rider;
+ const session = state.session;
+ session.events.length = 0;
  session.time += dt;
+ brakeEvents(rider, input, session);
  if (rider.grind) {
-  grindStep(rider, sim.input, session, sim.spray, dt);
-  return;
+  grindStep(rider, input, session, state.spray, dt);
+  rider.skid = 0;
+ } else {
+  ride(state, input, world, dt);
  }
+ deriveRider(rider);
+ if (!input.jump) input.jumpPressed = 0; // the pre-added one-shot follows jump until S1 switches the sim to it
+ return session.events;
+}
+
+// One step on the snow or in the air: steer, glide, jumps, rails, trees, spray and the finish line.
+function ride(state, input, world, dt) {
+ const rider = state.rider;
+ const session = state.session;
  const s = Math.hypot(rider.vx, rider.vy);
- steer(rider, sim.input, RIGS[session.rig], s, dt);
- const slip = rider.crashTimer > 0 ? 0 : glide(sim, s, dt);
+ steer(rider, input, RIGS[session.rig], s, dt);
+ const slip = rider.crashTimer > 0 ? 0 : glide(state, input, world.terrain, s, dt);
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
- jumpStep(rider, sim.input, session, sim.spray, dt);
- railCheck(rider, sim.input, sim.spray);
- keepOnMap(rider, sim.terrain.bounds);
- if (rider.crashTimer <= 0 && rider.z < TREE_TOP_M) hitTrees(rider, session, sim.trees, s);
- if (rider.crashTimer <= 0 && rider.z <= AIRBORNE_Z) carveSnow(sim, slip);
- // TODO(B2b): the finish screen is the UI's job: emit a finish event instead of writing the menu here.
+ jumpStep(rider, input, session, state.spray, dt);
+ railCheck(rider, input, state.spray);
+ if (rider.grind) pushEvent(session, 'grindStart', { rail: RAILS.indexOf(rider.grind.r), kind: rider.grind.r.t });
+ keepOnMap(rider, world.terrain.bounds);
+ if (rider.crashTimer <= 0 && rider.z < TREE_TOP_M) hitTrees(rider, session, world.trees, s);
+ const onSnow = rider.crashTimer <= 0 && rider.z <= AIRBORNE_Z;
+ rider.skid = onSnow ? slip : 0;
+ if (onSnow) spraySnow(rider, input, state.spray, slip);
  if (rider.y > FIN) {
-  const crashes = session.crashes;
+  if (session.phase !== 'done') {
+   pushEvent(session, 'finish', { time: session.time, score: session.score, crashes: session.crashes });
+  }
   session.phase = 'done';
-  sim.ui.msg.hidden = false;
-  sim.ui.msgT.textContent = 'Finished in ' + session.time.toFixed(1) + ' s with ' + session.score + ' points and ' +
-   crashes + ' crash' + (crashes == 1 ? '' : 'es') + '.';
-  sim.ui.go.textContent = 'Ride again';
-  sim.ui.go.hidden = false;
  }
+}
+
+// brakeStart and brakeEnd when the brake is pressed or let go; rider.isBraking remembers it between steps.
+function brakeEvents(rider, input, session) {
+ const isBraking = !!input.brake;
+ if (isBraking === rider.isBraking) return;
+ rider.isBraking = isBraking;
+ pushEvent(session, isBraking ? 'brakeStart' : 'brakeEnd', {});
+}
+
+// The RiderState fields derived from the rest (core/contracts.js). Nothing in the physics reads them.
+function deriveRider(rider) {
+ if (rider.vx !== 0 || rider.vy !== 0) rider.travelHeading = Math.atan2(rider.vy, rider.vx);
+ rider.boardHeading = rider.heading;
+ rider.spinRot = rider.rotation;
+ rider.isSwitch = rider.vx * Math.cos(rider.heading) + rider.vy * Math.sin(rider.heading) < SWITCH_SPEED;
 }
 
 // The wipeout tumble, spinning in the air, or carving on the snow (within forward or switch).
@@ -85,12 +113,12 @@ function steer(rider, input, rig, s, dt) {
 }
 
 // Gravity along the slope, grip against sideways slip, friction and braking. Returns the sideways slip (m/s).
-function glide(sim, s, dt) {
- const rider = sim.rider;
- const isBraking = sim.input.brake;
- const rig = RIGS[sim.session.rig];
- const grav = sim.terrain.gradient(rider.x, rider.y, sim.gradient);
- const m = sim.terrain.groomed(rider.x, rider.y);
+function glide(state, input, terrain, s, dt) {
+ const rider = state.rider;
+ const isBraking = input.brake;
+ const rig = RIGS[state.session.rig];
+ const grav = terrain.gradient(rider.x, rider.y, state.gradient);
+ const m = terrain.groomed(rider.x, rider.y);
  const air = rider.z > AIRBORNE_Z;
  const gk = (air ? 0 : (isBraking ? BRAKE_GRAVITY : 1)) * GRAVITY * GRAVITY_GAIN;
  let vx = rider.vx - grav.gx * gk * dt;
@@ -148,31 +176,16 @@ function hitTrees(rider, session, trees, s) {
     rider.x -= rider.vx * TREE_BOUNCE_S;
     rider.y -= rider.vy * TREE_BOUNCE_S;
     rider.vx = rider.vy = 0;
+    pushEvent(session, 'crash', { cause: 'tree' });
    }
   }
  }
 }
 
-// On the snow: a deeper track, and spray when carving hard or braking (slip: sideways slip, m/s).
-function carveSnow(sim, slip) {
- const rider = sim.rider;
- const isBraking = sim.input.brake;
- // TODO(B2b): ski tracks belong to the view: a track buffer the view owns, not paint in the colour map from here.
- // The track is a fixed depth below the snow as built (col0), never compounded per step: a slow rider stays over one
- // cell for many steps, which turned it black.
- const col = sim.view.col;
- const col0 = sim.view.col0;
- const dk = (isBraking || slip > 3) ? 0.8 : 0.9;
- const o = ((rider.y | 0) * W0 + (rider.x | 0)) * 4;
- const dg = dk + 0.02;
- const db = Math.min(1, dk + 0.07);
- for (const q of TRACK_CELLS) {
-  const i = o + q;
-  col[i] = Math.min(col[i], col0[i] * dk);
-  col[i + 1] = Math.min(col[i + 1], col0[i + 1] * dg);
-  col[i + 2] = Math.min(col[i + 2], col0[i + 2] * db);
- }
+// On the snow: spray when carving hard or braking (slip: sideways slip, m/s). The ski tracks are the view's
+// (view/ski-tracks.js), drawn from rider.skid and rider.isBraking after each step.
+function spraySnow(rider, input, spray, slip) {
  const sn = Math.hypot(rider.vx, rider.vy);
- if (isBraking && sn > 3) emit(sim.spray, 1, rider.x, rider.y, 0.15, 2.2, 1.6, -rider.vx * 0.15, -rider.vy * 0.15);
- else if (slip > 4) emit(sim.spray, 1, rider.x, rider.y, 0.15, 2.2, 1.4, 0, 0);
+ if (input.brake && sn > 3) emit(spray, 1, rider.x, rider.y, 0.15, 2.2, 1.6, -rider.vx * 0.15, -rider.vy * 0.15);
+ else if (slip > 4) emit(spray, 1, rider.x, rider.y, 0.15, 2.2, 1.4, 0, 0);
 }

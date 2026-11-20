@@ -1,4 +1,6 @@
-// The menu: the Snowboard / Skis picker with its gresca-rig storage key, the stance key, and the menu texts.
+// The menu: the Snowboard / Skis picker with its gresca-rig storage key, the stance key, the menu texts and the
+// finish screen (a SimEvent subscriber).
+import { on } from '../core/events.js';
 
 const RIG_KEY = 'gresca-rig';
 const OLD_RIG_KEY = 'gv-rig'; // before the rename; still read
@@ -44,4 +46,21 @@ export function loadStance(session, env, hanga) {
  } catch (_) {
   // storage blocked: regular stance
  }
+}
+
+/** The finish screen's text for a finish SimEvent {time s, score, crashes}. */
+export function finishText(event) {
+ const crashes = event.crashes;
+ return 'Finished in ' + event.time.toFixed(1) + ' s with ' + event.score + ' points and ' + crashes + ' crash' +
+  (crashes == 1 ? '' : 'es') + '.';
+}
+
+/** Subscribes the finish screen to the bus: the result and a Ride again button when the rider crosses the line. */
+export function subscribeFinish(bus, ui) {
+ on(bus, 'finish', (e) => {
+  ui.msg.hidden = false;
+  ui.msgT.textContent = finishText(e);
+  ui.go.textContent = 'Ride again';
+  ui.go.hidden = false;
+ });
 }

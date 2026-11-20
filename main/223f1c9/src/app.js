@@ -3,17 +3,20 @@ import { SIM_DT, SIM_MAX } from './core/config.js';
 import { createRng, reseed } from './core/rng.js';
 import { cx } from './world/course.js';
 import { createWorld, buildWorld } from './world/build.js';
-import { createRider, createSession } from './sim/state.js';
+import { createEventBus, onStep } from './core/events.js';
+import { createInputLog } from './core/input-log.js';
+import { createRider, createSession, resetDerived } from './sim/state.js';
 import { createTimestep, snapInterpolation, advance } from './sim/timestep.js';
 import { createInput } from './input/input.js';
 import { bindInput } from './input/bind-input.js';
 import { createView, resizeScreen } from './view/view-state.js';
 import { buildColourMap } from './view/colour-map.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
-import { draw } from './view/draw.js';
+import { updateCamera, draw } from './view/draw.js';
+import { markTrack, clearTracks } from './view/ski-tracks.js';
 import { getUi } from './ui/dom.js';
-import { updateHud, showGloves } from './ui/hud.js';
-import { bindMenu, loadStance, MENU_TEXT } from './ui/menu.js';
+import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
+import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
 import { createFacade } from './debug.js';
 
 const START_Y = 60;     // m, where a run starts, down from the top of the map
@@ -44,10 +47,21 @@ export function createGame(env) {
  const spray = { particles: [], rng };
  const timestep = createTimestep();
  const clock = { lastMs: 0 }; // ms, the last frame's timestamp
- // What step() reads and writes (sim/step.js). gradient: scratch for the slope under the rider, so no allocation.
+ const bus = createEventBus(); // SimEvents out of the sim, to ui/, view/ and the façade (core/events.js)
+ const hud = createHud();
+ const inputLog = createInputLog();
+ // What simTick() reads and writes (sim/timestep.js): step(state, input, world, dt) and the event bus.
+ // gradient: scratch for the slope under the rider, so no allocation.
  const sim = {
-  rider, input, session, terrain: world.terrain, trees: world.trees, spray, gradient: { gx: 0, gy: 0 }, view, ui,
+  state: { rider, session, spray, gradient: { gx: 0, gy: 0 } },
+  input,
+  world: { terrain: world.terrain, trees: world.trees },
+  bus,
+  inputLog,
  };
+ subscribeHud(bus, hud);
+ subscribeFinish(bus, ui);
+ onStep(bus, () => markTrack(view, rider));
  // What draw() reads (view/draw.js).
  const scene = {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, treeArr: world.treeArr,
@@ -66,7 +80,8 @@ export function createGame(env) {
   session.time = 0;
   rider.wipeoutSpin = 0;
   session.score = 0;
-  session.popup.t = 0;
+  hud.popup.t = 0;
+  session.events.length = 0;
   rider.airTime = 0;
   rider.fromKicker = false;
   spray.particles.length = 0;
@@ -75,8 +90,9 @@ export function createGame(env) {
   input.both = false;
   rider.grind = null;
   rider.grindDist = 0;
+  resetDerived(rider);
   reseed(rng);
-  view.col.set(view.col0); // wipe the ski tracks
+  clearTracks(view);
   resetCamera(camera, world.terrain.height(rider.x, START_Y));
   session.phase = 'run';
   ui.msg.hidden = true;
@@ -84,10 +100,11 @@ export function createGame(env) {
   snapInterpolation(timestep, rider);
  }
 
- // Draws one frame and the HUD. dt: s since the last frame; alpha: see view/draw.js riderPose().
+ // Moves the camera, then draws a frame and the HUD. dt: s since the last frame; alpha: see view/draw.js riderPose().
  function frame(dt, alpha) {
-  draw(view, scene, dt, alpha);
-  updateHud(ui, view.drawn, rider, session, world.terrain.bounds);
+  updateCamera(view, scene, dt, alpha);
+  draw(view, scene, dt);
+  updateHud(ui, hud, view.drawn, rider, session, world.terrain.bounds);
  }
 
  function loop(ts) {
@@ -125,6 +142,7 @@ export function createGame(env) {
  env.requestAnimationFrame(loop);
 
  return createFacade({
-  rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, hanga, startRun, frame,
+  rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, hanga, hud, bus, inputLog, startRun,
+  frame,
  });
 }

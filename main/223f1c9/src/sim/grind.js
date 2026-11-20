@@ -2,6 +2,7 @@
 import { RAILS } from '../world/course.js';
 import { rnd } from '../core/rng.js';
 import { emit } from './particles.js';
+import { pushEvent } from './state.js';
 
 const GRIND_MIN_SPEED = 3;   // m/s, slower riders don't get onto a rail, and a grind never slows below this
 const GRIND_DRAG = 0.12;     // 1/s, fraction of speed lost per second on the rail
@@ -13,7 +14,6 @@ const GRIND_POINTS_PER_M = 3; // points per metre ground
 const GRIND_JUMP_SPEED = 6.5; // m/s up, jumping off a rail
 const GRIND_DROP_SPEED = 2.5; // m/s up, rolling off the end
 const GRIND_DROP_AIR = -0.6; // s, air time starts this far below zero after rolling off (so the drop scores nothing)
-const POPUP_TIME = 1.6;      // s a trick popup stays on screen
 
 // rad, the size of angle d wrapped to -PI..PI
 const wrapAbs = (d) => Math.abs(Math.atan2(Math.sin(d), Math.cos(d)));
@@ -73,13 +73,13 @@ export function grindStep(rider, input, session, spray, dt) {
  else if (grind.t >= r.len) endGrind(rider, input, session, false);
 }
 
-// Leaves the rail, jumping (jump true) or rolling off the end, and scores the grind.
+// Leaves the rail, jumping (jump true) or rolling off the end, and scores the grind (events grindEnd, score).
 function endGrind(rider, input, session, jump) {
  const r = rider.grind.r;
  const pts = Math.round(rider.grindDist * GRIND_POINTS_PER_M);
  session.score += pts;
- session.popup.text = '+' + pts + 'p ' + (r.t === 'box' ? 'Box' : 'Rail');
- session.popup.t = POPUP_TIME;
+ pushEvent(session, 'grindEnd', { rail: RAILS.indexOf(r), kind: r.t, dist: rider.grindDist, jumped: jump });
+ pushEvent(session, 'score', { points: pts, kind: r.t, degrees: 0 });
  rider.grind = null;
  rider.grindDist = 0;
  rider.z = r.h;
