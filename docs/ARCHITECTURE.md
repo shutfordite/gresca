@@ -89,7 +89,7 @@ The terrain is a voxel-style column raycaster (152 samples × up to 360 columns,
 - `Math.random()` in particles is fine, but a seeded RNG for anything gameplay-related keeps replays and tests deterministic.
 
 ### What to keep
-- **One file, nothing to install** for players. It's a real strength. Keep shipping a single `index.html`, but stop *authoring* in it (see B1).
+- **Nothing to install** for players. ~~One file~~: superseded by ADR 0001 — the game is a static site on GitHub Pages, still with no build step.
 - Art as data plus pure helpers (`HANGA`, `RiderAnim`): UMD, testable in Node, tunables in one place.
 - Behaviour-level tests that run the real shipped code, and the drift test for embedded modules.
 - The column-raycast renderer and low-res upscale. It gives the style cheaply. Change what it samples, not how.
@@ -97,7 +97,7 @@ The terrain is a voxel-style column raycaster (152 samples × up to 360 columns,
 
 ## 4. Target architecture
 
-Same deployable: one `index.html`, no dependencies. Source lives in `src/`, is plain classic-script modules (ES modules don't load over `file://`), and is joined by a zero-dependency `tools/build.js` (a generalised `embed-art.js`).
+A static site with no build step and no runtime dependencies (ADR 0001): `index.html` loads `art/` and `src/` directly and fetches `maps/`. Source in `src/` starts as ordered classic scripts (B1) and becomes native ES modules in B2.
 
 ```
 src/
@@ -121,7 +121,7 @@ src/
   debug.js   window.Gresca test/debug façade (see A1)
 art/         unchanged (HANGA, RiderAnim)
 maps/        procedural.json? / el-tarter.json (gresca-map-1)
-tools/       build.js, bake-map.mjs (Node) + bake page, validate-map.js
+tools/       map compiler (pure JS core + Node CLI + bake page), validate-map.js
 docs/adr/    one short decision record per choice below
 ```
 
@@ -132,7 +132,7 @@ Rules the layers keep:
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians internally and compass degrees only at the spec boundary.
 - The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it.
 
-Decisions to record as ADRs: (1) single shipped file, built from `src/`; (2) ENU world frame; (3) course as polyline (s, d); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
+Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); (2) ENU world frame; (3) course as polyline (s, d); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
 
 ## 5. Work packages for agents
 
@@ -161,12 +161,16 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 ### Phase B: split the code without changing behaviour
 
 **B1. `src/` + build tool** *(after A1)*
-- Move the game script into `src/` files as in section 4, at first just cut along the existing `// ----` sections with no logic changes. `tools/build.js` joins `art/` + `src/` into `index.html` (and replaces `embed-art.js`). Extend the drift test: `build()` of the sources equals the committed `index.html`.
-- Document "never hand-edit `index.html`" in `AGENTS.md`.
-- Accept when: `index.html` behaviour is byte-for-byte or near; tests are unchanged and green.
+*Rewritten for ADR 0001 (no single file, no build step).*
+- Move the game script into ordered classic scripts under `src/` (for example `config.js`, `world.js`, `park.js`, `sim.js`, `input.js`, `camera.js`, `render.js`, `rider-view.js`, `hud.js`, `app.js`, `debug.js`), cutting along the existing `// ----` sections with **no logic changes**. They share globals exactly as the single script did. `index.html` keeps the HTML and CSS and loads `art/*.js` then `src/*.js` with `<script src>` in order.
+- Remove `tools/embed-art.js` and the embedded art blocks. Replace the drift test with one that checks `index.html` loads every `art/` and `src/` file, in the right order, and has no inline game code.
+- Harness: load the `<script src>` files in page order into the one vm context (the façade and all tests unchanged).
+- Update the README (how to play: the Pages link, or a local static server) and `AGENTS.md`.
+- Fold in the follow-ups listed in section 0 for B1.
+- Accept when: all tests pass unchanged; the PR's preview plays on the iPad exactly like main.
 
 **B2. State objects and events** *(after B1)*
-- Replace the globals with `rider`, `input`, `session`, `camera` objects and a `world` object. `step()` becomes `sim.step(rider, input, world, dt) → events[]`.
+- Convert `src/` to native ES modules (ADR 0001) as part of this: replace the globals with `rider`, `input`, `session`, `camera` objects and a `world` object. `step()` becomes `sim.step(rider, input, world, dt) → events[]`.
 - Move the finish screen, popup and glove classes into `ui/` as event subscribers. Move the camera update out of `draw()` into the loop.
 - Ski tracks become a sim event or a sparse track buffer that view owns. Stop writing into `col` from sim.
 - The façade (A1) now maps directly onto these objects; the tests should not need to change.
@@ -194,7 +198,7 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - Baker v2 as a Node 22 script (`tools/bake-map.mjs`, built-in `fetch`), keeping the browser page as a fallback. It chooses the piste by OSM id or name, converts Mercator pixels to local ENU metres (not one mid-latitude scale for the whole box), computes `meanSlopeDeg` and the horizon profile, and writes `maps/<id>.json`. Note: the agents' sandbox may block the tile and Overpass hosts; if so, the owner runs the bake and commits the JSON.
 
 **C4. Map loading and corridor-only detail** *(after C1–C3)*. *Amended by R1 and R5: the corridor cache holds the composed layers; slope limits and DEM defect checks become gameplay rules and validator checks.*
-- Load one map (embedded JSON for `file://`, `fetch` when served). Build in chunks with progress, or in a Worker, so the menu never freezes (M2).
+- Load one map with `fetch` from `maps/` (or from a file the player picks). Build in chunks with progress, or in a Worker, so the menu never freezes (M2).
 - Keep the coarse baked grid (about 14 m) for the whole map, for the backdrop and far field. Upsample to 2 m (bicubic) **only within a corridor** (piste plus about 150 m each side), in tiles made on demand along s. Memory budget: under 60 MB total on El Tarter.
 - Accept when: El Tarter loads and is rideable start to finish with the autopilot, and the procedural map still passes everything.
 
@@ -226,12 +230,12 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 ```
 # Working on Gresca
 - Run `npm test` before every commit. Never weaken or delete an assertion to make a refactor pass; say why in the PR if a test must change.
-- Do not hand-edit index.html (after B1). Edit src/ or art/, then `node tools/build.js`.
+- Game code lives in src/ (after B1); art/ is loaded as it is. No build step.
 - art/gresca-hanga-spec.js is owned by the art spec; change it only to sync a new spec version, byte-for-byte.
 - world/ and sim/ must not touch document, window, canvas or HANGA colours.
 - Units: metres, seconds, radians internally; compass degrees only where the spec needs them. Comment units on every tunable.
 - One work package per PR. Title: "<package id>: <what>". The body lists behaviour changes (or "none") and test changes.
-- Keep the single-file, no-dependency build. No npm packages without an ADR.
+- Static site, no build step, no runtime npm packages without an ADR (ADR 0001).
 ```
 
 ## 7. Review checklist for PRs
