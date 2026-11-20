@@ -39,6 +39,12 @@ Updated 21 Nov 2026, main after PR #25.
   equipment heading (`back ? a+π : a`). This is fixed by F5 (the camera follows `travelHeading`, added in B2b).
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
   in D1.
+- **C2 leftovers, for later packages:** the carve limit (`CARVE_LIMIT`) is measured from the map frame's across axis
+  until F6 moves it to the fall line; `START_HEADING`/`MENU_HEADING` (1.57, camera and menu) are grid headings turned
+  through the frame until C1 gives the course a start direction; the rider yaw and path turn rate are clockwise-positive
+  (the mirror of main, to keep the golden trace bit for bit): F6 should flip them to counter-clockwise when it changes
+  feel anyway and update the golden hash then; the minimap still draws in grid orientation, so S1/C4 decide whether a
+  rotated or real map gets a north-up minimap. `?rot=<deg>` in the URL places the procedural map rotated (debug).
 - **The design canvas copy of the art spec** (claude.ai design "Gresca Rider Style Prototypes",
   `project/data/gresca-hanga-spec.js`) is synced from the repo; re-sync it after every spec version.
 - **Pose tuning for S3:** the ski tuck reads as a blob from straight behind, the ski brake legs look short, and the
