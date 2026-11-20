@@ -36,12 +36,12 @@ function pilot(s, W, n) {
  return { ...steer, brake, jump };
 }
 
-const r12 = (v) => v; // full precision: JSON numbers round-trip, so equal traces are bitwise equal
+// Numbers are kept at full precision: JSON numbers round-trip, so equal traces are bitwise equal.
 
 // One step's record: the rider, the score and the step's new events (and the HUD and draw counts on frame steps).
 function record(g, n, evStart) {
  const s = g.state();
- const row = [n, s.x, s.y, s.z, s.vx, s.vy, s.vz, s.heading, s.score, s.crashes, s.phase, s.fromKicker, s.grinding].map(r12);
+ const row = [n, s.x, s.y, s.z, s.vx, s.vy, s.vz, s.heading, s.score, s.crashes, s.phase, s.fromKicker, s.grinding];
  const ev = g.game.events.list().slice(evStart);
  const out = { r: row };
  if (ev.length) out.e = ev.map((e) => JSON.stringify(e));
@@ -53,9 +53,9 @@ function frameRecord(g, out) {
  out.hud = g.el('info').textContent;
  out.dot = g.el('dot').style.left + ',' + g.el('dot').style.top;
  out.drawn = g.debug.drawn();
- out.yaw = r12(g.debug.riderYaw());
+ out.yaw = g.debug.riderYaw();
  const a = g.debug.anim();
- out.anim = a && JSON.stringify(a, (k, v) => r12(v));
+ out.anim = a && JSON.stringify(a);
 }
 
 // Rides one run from place() options until the finish or RUN_STEPS; returns the per-step records.

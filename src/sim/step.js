@@ -1,6 +1,6 @@
 // One physics step: steering, gravity, grip, friction, braking, jumps, rails, trees, spray and the finish; its events.
 import { TAU, RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
-import { FIN, RAILS } from '../world/course.js';
+import { DEFAULT_COURSE } from '../world/course.js';
 import { emit } from './particles.js';
 import { jumpStep } from './jump.js';
 import { railCheck, grindStep } from './grind.js';
@@ -27,31 +27,37 @@ const TREE_TOP_M = 1.5;      // m above the snow, higher jumps clear the trees
 const TREE_BOUNCE_S = 0.12;  // s of motion undone when hitting a tree
 const CRASH_TIME = 1.1;      // s of wipeout
 const SWITCH_SPEED = -1.5;    // m/s along the board, riding backwards faster than this is switch (as view/camera.js)
+const FLAT_SLOPE = 1e-9;     // m/m, flatter than this the rider has no downhill side
 
 /**
  * One step of dt (s): step(state, input, world, dt) -> the step's SimEvents (core/contracts.js; the array is reused
- * every step, copy what you keep). state: {rider, session, spray, gradient (a {gx,gy} scratch object)}; input: the
- * InputState; world: {terrain, trees}. Mutates rider, input.jump (and jumpPressed), session and spray, nothing else.
+ * every step, copy what you keep). state: {rider, session, spray, gradient (a {gx,gy} scratch object, also the fall
+ * line's), where (a {s,d,tx,ty} scratch object)}; input: the InputState; world: {terrain, trees, course (Course,
+ * core/contracts.js)}. Mutates rider, input.jump (and jumpPressed), session and spray, nothing else. Without a course
+ * or where (direct unit calls), DEFAULT_COURSE and a new where are used.
  */
 export function step(state, input, world, dt) {
  const rider = state.rider;
  const session = state.session;
+ const course = world.course || DEFAULT_COURSE;
+ const where = state.where || { s: 0, d: 0, tx: 0, ty: 1 };
  session.events.length = 0;
  session.time += dt;
  brakeEvents(rider, input, session);
  if (rider.grind) {
-  grindStep(rider, input, session, state.spray, dt);
+  grindStep(rider, input, session, state.spray, dt, course);
   rider.skid = 0;
  } else {
-  ride(state, input, world, dt);
+  ride(state, input, world, dt, course, where);
  }
- deriveRider(rider);
+ deriveRider(rider, course.fallLine(rider.x, rider.y, state.gradient));
  if (!input.jump) input.jumpPressed = 0; // the pre-added one-shot follows jump until S1 switches the sim to it
  return session.events;
 }
 
-// One step on the snow or in the air: steer, glide, jumps, rails, trees, spray and the finish line.
-function ride(state, input, world, dt) {
+// One step on the snow or in the air: steer, glide, jumps, rails, trees, spray and the finish line (course: Course,
+// where: its scratch).
+function ride(state, input, world, dt, course, where) {
  const rider = state.rider;
  const session = state.session;
  const s = Math.hypot(rider.vx, rider.vy);
@@ -59,15 +65,17 @@ function ride(state, input, world, dt) {
  const slip = rider.crashTimer > 0 ? 0 : glide(state, input, world.terrain, s, dt);
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
- jumpStep(rider, input, session, state.spray, dt);
- railCheck(rider, input, state.spray);
- if (rider.grind) pushEvent(session, 'grindStart', { rail: RAILS.indexOf(rider.grind.r), kind: rider.grind.r.t });
+ jumpStep(rider, input, session, state.spray, dt, course, where);
+ railCheck(rider, input, state.spray, course, where);
+ if (rider.grind) {
+  pushEvent(session, 'grindStart', { rail: course.rails.indexOf(rider.grind.r), kind: rider.grind.r.t });
+ }
  keepOnMap(rider, world.terrain.bounds);
  if (rider.crashTimer <= 0 && rider.z < TREE_TOP_M) hitTrees(rider, session, world.trees, s);
  const onSnow = rider.crashTimer <= 0 && rider.z <= AIRBORNE_Z;
  rider.skid = onSnow ? slip : 0;
  if (onSnow) spraySnow(rider, input, state.spray, slip);
- if (rider.y > FIN) {
+ if (course.project(rider.x, rider.y, where).s > course.finishS) {
   if (session.phase !== 'done') {
    pushEvent(session, 'finish', { time: session.time, score: session.score, crashes: session.crashes });
   }
@@ -83,12 +91,17 @@ function brakeEvents(rider, input, session) {
  pushEvent(session, isBraking ? 'brakeStart' : 'brakeEnd', {});
 }
 
-// The RiderState fields derived from the rest (core/contracts.js). Nothing in the physics reads them.
-function deriveRider(rider) {
+// The RiderState fields derived from the rest (core/contracts.js), fall: the course's fall line under the rider.
+// Nothing in the physics reads them.
+function deriveRider(rider, fall) {
  if (rider.vx !== 0 || rider.vy !== 0) rider.travelHeading = Math.atan2(rider.vy, rider.vx);
  rider.boardHeading = rider.heading;
  rider.spinRot = rider.rotation;
  rider.isSwitch = rider.vx * Math.cos(rider.heading) + rider.vy * Math.sin(rider.heading) < SWITCH_SPEED;
+ rider.fallLine = fall.heading;
+ // the sign of sin(fallLine - boardHeading): + when the fall line is counter-clockwise from the board
+ const cross = Math.cos(rider.boardHeading) * fall.fy - Math.sin(rider.boardHeading) * fall.fx;
+ rider.downhillSide = fall.slope > FLAT_SLOPE ? (cross >= 0 ? 1 : -1) : 0;
 }
 
 // The wipeout tumble, spinning in the air, or carving on the snow (within forward or switch).

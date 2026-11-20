@@ -1,6 +1,6 @@
 // The procedural world: createWorld() makes the height and groomed grids and their terrain; buildWorld() fills them.
 import { Terrain } from './terrain.js';
-import { W0, H0, FIN, KICK, cx, bump } from './course.js';
+import { W0, H0, FIN, KICK, cx, bump, createProceduralCourse } from './course.js';
 import { hash, vn, fbmRows } from './noise.js';
 
 const TREE_CELL_M = 6;      // m, one tree candidate per cell of this size
@@ -10,7 +10,8 @@ const TREELINE_M = 2560;    // m of altitude, no trees above it
 
 /**
  * A new, empty procedural world: H (m, float32 heights, 1 m cells), M (0..255 groomed mask), the trees (by grid cell
- * and as a list) and the terrain that samples H and M. Memory: H 9.8 MB, M 2.5 MB. Fill it with buildWorld().
+ * and as a list), the terrain that samples H and M, and the course (Course, core/contracts.js) over it.
+ * Memory: H 9.8 MB, M 2.5 MB. Fill it with buildWorld().
  */
 export function createWorld() {
  const H = new Float32Array(W0 * H0);
@@ -22,7 +23,7 @@ export function createWorld() {
   base: Terrain.grid(H, W0, H0, 1),
   groomed: (x, y) => M[Math.max(0, Math.min(H0 - 1, y | 0)) * W0 + Math.max(0, Math.min(W0 - 1, x | 0))] / 255,
  });
- return { H, M, trees: new Map(), treeArr: [], terrain };
+ return { H, M, trees: new Map(), treeArr: [], terrain, course: createProceduralCourse(terrain) };
 }
 
 /** Fills world (from createWorld) in place: heights, the groomed piste, kicker ramps and the trees. */

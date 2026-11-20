@@ -60,8 +60,8 @@ export function updateCamera(view, scene, dt, alpha) {
 
 /**
  * Draws one frame from the camera and pose updateCamera() set. dt: s since the last drawn frame (animation).
- * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, treeArr, particles, timestep, hanga,
- * riderAnim}. Mutates view (render buffers, animation, counts); reads everything else.
+ * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, course, treeArr, particles, timestep,
+ * hanga, riderAnim}. Mutates view (render buffers, animation, counts); reads everything else.
  */
 export function draw(view, scene, dt) {
  const { ctx, camera, terrain, hanga } = scene;
@@ -78,8 +78,8 @@ export function draw(view, scene, dt) {
  ctx.imageSmoothingEnabled = true;
  ctx.drawImage(view.lo, 0, 0, W, Hh);
  drawTrees(ctx, view, camera, terrain, hanga, scene.treeArr, RW);
- view.railsDrawn = drawRails(ctx, camera, terrain);
- view.flagsDrawn = drawFlags(ctx, camera, terrain);
+ view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view);
+ view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view);
  drawSpray(ctx, camera, terrain, scene.particles);
  drawRiderOnSnow(ctx, view, scene, gR, dt);
 }

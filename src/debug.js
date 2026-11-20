@@ -10,7 +10,6 @@ import { reseed } from './core/rng.js';
 import { SIM_EVENT_TYPES, INPUT_FIELDS } from './core/contracts.js';
 import { on, publish, afterStep } from './core/events.js';
 import { startRecording, stopRecording, readInput } from './core/input-log.js';
-import { cx } from './world/course.js';
 import { worldFacade } from './world/fields.js';
 import { step } from './sim/step.js';
 import { emit, stepParticles } from './sim/particles.js';
@@ -23,6 +22,12 @@ import { viewFields, viewDebug } from './view/fields.js';
 
 const PLACE = Object.freeze({ x: null, y: 500, vx: 0, vy: 0, heading: Math.PI / 2, z: 0, vz: 0 });
 const EVENT_LOG_MAX = 1000; // events Gresca.events keeps; older ones are dropped
+
+// m, x of the course's centreline (d = 0) level with map y (m): where place() puts the rider by default.
+function centreX(course, y) {
+ const p = course.project(0, y, {});
+ return course.point(p.s, 0, p).x;
+}
 
 // Gresca.events: a copy of every SimEvent the game publishes, oldest first, for tests and the console.
 function eventsFacade(bus) {
@@ -77,7 +82,7 @@ function recorderFacade(g) {
 export function createFacade(g) {
  const { rider, input, spray, timestep } = g;
  const FIELDS = Object.freeze({
-  ...simFields(rider, g.session, spray),
+  ...simFields(rider, g.session, spray, g.world.course),
   ...uiFields(g.hud),
   ...inputFields(input),
   ...viewFields(g.camera),
@@ -109,7 +114,7 @@ export function createFacade(g) {
    for (const k in o) if (!(k in PLACE)) throw new Error('Gresca.place: unknown field ' + k);
    const d = Object.assign({}, PLACE, o);
    g.startRun();
-   rider.x = d.x === null ? cx(d.y) : d.x;
+   rider.x = d.x === null ? centreX(g.world.course, d.y) : d.x;
    rider.y = d.y;
    rider.vx = d.vx;
    rider.vy = d.vy;
