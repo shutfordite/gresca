@@ -29,7 +29,7 @@ function loop(ts){const dt=Math.max(0,(ts-last)/1000||0);last=ts;let alpha=1;
  else simAcc=0;
  // the camera and animation get the real frame time, capped like the simulation
  if(state!=='load')draw(Math.min(dt,SIM_MAX*SIM_DT),alpha);requestAnimationFrame(loop)}
-setTimeout(()=>{build();state='ready';x=cx(60);y=60;vx=vy=0;a=1.57;crash=0;crashes=0;time=0;spin=0;camA=1.57;camH=H[60*W0+(x|0)]+CAMH;
+setTimeout(()=>{build();state='ready';x=cx(60);y=60;vx=vy=0;a=1.57;crash=0;crashes=0;time=0;spin=0;camA=1.57;camH=terrain.height(x,60)+CAMH;
  msgT.textContent='Ride from the Encampadors ridge down to Pas de la Casa. Hold the left or right side of the screen to turn. Press both sides together to jump, then tap left or right in the air to spin. Swipe down to brake. Avoid the trees.';go.hidden=false},60);
 requestAnimationFrame(loop);
 

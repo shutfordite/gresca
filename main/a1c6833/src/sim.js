@@ -17,7 +17,7 @@ function emit(n,px_,py_,pz,spread,up,dvx,dvy){for(let k=0;k<n&&parts.length<MAXP
 function stepParts(dt){for(let k=parts.length-1;k>=0;k--){const p=parts[k];p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vz-=6*dt;p.vx*=.96;p.vy*=.96;if(p.t>p.life||p.z<-.2)parts.splice(k,1)}}
 
 function start(){x=cx(60);y=60;vx=0;vy=2;a=Math.PI/2;crash=0;crashes=0;time=0;spin=0;score=0;popT=0;airT=0;kick=false;parts.length=0;jz=jv=JU=0;rot=0;both=false;grind=null;grindD=0;reseed();
- col.set(col0);camA=1.57;cam.s=.26;camH=H[60*W0+(x|0)]+CAMH+cam.s*CAMBACK;state='run';msg.hidden=true;simAcc=0;ipSnap()}
+ col.set(col0);camA=1.57;cam.s=.26;camH=terrain.height(x,60)+CAMH+cam.s*CAMBACK;state='run';msg.hidden=true;simAcc=0;ipSnap()}
 
 function jumpStep(dt){
  if(crash>0){jz=0;jv=0;airT=0;return}
