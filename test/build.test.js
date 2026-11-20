@@ -6,7 +6,8 @@ import { load } from './harness.js';
 
 // Reference digests of the world built by main at 280d796 (before A2 touched build()). Produced by running this
 // file against that version's game: `git show 280d796:index.html > /tmp/main.html` then
-// `GAME_FILE=/tmp/main.html node --test test/build.test.js`; the failure messages print the actual digests.
+// `GAME_FILE=/tmp/main.html node --test test/build.test.js`; the failure messages print the actual digests. (B2a dropped
+// GAME_FILE: to compare against an older version now, run that version's own tests.)
 // The digest code below reads only the façade, so it runs unchanged against that version. Checked with both the
 // old (contextified) harness and the A2 one: same digests.
 const WANT = {

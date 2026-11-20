@@ -15,10 +15,17 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
 
 ## Files
 - `art/gresca-hanga-spec.js` belongs to the art spec. Change it only to sync a new spec version, byte for byte.
-- `index.html` is only HTML and CSS. It loads `art/*.js` and then the game's `src/*.js` with plain classic
-  `<script src>` tags (no `type="module"`, `defer` or `async` until B2). The files share one set of top-level globals
-  and run in page order, so order matters: a file may only use, while it loads, what earlier files declare.
-  `test/page.test.js` lists the order; a new file in `art/` or `src/` goes in both places.
+- `index.html` is only HTML and CSS. It loads `art/*.js` as classic `<script src>` tags, then the game as one ES
+  module, `<script type="module" src="src/main.js">`. Every other file in `src/` is reached from `main.js` through
+  static imports (`test/page.test.js` checks there are no orphans).
+- `src/` is laid out by layer: `core/` (tunables, RNG), `world/` (terrain, course, build), `sim/` (rider state,
+  step, jump, grind, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites, rider, sky), `ui/` (HUD,
+  menu), `app.js` (`createGame(env)`: state objects, wiring, loop), `debug.js` (the façade), `main.js` (entry).
+  The full list is in `docs/ARCHITECTURE.md` section 4.
+- **No module-level mutable state** (ADR 0002). Modules export functions and frozen constants only. All state lives
+  in objects that `createGame(env)` makes; put new state there and pass it in.
+- Only `src/main.js` reads browser globals (`window`, `document`, `localStorage`, `requestAnimationFrame`, …) or
+  `HANGA`/`RiderAnim`. Everything else gets them from `env`.
 - Each `src/` file starts with a one-line comment saying what it holds.
 - No build step and no runtime npm packages. Changing that needs a decision record in `docs/adr/`.
 - Any new folder the game loads at runtime must be added to `SITE` in `.github/workflows/preview.yml`, or previews break.
@@ -26,9 +33,9 @@ The plan is in `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3
 
 ## Code rules
 - Keep the layers apart: `world/` and `sim/` never touch `document`, `window`, canvas or HANGA colours,
-  and must load in Node with no stubs (after B2, as ES modules imported directly by tests). `view/` reads sim state but never writes it.
+  and load in Node with no stubs, as ES modules imported directly by tests. `view/` reads sim state but never writes it.
   The camera is not advanced inside a draw call.
-- Tests use the `window.Gresca` façade (after A1), not game globals.
+- Tests use the `window.Gresca` façade for whole-game behaviour; they may import only the pure modules directly.
 - Units: metres, seconds and radians internally; compass degrees only where the art spec needs them.
   Put the unit in a comment on every tunable.
 - Don't add new code that assumes +y is downhill or indexes the height array directly. Use the terrain
@@ -51,8 +58,8 @@ change, not as a reason to add layers: in a hot loop, a plain function beats an 
 - **Interface segregation.** Pass a function the narrowest thing it needs (`terrain`, not `world`; the rider state,
   not the whole session). Keep interfaces small: `Terrain` answers questions about the ground, nothing else.
 - **Dependency inversion.** `sim/` and `world/` depend on interfaces and plain data, never on `view/`, `ui/`, the
-  DOM or the loop. Pass dependencies in (`step(rider, input, world, dt)`) rather than reaching for globals. Until B2
-  the shared globals stay; don't add new ones, and put new state in an object owned by one file.
+  DOM or the loop. Pass dependencies in (`step(rider, input, world, dt)`) rather than reaching for globals. There
+  are no globals: state is in the objects `createGame(env)` makes (ADR 0002).
 
 ## Style
 - **Readable over compact.** New or rewritten code has one statement per line, descriptive names and functions

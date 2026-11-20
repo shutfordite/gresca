@@ -3,7 +3,7 @@
 A freestyle ski and snowboard game for the browser. You ride a run of kickers, rails and boxes, spin in the air and
 land switch. It is a fan-made project inspired by mobile snow games, and is not affiliated with or endorsed by any
 game studio or ski resort. It is a static site with no build step: `index.html` loads the art modules from `art/` and
-the game's scripts from `src/`, and all art is drawn in code.
+the game from `src/` as native ES modules (entry `src/main.js`), and all art is drawn in code.
 
 *Gresca* is Catalan for a lively, rowdy commotion. The first map is set in Grandvalira, Andorra (the El Tarter sector).
 
@@ -62,9 +62,17 @@ The rider is drawn from the Hanga Dawn art spec and animated by a small pose and
   terrain: the legs absorb the ground through a spring and squat deeper on harder landings, the rider leans into
   turns by the real turn rate (`atan(v·ω/g)`), the upper body angulates, the outside arm counterbalances, and the
   stance gets lower on ground steeper than the map's mean gradient and at speed. Every number is in `RiderAnim.tune`.
-- `index.html` loads both files from `art/` with `<script src>`, before the game's `src/` files. Nothing is embedded
-  or copied: change a file in `art/` and the game uses it.
+- `index.html` loads both files from `art/` with `<script src>`, before the game's module entry; `src/main.js` hands
+  them to the game. Nothing is embedded or copied: change a file in `art/` and the game uses it.
 - A goofy snowboard stance is read from `localStorage` key `gresca-stance` (the menu control is still to come).
+
+## Code layout
+
+`src/` is native ES modules by layer, with no build step and no state in any module (`docs/adr/0002-es-modules-and-create-game.md`):
+`core/` (tunables, seeded RNG), `world/` (terrain, course, world build), `sim/` (rider state, physics step, jumps,
+rails, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites, rider, sky), `ui/` (HUD, menu),
+`app.js` (`createGame(env)` makes one game's state objects and runs it), `debug.js` (the `window.Gresca` façade) and
+`main.js` (the entry: builds `env` from the browser). Details in `docs/ARCHITECTURE.md` section 4.
 
 ## Tests
 
@@ -72,27 +80,31 @@ The rider is drawn from the Hanga Dawn art spec and animated by a small pose and
 npm test
 ```
 
-Needs Node 22.8 or newer (`"engines"` in `package.json`), and no packages. The tests read the `<script src>` files
-`index.html` names and run them, in page order, in one Node `vm` with stubbed browser APIs (`test/harness.js`), so they
-exercise exactly the files the browser loads. Tests read and drive the game only through `window.Gresca`, a small
-façade in `src/debug.js` (`state()`, `set()`, `place()`, `sim()`, `frame()`, `input()`, `world`, and `debug` for
-render internals). They never name the game's globals, so its state can be reorganised without touching the tests.
+Needs Node 22.8 or newer (`"engines"` in `package.json`), and no packages. The tests are ES modules
+(`test/package.json`). `test/harness.js` imports `src/app.js` straight into Node and calls `createGame(env)` with
+stubbed browser APIs and a fresh copy of the art modules, so each `await load()` is an independent game running exactly
+the files the browser loads. Tests read and drive whole games only through `window.Gresca`, a small façade in
+`src/debug.js` (`state()`, `set()`, `place()`, `sim()`, `frame()`, `input()`, `world`, and `debug` for render
+internals). The pure layers (`core/`, `world/`, `sim/`, `input/input.js`) are also imported directly, with no stubs.
 
-- `test/page.test.js`: `index.html` has no inline script code and loads every file in `art/` and `src/` exactly once,
-  in the expected order, and every file it names exists.
-- `test/facade.test.js`: a lint that fails if any test's `g.run('...')` string names a top-level identifier of the
-  game's `src/` files, plus round-trip checks of the façade.
-
+- `test/page.test.js`: `index.html` has no inline code, loads the art scripts and then one module entry; every module
+  in `src/` is reached from `src/main.js`; only `main.js` reads browser globals; no module holds state.
+- `test/facade.test.js`: a lint that fails if a test's `g.run('...')` string names anything but the art modules and
+  storage, or if a test imports game modules other than the pure layers, plus round-trip checks of the façade.
+- `test/games.test.js`: two games in one process stay independent.
+- `test/sim.test.js`: the pure modules (RNG, course, particles, jumps, rails, physics step, timestep, input) on plain
+  objects.
+- `test/terrain.test.js`: the terrain interface on its own and in the game, and that nothing else indexes the grids.
 - `test/physics.test.js`: terrain, gravity, brake, steering, jumping, kickers, trees, finish.
 - `test/features.test.js`: touch and keyboard input, camera framing, snow look, spin and switch riding, rendering
   smoke tests and full-run integration tests with an autopilot.
 - `test/park.test.js`: kickers, rails and boxes, and the Snowboard / Skis menu.
 - `test/rider-anim.test.js`: the spec module's version, the pose follows game state with the spec's timing,
   and the body dynamics (lean, compression, landings, steepness) behave and stay stable.
+- `test/build.test.js`, `test/camera.test.js`, `test/look.test.js`, `test/timestep.test.js`: the built world bit for
+  bit, the camera's slope follow, fog and sky, and the fixed timestep.
 
-Run `npm test` after every change. To test another copy of the game: `GAME_FILE=/path/to/index.html npm test` (its
-`<script src>` paths are resolved relative to that file; inline `<script>` blocks of older single-file versions run
-too).
+Run `npm test` after every change.
 
 ## Tools
 
