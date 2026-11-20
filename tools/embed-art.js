@@ -2,7 +2,7 @@
 'use strict';
 // Copies the art modules into index.html, each as its own <script id="..."> block before the game script.
 // Run after changing anything in art/:   node tools/embed-art.js
-// test/art-sync.test.js fails if index.html and art/ have drifted apart.
+// test/rider-anim.test.js ("art modules are embedded verbatim") fails if index.html and art/ have drifted apart.
 const fs = require('fs');
 const path = require('path');
 
