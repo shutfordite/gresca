@@ -36,6 +36,55 @@ definitions: `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3. 
 - Any new folder the game loads at runtime must be added to `SITE` in `.github/workflows/preview.yml`, or previews break.
 - Changes must work in Safari on iPad (the main test device): check the preview there for anything visible or touch-related.
 
+## Code map
+To change X, edit Y; the tests that cover it are Z. Folders with their own `AGENTS.md` (`src/sim`, `src/view`,
+`art`) add local rules: read it before editing there.
+
+| To change | Edit | Tests |
+|---|---|---|
+| Tunables (speeds, grip, camera distances, render size) | `src/core/config.js` | `physics`, `camera`, `sim` |
+| Seeded randomness | `src/core/rng.js` | `sim`, `timestep` |
+| Terrain heights, layers, sampling | `src/world/terrain.js`, `noise.js` | `terrain`, `build` |
+| Course: centreline, finish, kickers, rails | `src/world/course.js` | `sim`, `park`, `physics` |
+| Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
+| Riding physics: steer, grip, brake, trees, finish | `src/sim/step.js` | `physics`, `sim` |
+| Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
+| Rails and boxes | `src/sim/grind.js` | `park`, `sim` |
+| Snow spray | `src/sim/particles.js` | `features`, `sim` |
+| Fixed timestep and interpolation | `src/sim/timestep.js` | `timestep`, `facade` |
+| Rider and session state fields | `src/sim/state.js` (+ `src/debug.js` to expose them) | `facade`, `sim` |
+| Touch and key controls | `src/input/input.js` (logic), `bind-input.js` (DOM) | `features`, `sim`, `facade` |
+| Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
+| Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
+| Snow, rock, park colours (until D2) | `src/view/colour-map.js` | `features`, `build` |
+| Sky, sun, fog | `src/view/sky.js` | `look` |
+| Flags, poles, rails on screen | `src/view/sprites.js` | `park` |
+| Rider pose and body motion | `art/gresca-rider-anim.js`, `src/view/rider-animation.js` | `rider-anim` |
+| Drawing the rider | `src/view/rider-draw.js` | `rider-anim` |
+| Rider shapes, poses, palette (spec) | `art/gresca-hanga-spec.js` (new version only) | `hanga-v14` |
+| HUD, popup, minimap | `src/ui/hud.js`, `styles/hud.css` | `facade`, `features` |
+| Menu, rig and stance picker | `src/ui/menu.js`, `styles/menu.css`, `index.html` | `park`, `page` |
+| State wiring, boot, frame loop | `src/app.js` | `games`, `facade`, `timestep` |
+| What tests can read and set | `src/debug.js` | `facade` |
+| Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
+
+Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.
+
+## Who owns what (from phase 3)
+Each stream in `docs/ROADMAP.md` owns its folders. During phase 3 a PR edits only its stream's folders; anything
+else (a contract in `src/core/`, `app.js`, `debug.js`, `index.html`) is its own small PR, merged first.
+
+| Stream | Owns |
+|---|---|
+| S1 controls and UI | `src/input/`, `src/ui/`, `styles/` |
+| S2 sim feel | `src/sim/` |
+| S3 rider animation | `art/gresca-rider-anim.js`, the rider files in `src/view/` |
+| S4 look, camera, render | `src/view/` except the rider files, `art/gresca-hanga-spec.js` versions |
+| S5 maps | `src/world/`, `tools/`, `maps/` |
+| Shared (coordinator) | `src/core/`, `src/app.js`, `src/debug.js`, `src/main.js`, `index.html`, `docs/`, `test/harness.js` |
+
+Until then (the freeze, `docs/STATUS.md`), one code PR runs at a time and may touch any folder.
+
 ## Code rules
 - Keep the layers apart: `world/` and `sim/` never touch `document`, `window`, canvas or HANGA colours,
   and load in Node with no stubs, as ES modules imported directly by tests. `view/` reads sim state but never writes it.
