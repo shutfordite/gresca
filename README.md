@@ -10,6 +10,10 @@ game studio or ski resort. The whole game is one file, `index.html`, and all art
 
 Open `index.html` in a browser. There is nothing to build or install.
 
+The latest `main` is playable at https://shutfordite.github.io/gresca/. Every pull request also gets its own playable
+preview at `https://shutfordite.github.io/gresca/pr/<number>/`, linked in a comment on the pull request
+(`.github/workflows/preview.yml`).
+
 ## Controls
 
 | Input | Action |
