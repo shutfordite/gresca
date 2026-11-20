@@ -18,7 +18,7 @@ function run(s, inp, sec) { for (let t = 0; t < sec - 1e-9; t += DT) RA.update(s
 function settled(rig, inp = snow()) { return run(RA.create(rig), inp, 2); }
 
 test('art spec module', async (t) => {
-  await t.test('spec module is v1.3.0', () => assert.equal(HANGA.version, '1.3.0'));
+  await t.test('spec module is v1.4.0', () => assert.equal(HANGA.version, '1.4.0'));
 });
 
 test('pose state machine follows the spec timing', async (t) => {
