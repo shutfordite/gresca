@@ -118,6 +118,8 @@ function load(opts = {}) {
     emitParticles: (...args) => G().emitParticles(...args),
     // draw n frames of dt seconds each
     frames(n, dt = 1 / 60) { for (let i = 0; i < n; i++) G().frame(dt); },
+    // one real browser frame: run the requestAnimationFrame callbacks waiting now (the game loop) with timestamp ts, ms
+    raf(ts) { raf.splice(0).forEach((fn) => fn(ts)); },
     speed: () => G().state().speed,
     // advance the physics by `sec` seconds at a fixed timestep
     sim: (sec, dt = 1 / 120) => G().sim(sec, dt),
