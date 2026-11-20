@@ -13,7 +13,7 @@
 //   features  kickers, rails and boxes stamped along the course (C2): none yet; today's kicker ramps are still
 //             baked into the procedural base grid by build()
 //   detail    seeded micro-relief: none yet
-const Terrain=(()=>{
+export const Terrain=(()=>{
  const LAYERS=['base','sculpt','features','detail'];
 
  // Catmull-Rom weights for the four samples around a point a fraction t (0..1) of the way from sample 1 to sample 2,
