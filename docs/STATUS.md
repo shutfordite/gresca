@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 20 Nov 2026, main after PR #17.
+Updated 20 Nov 2026, main after PR #20.
 
 ## Done
 | Package | PR |
@@ -15,12 +15,12 @@ Updated 20 Nov 2026, main after PR #17.
 | Fix: ski tracks no longer turn black | #13 |
 | B3 terrain interface: layer stack, smooth physics surface | #14 |
 | B2a ES modules, all state made by `createGame(env)`, CSS in `styles/` (ADR 0002) | #17 |
-| Docs: AGENTS standards, roadmap, CLAUDE.md, PR template | #15, #16 |
+| Docs: AGENTS standards, roadmap, CLAUDE.md, PR template, decisions | #15, #16, #19 |
+| Art spec v1.4: twist, head yaw, body pitch (board flips about its long axis), camera pitch, brake/switch/tuck poses; additive, unused by the game until S3/S4 | #18 |
+| Coordinator skill (`.claude/skills/gresca-architect`) and this file | #20 |
 
 ## Open PRs
-- **#18 art spec v1.4** (twist, head yaw, body pitch, camera pitch, brake/switch/tuck poses). Additive: the game draws
-  exactly as before until S3/S4 opt in. Board flips rotate about the board's long axis (owner: "most realistic").
-- **#19** records the owner's decisions in `docs/ROADMAP.md`.
+None. (#18 art spec v1.4, #19 roadmap decisions and #20 coordinator skill are merged.)
 
 ## Next, in order (the freeze: one code PR at a time)
 1. **P1 docs:** code map in `AGENTS.md` ("to change X edit Y, tests Z"), folder ownership table (streams S1–S5 in
@@ -39,8 +39,8 @@ Updated 20 Nov 2026, main after PR #17.
   equipment heading (`back ? a+π : a`). This is fixed by F5 (the camera follows `travelHeading`, added in B2b).
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
   in D1.
-- **The design canvas copy of the art spec** (claude.ai design "Gresca Rider Style Prototypes") is behind the repo
-  after #18. Re-sync it from `art/gresca-hanga-spec.js`.
+- **The design canvas copy of the art spec** (claude.ai design "Gresca Rider Style Prototypes",
+  `project/data/gresca-hanga-spec.js`) is synced from the repo; re-sync it after every spec version.
 - **Pose tuning for S3:** the ski tuck reads as a blob from straight behind, the ski brake legs look short, and the
   board's toe-side brake looks like kneeling at yaw 90.
 
