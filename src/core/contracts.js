@@ -1,6 +1,7 @@
 // The contracts the streams meet through: InputState, RiderState, SimEvent, Course and AnimInput (typedefs, field
 // lists, validators).
-// Units: metres, seconds, radians. Map axes: +x across the map, +y down the run (until C2's ENU frame).
+// Units: metres, seconds, radians. World axes (docs/adr/0005-enu-frame.md): +x east, +y north, z up; headings are
+// radians counter-clockwise from east. Nothing here assumes which way is downhill: ask the Course.
 // Fields marked "pre-added" are set to sensible values today but nothing reads them yet: the phase-3 streams start
 // using them without editing this file (docs/ROADMAP.md, phase 1 row 3).
 
@@ -27,15 +28,16 @@ export const INPUT_FIELDS = Object.freeze([
 /**
  * The rider as the sim leaves it after each step (sim/state.js createRider()).
  * @typedef {object} RiderState
- * @property {number} x m across the map
- * @property {number} y m down the map
- * @property {number} vx m/s
- * @property {number} vy m/s
- * @property {number} heading rad, the direction the board points (twin tip: heading + PI is the same board switch)
+ * @property {number} x m east
+ * @property {number} y m north
+ * @property {number} vx m/s east
+ * @property {number} vy m/s north
+ * @property {number} heading rad counter-clockwise from east, the direction the board points (twin tip: heading + PI
+ *  is the same board switch)
  * @property {number} z m above the ground
  * @property {number} vz m/s, + up
  * @property {number} airTime s in the air this jump
- * @property {number} rotation rad turned in the air this jump
+ * @property {number} rotation rad turned in the air this jump, + to the right (clockwise)
  * @property {boolean} fromKicker this jump was launched by a kicker
  * @property {number} crashTimer s of wipeout left
  * @property {number} wipeoutSpin rad, tumble angle while crashed
@@ -95,13 +97,14 @@ const EVENT_FIELDS = Object.freeze({
 /**
  * The piste the rider follows, in along (s) and across (d) coordinates. Everything outside the map's own files asks the
  * course, never cx(), the finish y or "+y is downhill". Callers may assume only that s is metres increasing down the
- * piste and d is metres across it, positive on the side of heading - PI/2 from the tangent (the rider's left facing
- * down the piste; +x on the procedural map). The procedural course uses s = y and d = x - cx(y); C1 swaps in arc
- * length and perpendicular distance. Every query writes into the caller's out (no allocation) and returns it.
+ * piste and d is metres across it, positive on the side of heading + PI/2 from the tangent (counter-clockwise: the
+ * rider's left facing down the piste; grid +x on the procedural map). Positions and directions are world metres. The
+ * procedural course uses s = y and d = x - cx(y) on its grid; C1 swaps in arc length and perpendicular distance.
+ * Every query writes into the caller's out (no allocation) and returns it.
  * @typedef {object} Course
  * @property {function(number, number, object): {s: number, d: number, tx: number, ty: number}} project
  *  (x, y m, out) -> s m along, d m across, tx, ty the unit tangent (down the piste) at s
- * @property {function(number, number, object): {x: number, y: number}} point (s, d m, out) -> x, y m on the map
+ * @property {function(number, number, object): {x: number, y: number}} point (s, d m, out) -> x, y world m
  * @property {function(number, number, object): {fx: number, fy: number, heading: number, slope: number}} fallLine
  *  (x, y m, out) -> unit horizontal downhill direction fx, fy, its heading (rad), slope (m/m; 0 on flat ground, where
  *  the direction is the course tangent); out also gets gx, gy (m/m), the gradient it came from
@@ -113,7 +116,7 @@ const EVENT_FIELDS = Object.freeze({
  *  s order: lip at s, centred at d, launching within halfWidth across and depth past the lip (m)
  * @property {ReadonlyArray<{s0: number, s1: number, d: number, x0: number, y0: number, x1: number, y1: number,
  *  dx: number, dy: number, len: number, h: number, t: string}>} rails frozen rails and boxes: s0..s1 at d (m), and
- *  their map geometry (m, unit direction, length m, top height m, 'rail' | 'box')
+ *  their world geometry (m, unit direction, length m, top height m, 'rail' | 'box')
  * @property {function(number, number): ?object} kickerAt (s, d m) -> the kicker whose launch zone holds (s, d), or null
  */
 

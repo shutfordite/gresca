@@ -18,26 +18,29 @@ import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
 import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
 import { createFacade } from './debug.js';
 
-const START_SPEED = 2;  // m/s down the slope at the drop
-const MENU_HEADING = 1.57; // rad, straight down the map
+const START_SPEED = 2;  // m/s down the map at the drop
+const MENU_HEADING = 1.57; // rad on the map's grid: just short of straight down
 const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
 
 /**
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
- * requestAnimationFrame, setTimeout, HANGA, RiderAnim}; localStorage and devicePixelRatio are read at each use.
+ * requestAnimationFrame, setTimeout, HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
+ * procedural map at that heading, for the rotated-map tests; default 0)}; localStorage and devicePixelRatio are read
+ * at each use.
  * Every piece of state lives in the objects made here; the modules hold none (docs/adr/0002). Returns the frozen
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
  */
 export function createGame(env) {
  const hanga = env.HANGA;
- const world = createWorld();
+ const world = createWorld({ rotationRad: env.mapRotationRad || 0 });
+ const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
  const view = createView(env.document, hanga);
  const ui = getUi(env.document);
  const resize = () => resizeScreen(view, ui.canvas, env.devicePixelRatio);
  env.window.addEventListener('resize', resize);
  resize();
 
- const camera = createCamera();
+ const camera = createCamera(mapFrame);
  const rider = createRider();
  const session = createSession();
  const input = createInput();
@@ -47,13 +50,18 @@ export function createGame(env) {
  const clock = { lastMs: 0 }; // ms, the last frame's timestamp
  const bus = createEventBus(); // SimEvents out of the sim, to ui/, view/ and the façade (core/events.js)
  const hud = createHud();
+ const startVelocity = { x: 0, y: 0 }; // m/s, scratch for startRun()
  const inputLog = createInputLog();
  // What simTick() reads and writes (sim/timestep.js): step(state, input, world, dt) and the event bus.
- // gradient (also the fall line's out) and where (the rider on the course): scratch, so no allocation.
+ // gradient (also the fall line's out), where (the rider on the course) and near (trees near the rider): scratch,
+ // so no allocation.
  const sim = {
-  state: { rider, session, spray, gradient: { gx: 0, gy: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } },
+  state: {
+   rider, session, spray, gradient: { gx: 0, gy: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 },
+   near: new Array(world.trees.maxNear).fill(null),
+  },
   input,
-  world: { terrain: world.terrain, trees: world.trees, course: world.course },
+  world: { terrain: world.terrain, trees: world.trees, course: world.course, frame: mapFrame },
   bus,
   inputLog,
  };
@@ -63,6 +71,7 @@ export function createGame(env) {
  // What draw() reads (view/draw.js).
  const scene = {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, course: world.course,
+  frame: mapFrame,
   treeArr: world.treeArr,
   particles: spray.particles, timestep, hanga, riderAnim: env.RiderAnim,
  };
@@ -73,12 +82,13 @@ export function createGame(env) {
   course.point(course.startS, 0, rider);
  }
 
- // A new run from the top: what the Drop in button does.
+ // A new run from the top: what the Drop in button does. The rider points and moves straight down the map's grid.
  function startRun() {
   placeAtStart();
-  rider.vx = 0;
-  rider.vy = START_SPEED;
-  rider.heading = Math.PI / 2;
+  mapFrame.vecToWorld(0, START_SPEED, startVelocity);
+  rider.vx = startVelocity.x;
+  rider.vy = startVelocity.y;
+  rider.heading = mapFrame.downhill;
   rider.crashTimer = 0;
   session.crashes = 0;
   session.time = 0;
@@ -97,7 +107,7 @@ export function createGame(env) {
   resetDerived(rider);
   reseed(rng);
   clearTracks(view);
-  resetCamera(camera, world.terrain.height(rider.x, rider.y));
+  resetCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
   session.phase = 'run';
   ui.msg.hidden = true;
   timestep.acc = 0;
@@ -127,12 +137,12 @@ export function createGame(env) {
   session.phase = 'ready';
   placeAtStart();
   rider.vx = rider.vy = 0;
-  rider.heading = MENU_HEADING;
+  rider.heading = mapFrame.headingToWorld(MENU_HEADING);
   rider.crashTimer = 0;
   session.crashes = 0;
   session.time = 0;
   rider.wipeoutSpin = 0;
-  menuCamera(camera, world.terrain.height(rider.x, rider.y));
+  menuCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
   ui.msgT.textContent = MENU_TEXT;
   ui.go.hidden = false;
  }

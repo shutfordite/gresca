@@ -2,7 +2,8 @@
 // a game. Tests never see the state objects, so they can be reorganised by re-pointing the field files only.
 // Each area registers its own fields: sim/fields.js, ui/fields.js, input/fields.js, view/fields.js (and the world's,
 // world/fields.js); this file composes them and adds the actions. Units: metres (m), seconds (s), m/s and radians
-// (rad). Map axes: +x across the map, +y down the run.
+// (rad). World axes (docs/adr/0005-enu-frame.md): +x east, +y north, z up; headings counter-clockwise from east.
+// Gresca.world.frame converts to and from the map's own grid (u across, v down the piste).
 // Everything it returns is a copy: changing a returned value changes nothing in the game. Write with set().
 // Nothing in the game calls it.
 import { MAX_PARTICLES, CAM_BACK, RIDER_SCALE, SIM_DT, SIM_MAX } from './core/config.js';
@@ -20,14 +21,9 @@ import { inputFields } from './input/fields.js';
 import { uiFields } from './ui/fields.js';
 import { viewFields, viewDebug } from './view/fields.js';
 
-const PLACE = Object.freeze({ x: null, y: 500, vx: 0, vy: 0, heading: Math.PI / 2, z: 0, vz: 0 });
+// place() defaults: s 500 m (the empty practice stretch), d 0 (the centreline), at rest; heading null: down the map.
+const PLACE = Object.freeze({ x: null, y: null, s: 500, d: 0, vx: 0, vy: 0, heading: null, z: 0, vz: 0 });
 const EVENT_LOG_MAX = 1000; // events Gresca.events keeps; older ones are dropped
-
-// m, x of the course's centreline (d = 0) level with map y (m): where place() puts the rider by default.
-function centreX(course, y) {
- const p = course.project(0, y, {});
- return course.point(p.s, 0, p).x;
-}
 
 // Gresca.events: a copy of every SimEvent the game publishes, oldest first, for tests and the console.
 function eventsFacade(bus) {
@@ -108,17 +104,22 @@ export function createFacade(g) {
  return Object.freeze({
   state,
   set,
-  // New run (start()), then put the rider at {x,y,vx,vy,heading,z,vz}: defaults y 500 (the empty practice
-  // stretch), x on the piste centreline, at rest, heading straight down. Clears crashes and all input.
+  // New run (start()), then put the rider at {x, y (world m) or s, d (course m), vx, vy (m/s), heading (rad), z, vz}:
+  // defaults s 500 (the empty practice stretch), d 0 (the piste centreline), at rest, heading straight down the map
+  // (Gresca.world.frame.downhill). Clears crashes and all input.
   place(o = {}) {
    for (const k in o) if (!(k in PLACE)) throw new Error('Gresca.place: unknown field ' + k);
+   if (('x' in o) !== ('y' in o)) throw new Error('Gresca.place: give both x and y, or s and d');
    const d = Object.assign({}, PLACE, o);
    g.startRun();
-   rider.x = d.x === null ? centreX(g.world.course, d.y) : d.x;
-   rider.y = d.y;
+   if (d.x === null) g.world.course.point(d.s, d.d, rider);
+   else {
+    rider.x = d.x;
+    rider.y = d.y;
+   }
    rider.vx = d.vx;
    rider.vy = d.vy;
-   rider.heading = d.heading;
+   rider.heading = d.heading === null ? g.world.frame.downhill : d.heading;
    rider.z = d.z;
    rider.vz = d.vz;
    rider.crashTimer = 0;

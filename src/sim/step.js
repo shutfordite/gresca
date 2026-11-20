@@ -1,6 +1,7 @@
 // One physics step: steering, gravity, grip, friction, braking, jumps, rails, trees, spray and the finish; its events.
 import { TAU, RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
 import { DEFAULT_COURSE } from '../world/course.js';
+import { DEFAULT_FRAME } from '../world/map-frame.js';
 import { emit } from './particles.js';
 import { jumpStep } from './jump.js';
 import { railCheck, grindStep } from './grind.js';
@@ -20,8 +21,6 @@ const SNOW_FRICTION = 0.02;  // 1/s, fraction of speed lost per second on any sn
 const POWDER_FRICTION = 0.18; // 1/s, extra off the groomed piste
 const BRAKE_DECEL = 16;      // m/s², braking
 const EDGE_M = 6;            // m, the rider stays this far inside the map
-const TREE_CELL_M = 6;       // m, the trees map's cell size (world/build.js)
-const TREE_KEY_STRIDE = 10000; // the trees map key is gx * TREE_KEY_STRIDE + gy (world/build.js)
 const TREE_RADIUS_M = 2.4;   // m, closer to a trunk than this is a crash
 const TREE_TOP_M = 1.5;      // m above the snow, higher jumps clear the trees
 const TREE_BOUNCE_S = 0.12;  // s of motion undone when hitting a tree
@@ -32,9 +31,12 @@ const FLAT_SLOPE = 1e-9;     // m/m, flatter than this the rider has no downhill
 /**
  * One step of dt (s): step(state, input, world, dt) -> the step's SimEvents (core/contracts.js; the array is reused
  * every step, copy what you keep). state: {rider, session, spray, gradient (a {gx,gy} scratch object, also the fall
- * line's), where (a {s,d,tx,ty} scratch object)}; input: the InputState; world: {terrain, trees, course (Course,
- * core/contracts.js)}. Mutates rider, input.jump (and jumpPressed), session and spray, nothing else. Without a course
- * or where (direct unit calls), DEFAULT_COURSE and a new where are used.
+ * line's), where (a {s,d,tx,ty} scratch object), near (an array, scratch for the trees near the rider)}; input: the
+ * InputState; world: {terrain, trees ({near(x, y, out) -> count}, world/build.js), course (Course,
+ * core/contracts.js), frame (the MapFrame, world/map-frame.js)}. Everything is in world metres (east, north) and
+ * radians counter-clockwise from east (docs/adr/0005-enu-frame.md). Mutates rider, input.jump (and jumpPressed),
+ * session and spray, nothing else. Without a course, frame, where or near (direct unit calls), DEFAULT_COURSE,
+ * DEFAULT_FRAME and new scratch objects are used.
  */
 export function step(state, input, world, dt) {
  const rider = state.rider;
@@ -61,7 +63,7 @@ function ride(state, input, world, dt, course, where) {
  const rider = state.rider;
  const session = state.session;
  const s = Math.hypot(rider.vx, rider.vy);
- steer(rider, input, RIGS[session.rig], s, dt);
+ steer(rider, input, RIGS[session.rig], s, dt, (world.frame || DEFAULT_FRAME).rotation);
  const slip = rider.crashTimer > 0 ? 0 : glide(state, input, world.terrain, s, dt);
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
@@ -71,7 +73,7 @@ function ride(state, input, world, dt, course, where) {
   pushEvent(session, 'grindStart', { rail: course.rails.indexOf(rider.grind.r), kind: rider.grind.r.t });
  }
  keepOnMap(rider, world.terrain.bounds);
- if (rider.crashTimer <= 0 && rider.z < TREE_TOP_M) hitTrees(rider, session, world.trees, s);
+ if (rider.crashTimer <= 0 && rider.z < TREE_TOP_M) hitTrees(rider, session, world.trees, state.near || [], s);
  const onSnow = rider.crashTimer <= 0 && rider.z <= AIRBORNE_Z;
  rider.skid = onSnow ? slip : 0;
  if (onSnow) spraySnow(rider, input, state.spray, slip);
@@ -104,8 +106,11 @@ function deriveRider(rider, fall) {
  rider.downhillSide = fall.slope > FLAT_SLOPE ? (cross >= 0 ? 1 : -1) : 0;
 }
 
-// The wipeout tumble, spinning in the air, or carving on the snow (within forward or switch).
-function steer(rider, input, rig, s, dt) {
+// The wipeout tumble, spinning in the air, or carving on the snow (within forward or switch). Right turns clockwise
+// (heading down), left counter-clockwise; rotation counts + to the right. across: rad, the world heading of the map
+// frame's across axis (grid +u): the carve limit keeps the board CARVE_LIMIT from it, measured on the map's grid as
+// r = across - heading (F6 replaces it with the fall line).
+function steer(rider, input, rig, s, dt, across) {
  const turn = (input.right ? 1 : 0) - (input.left ? 1 : 0);
  if (rider.crashTimer > 0) {
   rider.crashTimer -= dt;
@@ -114,14 +119,15 @@ function steer(rider, input, rig, s, dt) {
   // in the air, left and right spin the board
   rider.wipeoutSpin = 0;
   const da = turn * dt * rig.spin;
-  rider.heading += da;
+  rider.heading -= da;
   rider.rotation += da;
  } else {
   rider.wipeoutSpin = 0;
-  let a = rider.heading + turn * dt * (CARVE_RATE - Math.min(s, CARVE_SPEED_CAP) * CARVE_SPEED_LOSS) * rig.turn;
+  const rate = CARVE_RATE - Math.min(s, CARVE_SPEED_CAP) * CARVE_SPEED_LOSS; // rad/s before the rig's factor
+  let a = across - rider.heading + turn * dt * rate * rig.turn;
   a = ((a % TAU) + TAU) % TAU;
   const bs = a >= Math.PI ? Math.PI : 0;
-  rider.heading = bs + Math.max(CARVE_LIMIT, Math.min(Math.PI - CARVE_LIMIT, a - bs));
+  rider.heading = across - (bs + Math.max(CARVE_LIMIT, Math.min(Math.PI - CARVE_LIMIT, a - bs)));
  }
 }
 
@@ -161,36 +167,44 @@ function glide(state, input, terrain, s, dt) {
  return slip;
 }
 
+// Keeps the rider EDGE_M inside the map's rectangle (bounds: terrain.bounds, world/terrain.js) across it (a) and at
+// its top edge (b, where runs start), stopping the motion into the edge. Position and speed change only when clamped.
 function keepOnMap(rider, bounds) {
- if (rider.x < EDGE_M) {
-  rider.x = EDGE_M;
-  rider.vx = 0;
+ const ex = rider.x - bounds.x0;
+ const ey = rider.y - bounds.y0;
+ const a = ex * bounds.ax + ey * bounds.ay;
+ const b = ex * bounds.bx + ey * bounds.by;
+ const a1 = Math.max(EDGE_M, Math.min(bounds.width - EDGE_M, a));
+ if (a1 !== a) {
+  const va = rider.vx * bounds.ax + rider.vy * bounds.ay;
+  rider.vx -= va * bounds.ax;
+  rider.vy -= va * bounds.ay;
  }
- if (rider.x > bounds.maxX - EDGE_M) {
-  rider.x = bounds.maxX - EDGE_M;
-  rider.vx = 0;
+ const b1 = Math.max(EDGE_M, b);
+ if (b1 !== b) {
+  const vb = rider.vx * bounds.bx + rider.vy * bounds.by;
+  rider.vx -= vb * bounds.bx;
+  rider.vy -= vb * bounds.by;
  }
- if (rider.y < EDGE_M) {
-  rider.y = EDGE_M;
-  rider.vy = 0;
+ if (a1 !== a || b1 !== b) {
+  rider.x = bounds.x0 + a1 * bounds.ax + b1 * bounds.bx;
+  rider.y = bounds.y0 + a1 * bounds.ay + b1 * bounds.by;
  }
 }
 
-// A crash for each tree trunk in the 3 × 3 tree cells around the rider that it is moving into (s: speed, m/s).
-function hitTrees(rider, session, trees, s) {
- const gx0 = (rider.x / TREE_CELL_M) | 0;
- const gy0 = (rider.y / TREE_CELL_M) | 0;
- for (let u = -1; u <= 1; u++) {
-  for (let v = -1; v <= 1; v++) {
-   const T = trees.get((gx0 + u) * TREE_KEY_STRIDE + gy0 + v);
-   if (T && Math.hypot(T.x - rider.x, T.y - rider.y) < TREE_RADIUS_M && s > 1) {
-    rider.crashTimer = CRASH_TIME;
-    session.crashes++;
-    rider.x -= rider.vx * TREE_BOUNCE_S;
-    rider.y -= rider.vy * TREE_BOUNCE_S;
-    rider.vx = rider.vy = 0;
-    pushEvent(session, 'crash', { cause: 'tree' });
-   }
+// A crash for each tree trunk near the rider (trees.near(), into the scratch array near) that it is moving into
+// (s: speed, m/s).
+function hitTrees(rider, session, trees, near, s) {
+ const n = trees.near(rider.x, rider.y, near);
+ for (let i = 0; i < n; i++) {
+  const T = near[i];
+  if (Math.hypot(T.x - rider.x, T.y - rider.y) < TREE_RADIUS_M && s > 1) {
+   rider.crashTimer = CRASH_TIME;
+   session.crashes++;
+   rider.x -= rider.vx * TREE_BOUNCE_S;
+   rider.y -= rider.vy * TREE_BOUNCE_S;
+   rider.vx = rider.vy = 0;
+   pushEvent(session, 'crash', { cause: 'tree' });
   }
  }
 }

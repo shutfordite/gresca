@@ -3,14 +3,15 @@ import { field, prop } from '../core/facade-fields.js';
 
 /**
  * The sim's fields, in state() order. r: RiderState, s: the session, spray: {particles}, course: the Course (its rails
- * are what grind.rail indexes). Units: m, m/s, s, rad. Map axes: +x across the map, +y down the run.
+ * are what grind.rail indexes). Units: m, m/s, s, rad. World axes: +x east, +y north; headings counter-clockwise from
+ * east (docs/adr/0005-enu-frame.md).
  */
 export function simFields(r, s, spray, course) {
  return {
   phase: prop(s, 'phase'),           // 'load' | 'ready' | 'run' | 'done'
-  x: prop(r, 'x', true),             // m, rider position on the map
+  x: prop(r, 'x', true),             // m, rider position (east, north)
   y: prop(r, 'y', true),
-  vx: prop(r, 'vx'),                 // m/s, rider velocity on the map
+  vx: prop(r, 'vx'),                 // m/s, rider velocity (east, north)
   vy: prop(r, 'vy'),
   speed: field(() => Math.hypot(r.vx, r.vy)), // m/s, read only
   heading: prop(r, 'heading'),       // rad, direction the board points; twin tip: heading + PI is the board switch

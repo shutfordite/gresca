@@ -32,8 +32,9 @@ export function animInput(rider, session, course, out) {
  out.braking = rider.isBraking;
  out.speed = speed;
  out.travelDir = speed > MOVING_SPEED ? Math.atan2(rider.vy, rider.vx) : rider.heading;
- // the spec mirrors a goofy snowboarder in z, so the rider faces the other end of the board
- out.facing = rider.heading + (isGoofyBoard ? Math.PI : 0);
+ // the spec mirrors a goofy snowboarder in z, so the rider faces the other end of the board (- PI: the mirror of the
+ // grid's + PI, docs/adr/0005-enu-frame.md, so the default placement keeps its numbers bit for bit)
+ out.facing = rider.heading - (isGoofyBoard ? Math.PI : 0);
  out.riderSide = Math.cos(out.facing - out.travelDir) >= 0 ? 1 : -1;
  out.impact = rider.landingSpeed;
  out.landings = rider.landings;

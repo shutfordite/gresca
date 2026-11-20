@@ -1,5 +1,8 @@
 // The procedural course: map size, the piste centreline cx(), the finish, the kickers, rails and boxes, and the
 // Course (core/contracts.js) over them that everything outside the procedural map uses (createProceduralCourse()).
+// Everything here is authored on the map's grid (x across, y down the piste: grid u and v); the Course answers in
+// world metres (east, north), through the map frame (world/map-frame.js, docs/adr/0005-enu-frame.md).
+import { DEFAULT_FRAME } from './map-frame.js';
 
 export const W0 = 1000; // cells (m) across the map
 export const H0 = 2450; // cells (m) down the map
@@ -31,8 +34,8 @@ export const cx = (y) => 500 + 170 * Math.sin(y / 350) + 70 * Math.sin(y / 130 +
 const cxSlope = (y) => 170 / 350 * Math.cos(y / 350) + 70 / 130 * Math.cos(y / 130 + 1);
 
 /**
- * A rail is a straight chord that follows the piste: x0,y0 to its end, unit direction dx,dy, length len (m); in course
- * coordinates it runs from s0 to s1 (m) at d (m across, its offset from the centreline).
+ * A rail is a straight chord that follows the piste: x0,y0 to its end, unit direction dx,dy, length len (m), on the
+ * grid; in course coordinates it runs from s0 to s1 (m) at d (m across, its offset from the centreline).
  */
 function makeRail([ya, n, off, t]) {
  const yb = ya + n;
@@ -45,7 +48,7 @@ function makeRail([ya, n, off, t]) {
  });
 }
 
-/** The rails and boxes, {y0,y1,x0,x1,len,s0,s1,d,dx,dy,h,t}, in RAIL_DEF order (frozen). */
+/** The rails and boxes on the grid, {y0,y1,x0,x1,len,s0,s1,d,dx,dy,h,t}, in RAIL_DEF order (frozen). */
 export const RAILS = Object.freeze(RAIL_DEF.map(makeRail));
 
 /** m, the kicker ramp height added at (px,py): a curved rise up to the lip, then a short drop. */
@@ -64,12 +67,25 @@ export function bump(px, py) {
 }
 
 // The kickers in course coordinates: lip at s (m), centred at d (m across), launching within halfWidth (m) across and
-// depth (m) past the lip; x, y (m) is the lip's centre on the map.
-const KICKERS = Object.freeze(KICK.map((k) => Object.freeze({
- s: k, d: 0, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k), x: cx(k), y: k,
-})));
+// depth (m) past the lip; x, y (m) is the lip's centre in the world (frame: the MapFrame).
+function makeKickers(frame) {
+ return Object.freeze(KICK.map((k) => {
+  const p = frame.toWorld(cx(k), k, { x: 0, y: 0 });
+  return Object.freeze({
+   s: k, d: 0, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k), x: p.x, y: p.y,
+  });
+ }));
+}
 
-// Writes the unit tangent of the centreline at s (m) into out.tx, out.ty (down the piste).
+// A grid rail (RAILS) in the world: x0, y0, x1, y1 its ends (m), dx, dy its unit direction, y0 and y1 now world y.
+function placeRail(r, frame) {
+ const a = frame.toWorld(r.x0, r.y0, { x: 0, y: 0 });
+ const b = frame.toWorld(r.x1, r.y1, { x: 0, y: 0 });
+ const dir = frame.vecToWorld(r.dx, r.dy, { x: 0, y: 0 });
+ return Object.freeze({ ...r, x0: a.x, y0: a.y, x1: b.x, y1: b.y, dx: dir.x, dy: dir.y });
+}
+
+// Writes the unit tangent of the centreline at s (m) on the grid into out.tx, out.ty (down the piste).
 function tangentAt(s, out) {
  const c = cxSlope(s);
  const n = Math.hypot(c, 1);
@@ -79,20 +95,32 @@ function tangentAt(s, out) {
 }
 
 /**
- * The procedural map's Course (core/contracts.js). To keep today's numbers exactly, s = y and d = x - cx(y) (not arc
- * length and perpendicular distance: C1 swaps those in). terrain: the world's Terrain, for fallLine(); null gives a
- * course whose fall line is always the tangent. Frozen and stateless: every query writes into the caller's out.
+ * The procedural map's Course (core/contracts.js), in world metres. On the grid, s = y and d = x - cx(y) (not arc
+ * length and perpendicular distance: C1 swaps those in), so today's numbers are kept exactly. terrain: the world's
+ * Terrain, for fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the
+ * grid in the world (default: the piste runs south). Frozen and stateless: every query writes into the caller's out.
  */
-export function createProceduralCourse(terrain) {
+export function createProceduralCourse(terrain, frame = DEFAULT_FRAME) {
+ const kickers = makeKickers(frame);
+ const rails = Object.freeze(RAILS.map((r) => placeRail(r, frame)));
+ const at = { u: 0, v: 0 }; // scratch: a world point on the grid
+ const vec = { x: 0, y: 0 }; // scratch: a grid vector in the world
+ // the unit tangent at grid s, written into out.tx, out.ty in the world
+ function worldTangent(s, out) {
+  tangentAt(s, out);
+  frame.vecToWorld(out.tx, out.ty, vec);
+  out.tx = vec.x;
+  out.ty = vec.y;
+  return out;
+ }
  function project(x, y, out) {
-  out.s = y;
-  out.d = x - cx(y);
-  return tangentAt(y, out);
+  frame.toGrid(x, y, at);
+  out.s = at.v;
+  out.d = at.u - cx(at.v);
+  return worldTangent(at.v, out);
  }
  function point(s, d, out) {
-  out.x = cx(s) + d;
-  out.y = s;
-  return out;
+  return frame.toWorld(cx(s) + d, s, out);
  }
  function fallLine(x, y, out) {
   let slope = 0;
@@ -107,7 +135,8 @@ export function createProceduralCourse(terrain) {
    out.fx = -out.gx / slope;
    out.fy = -out.gy / slope;
   } else {
-   tangentAt(y, out);
+   frame.toGrid(x, y, at);
+   worldTangent(at.v, out);
    out.fx = out.tx;
    out.fy = out.ty;
   }
@@ -116,19 +145,20 @@ export function createProceduralCourse(terrain) {
   return out;
  }
  function kickerAt(s, d) {
-  for (const k of KICKERS) {
+  for (const k of kickers) {
    if (Math.abs(d - k.d) < k.halfWidth && s >= k.s && s < k.s + k.depth) return k;
   }
   return null;
  }
  return Object.freeze({
-  length: H0, startS: START_Y, finishS: FIN, kickers: KICKERS, rails: RAILS,
+  length: H0, startS: START_Y, finishS: FIN, kickers, rails,
   project, point, fallLine, kickerAt, widthAt: () => 2 * PISTE_HALF_WIDTH,
  });
 }
 
 /**
- * The procedural course with no terrain (fall line = tangent), for sim functions called without a course (the sim's
- * unit tests). The game always passes world.course. C1 removes it once those tests build their own course.
+ * The procedural course with no terrain (fall line = tangent) at the default placement, for sim functions called
+ * without a course (the sim's unit tests). The game always passes world.course. C1 removes it once those tests
+ * build their own course.
  */
 export const DEFAULT_COURSE = createProceduralCourse(null);

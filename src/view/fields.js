@@ -2,7 +2,7 @@
 import { MAP_ID, RAY_FAR, RAY_SAMPLES } from '../core/config.js';
 import { nested, prop } from '../core/facade-fields.js';
 import { cameraTilt, camCompass } from './camera.js';
-import { fogAt, sunDisc } from './sky.js';
+import { fogAt, sunDisc, sunAzimuthDeg } from './sky.js';
 import { project } from './sprites.js';
 import { riderPose } from './draw.js';
 import { animTick } from './rider-animation.js';
@@ -11,10 +11,10 @@ import { animTick } from './rider-animation.js';
 export function viewFields(c) {
  return {
   camera: nested('camera', {
-   heading: prop(c, 'heading'),     // rad, direction the camera looks along the ground (same convention as the rider)
+   heading: prop(c, 'heading'),     // rad, direction the camera looks along the ground (counter-clockwise from east)
    height: prop(c, 'height'),       // m, camera altitude (absolute, same datum as world.height)
-   x: prop(c, 'x'), y: prop(c, 'y'), // m, camera position on the map, CAM_BACK behind the rider
-   dirX: prop(c, 'dirX'), dirY: prop(c, 'dirY'), // unit view direction on the map
+   x: prop(c, 'x'), y: prop(c, 'y'), // m, camera position (east, north), CAM_BACK behind the rider
+   dirX: prop(c, 'dirX'), dirY: prop(c, 'dirY'), // unit view direction (east, north)
    slope: prop(c, 'slope'),         // smoothed slope ahead, metres dropped per metre (full-tilt tan)
    tilt: prop(c, 'tilt'),           // view tilt (tan) after partial slope follow and the rider clamp
    pitchPx: prop(c, 'pitchPx'),     // view tilt in low-res render pixels (focalPx * tilt)
@@ -32,19 +32,21 @@ export function viewFields(c) {
  */
 export function viewDebug(g) {
  const { view, camera, hanga, world } = g;
- const colourOf = (cols, px, py) => {
-  const o = ((py | 0) * view.map.width + (px | 0)) * 4;
+ const colourOf = (cols, px, py) => { // the colour map texel under world point (px, py)
+  const at = world.frame.toGrid(px, py, { u: 0, v: 0 });
+  const o = ((at.v | 0) * view.map.width + (at.u | 0)) * 4;
   return [cols[o], cols[o + 1], cols[o + 2], cols[o + 3]];
  };
  return Object.freeze({
   drawn: () => ({ rails: view.railsDrawn, flags: view.flagsDrawn }), // segments of rail and flags drawn last frame
-  project: (wx, wy, h) => { // screen position of a map point, or null
+  project: (wx, wy, h) => { // screen position of a world point, or null
    const P = project(camera, wx, wy, h);
    return P && { ...P };
   },
   cameraTilt: (s, rel, drop) => cameraTilt(hanga, s, rel, drop),
   camCompass: () => camCompass(camera), // camera heading, compass degrees
-  sunDisc: () => ({ ...sunDisc(hanga, camera, view.W, view.Hh) }), // {X,Y,r,on}, canvas pixels
+  sunDisc: () => ({ ...sunDisc(hanga, camera, view.W, view.Hh, world.frame) }), // {X,Y,r,on}, canvas pixels
+  sunAzimuthDeg: () => sunAzimuthDeg(hanga, world.frame), // compass deg, the sun in the world (turned with the map)
   screen: () => ({ width: view.W, height: view.Hh }), // canvas pixels
   mapId: MAP_ID,
   // fog colour, distance of the last terrain sample (m), samples per column

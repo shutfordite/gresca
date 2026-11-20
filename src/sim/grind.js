@@ -72,7 +72,9 @@ export function grindStep(rider, input, session, spray, dt, course = DEFAULT_COU
  rider.vz = 0;
  const a = rider.heading;
  const phi = Math.atan2(r.dy, r.dx);
- const tgt = Math.cos(a - phi) >= 0 ? phi : phi + Math.PI;
+ // nose or tail along the rail; the tail-first target is written phi - PI (the same direction as phi + PI): in the
+ // world frame that is the mirror of the grid's phi + PI, so the default placement keeps its numbers bit for bit
+ const tgt = Math.cos(a - phi) >= 0 ? phi : phi - Math.PI;
  rider.heading += Math.atan2(Math.sin(tgt - a), Math.cos(tgt - a)) * Math.min(1, dt * GRIND_TURN_RATE);
  if (rnd(spray.rng) < 0.7) emit(spray, 1, rider.x, rider.y, r.h, 1.2, 1.2, 0, 0);
  if (input.jump) endGrind(rider, input, session, course, true);

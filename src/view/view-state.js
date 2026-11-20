@@ -9,7 +9,8 @@ const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs
 /**
  * A new view: W, Hh (screen canvas px), lo/lx (the low-res terrain render canvas and context), occ (per render
  * column and terrain sample, the screen row the terrain reached: hides trees behind ridges), map/mx (the W0 × H0
- * colour map canvas, one px per m) and col/col0 (its live RGBA, with ski tracks, and as built; set after the build),
+ * colour map canvas, one px per m of the map's grid) and col/col0 (its live RGBA, with ski tracks, and as built) and
+ * mapFrame (where its texels sit in the world; all three set after the build),
  * fog (spec terrain.fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), groundM (m, the
  * ground under it, from updateCamera()), the rider animation (anim, animPrev, riderList, riderYaw deg) and counts of
  * what the last frame drew.
@@ -38,7 +39,10 @@ export function createView(doc, hanga) {
   riderYaw: 0,
   animIn: createAnimInput(), // the sim's AnimInput for the rider animation, refilled each drawn frame
   where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the camera projected on the course (sprites.js)
-  point: { x: 0, y: 0 }, // scratch: a course point on the map (sprites.js)
+  point: { x: 0, y: 0 }, // scratch: a course point in the world (sprites.js)
+  mapFrame: null, // the MapFrame placing the colour map's texels in the world (set with col, colour-map.js)
+  texel: { u: 0, v: 0 }, // scratch: a world point in colour map texels (draw.js, ski-tracks.js)
+  rayTexel: { u: 0, v: 0 }, // scratch: a ray direction in texels (draw.js)
   flagsDrawn: 0,
   railsDrawn: 0,
  };

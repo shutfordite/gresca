@@ -9,7 +9,8 @@ import { createRng, reseed, rnd } from '../src/core/rng.js';
 import { createEventBus } from '../src/core/events.js';
 import { createInputLog } from '../src/core/input-log.js';
 import { RIGS, SIM_DT } from '../src/core/config.js';
-import { KICK, RAILS, cx, bump } from '../src/world/course.js';
+import { KICK, RAILS, cx, bump, DEFAULT_COURSE } from '../src/world/course.js';
+import { NO_TREES } from '../src/world/build.js';
 import { Terrain } from '../src/world/terrain.js';
 import { createRider, createSession } from '../src/sim/state.js';
 import { emit, stepParticles } from '../src/sim/particles.js';
@@ -35,7 +36,7 @@ function simOn(terrain, x, y) {
  Object.assign(rider, { x, y, heading: Math.PI / 2 });
  const session = createSession();
  return { state: { rider, session, spray: spray(), gradient: { gx: 0, gy: 0 } }, input: createInput(),
-  world: { terrain, trees: new Map() }, bus: createEventBus(), inputLog: createInputLog(), rider, session };
+  world: { terrain, trees: NO_TREES }, bus: createEventBus(), inputLog: createInputLog(), rider, session };
 }
 const stepOn = (sim) => step(sim.state, sim.input, sim.world, SIM_DT);
 
@@ -101,7 +102,7 @@ describe('sim/ on plain objects', () => {
  });
 
  it('railCheck: riding along a rail starts a grind, across it does not', () => {
-  const r = RAILS[0], along = createRider(), across = createRider();
+  const r = DEFAULT_COURSE.rails[0], along = createRider(), across = createRider();
   Object.assign(along, { x: r.x0 + r.dx * 2, y: r.y0 + r.dy * 2, vx: r.dx * 10, vy: r.dy * 10, heading: Math.atan2(r.dy, r.dx) });
   Object.assign(across, { x: along.x, y: along.y, vx: 10, vy: 0, heading: 0 });
   railCheck(along, createInput(), spray());
@@ -128,7 +129,8 @@ describe('sim/ on plain objects', () => {
    sim.rider.vy = 5;
    sim.input.right = 1;
    for (let i = 0; i < 30; i++) stepOn(sim);
-   return sim.rider.heading - Math.PI / 2;
+   const turn = Math.PI / 2 - sim.rider.heading; // rad clockwise (right) from where it started
+   return Math.atan2(Math.sin(turn), Math.cos(turn));
   };
   assert.ok(turned('ski') > turned('board') && RIGS.ski.turn > RIGS.board.turn);
  });

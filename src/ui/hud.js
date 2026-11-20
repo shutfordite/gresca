@@ -30,8 +30,10 @@ export function subscribeHud(bus, hud) {
 }
 
 /**
- * Writes the HUD elements of ui from the rider as drawn (pose: m), its speed (rider.vx, vy: m/s), the session's score,
- * the popup (hud), the map bounds (m) for the minimap dot and the course (metres to go: finishS - s).
+ * Writes the HUD elements of ui from the rider as drawn (pose: world m), its speed (rider.vx, vy: m/s), the session's
+ * score, the popup (hud), the map's rectangle (bounds: terrain.bounds, m) for the minimap dot and the course (metres
+ * to go: finishS - s). The minimap is a picture of the map's grid: the dot goes where the pose is across (a) and down
+ * (b) that rectangle.
  */
 export function updateHud(ui, hud, pose, rider, session, bounds, course) {
  const sp = Math.hypot(rider.vx, rider.vy);
@@ -40,8 +42,12 @@ export function updateHud(ui, hud, pose, rider, session, bounds, course) {
  ui.info.textContent = Math.round(sp * MS_TO_KMH) + ' km/h · ' + Math.max(0, Math.round(toGo)) + ' m to go';
  ui.pop.textContent = hud.popup.text;
  ui.pop.style.opacity = Math.min(1, hud.popup.t * 2);
- ui.dot.style.left = pose.x / bounds.maxX * MINIMAP_W_PX + 'px';
- ui.dot.style.top = pose.y / bounds.maxY * MINIMAP_H_PX + 'px';
+ const ex = pose.x - bounds.x0;
+ const ey = pose.y - bounds.y0;
+ const a = ex * bounds.ax + ey * bounds.ay; // m across the map
+ const b = ex * bounds.bx + ey * bounds.by; // m down the map
+ ui.dot.style.left = a / bounds.width * MINIMAP_W_PX + 'px';
+ ui.dot.style.top = b / bounds.length * MINIMAP_H_PX + 'px';
 }
 
 /** Shows the glove hint for each side that is held (left, right: truthy when held). */
