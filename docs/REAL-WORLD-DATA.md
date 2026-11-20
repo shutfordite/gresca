@@ -38,8 +38,8 @@ so re-check the "verify" items before shipping a map.
 4. **Licences travel with the map file.** A map JSON containing OSM-derived pistes is a derivative database under
    ODbL: it must keep the attribution and stay ODbL, even though the game code is separately licensed. Elevation
    sources each need their notice. The credits screen must be generated from the map file.
-5. **Nothing third-party at runtime.** Fetching tiles or Overpass from the game would break `file://` play, add
-   CORS and availability failures, and make licences harder. All fetching happens at bake time.
+5. **Nothing third-party at runtime, by default.** Fetching tiles or Overpass from the game adds CORS and
+   availability failures and makes licences harder, so all fetching happens at bake time unless D0 says otherwise.
 
 ## 3. Architecture decisions (changes to the plan)
 
@@ -106,11 +106,11 @@ policy counts all of an app's users together), and use OpenSkiMap's processed ru
 | Bring your own mountain | file picker / drag-and-drop in the game | not planned | **Add to C4**: load a baked file through the same loader and validator; built-in maps stay. |
 | Horizon | coarse ring (~zoom 10, ~110 m) drawn render-only behind the fog | baked horizon profile | Both: bake a coarse ring, derive the spec's horizon profile from it (D3). |
 | Renderer | the CPU raycast can't show km of real ground on a phone; live Gresca needs WebGL2 | keep the raycast, measure in D1 | **D1's frame-time harness decides.** If real-map frames miss budget, a WebGL2 terrain renderer becomes a phase E, behind the same view interface. |
-| Runtime fetching | "live Gresca" option (Pages-hosted, bundler, PMTiles streaming) needs an owner decision | ruled out | **Owner decision D0, below.** The architecture keeps it possible: the portable compiler core plus the loader is exactly the "bake at start" shortcut. |
+| Runtime fetching | "live Gresca" option (Pages-hosted, bundler, PMTiles streaming) needs an owner decision | off by default | **Owner decision D0, below.** The architecture keeps it possible: the portable compiler core plus the loader is exactly the "bake at start" shortcut. |
 
 ### D0. The one strategic decision
-Keep "one HTML file, nothing fetched at runtime" (resorts are baked and shipped, or loaded from a file), **or** allow a
-hosted build on GitHub Pages that fetches elevation (Mapterhorn) and a Gresca-hosted weekly piste extract at start.
+The one-file rule is gone (ADR 0001); what is still open is runtime fetching. Keep "nothing third-party fetched at
+runtime" (resorts are baked and shipped in `maps/`, or loaded from a file), **or** let the hosted build on GitHub Pages fetch elevation (Mapterhorn) and a Gresca-hosted weekly piste extract at start.
 Nothing in phases B and C depends on the answer; it matters from C4 on. Recommendation: keep the rule until El Tarter
 rides well from a baked file, then decide with real frame-time and file-size numbers.
 
