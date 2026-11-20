@@ -1,21 +1,19 @@
-'use strict';
 // The terrain interface (src/terrain.js, B3): a layer stack sampled as one smooth surface, the gradient physics reads,
 // the renderer's fast path, and the rule that nothing else indexes the height arrays.
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-const ROOT = path.join(__dirname, '..');
-const TERRAIN_SRC = fs.readFileSync(path.join(ROOT, 'src', 'terrain.js'), 'utf8');
+const ROOT = path.join(import.meta.dirname, '..');
+const TERRAIN_FILE = path.join(ROOT, 'src', 'world', 'terrain.js');
+const TERRAIN_SRC = fs.readFileSync(TERRAIN_FILE, 'utf8');
 
-// terrain.js on its own, in an empty context: no document, window, canvas or HANGA, and no other game file.
-function loadTerrain() {
-  const ctx = vm.createContext({});
-  vm.runInContext(TERRAIN_SRC + '\nthis.Terrain=Terrain;', ctx, { filename: 'src/terrain.js' });
-  return ctx.Terrain;
+// world/terrain.js on its own, imported straight into Node: no document, window, canvas or HANGA, no stubs.
+async function loadTerrain() {
+  return (await import(pathToFileURL(TERRAIN_FILE).href)).Terrain;
 }
 
 // Seeded random numbers for the test grids and sample points (Park-Miller).
@@ -31,8 +29,8 @@ function roughGrid(T, nx = 12, ny = 9, cellM = 2) {
 // Central finite differences of height (m/m).
 const fd = (h, x, y, e = 1e-4) => ({ gx: (h(x + e, y) - h(x - e, y)) / (2 * e), gy: (h(x, y + e) - h(x, y - e)) / (2 * e) });
 
-describe('Terrain (src/terrain.js on its own)', () => {
-  const T = loadTerrain();
+describe('Terrain (src/world/terrain.js on its own)', async () => {
+  const T = await loadTerrain();
   const { data, nx, ny, cellM, base } = roughGrid(T);
   const t = T.create({ base });
 
@@ -143,8 +141,8 @@ describe('Terrain (src/terrain.js on its own)', () => {
   });
 });
 
-describe('the game\'s terrain (through Gresca.world)', () => {
-  const g = load();
+describe('the game\'s terrain (through Gresca.world)', async () => {
+  const g = await load();
   const W = g.world, D = g.debug, FIN = W.finishY;
 
   it('is the procedural map as one base layer', () => {
@@ -210,10 +208,11 @@ describe('the game\'s terrain (through Gresca.world)', () => {
 // H (heights), M (groomed mask) and the grid size W0 × H0 belong to the files below. Everything else asks `terrain`.
 // Each entry: the names that file may use, and why. Keep it short: every name listed must still be used there.
 const OWNERS = new Map([
-  ['src/config.js', { names: ['W0', 'H0'], why: 'declares the procedural map\'s grid size (cells across and down)' }],
-  ['src/world.js', { names: ['M', 'W0', 'H0'], why: 'owns the height and groomed arrays and builds `terrain` (and its groomed lookup) from them' }],
-  ['src/build.js', { names: ['H', 'M', 'W0', 'H0'], why: 'build() fills the arrays and paints the colour map from them' }],
-  ['src/step.js', { names: ['W0'], why: 'row stride of the colour map col for ski tracks (B2 moves tracks out of the sim, D2 removes col)' }],
+  ['src/world/course.js', { names: ['W0', 'H0'], why: 'declares the procedural map\'s grid size (cells across and down)' }],
+  ['src/world/build.js', { names: ['H', 'M', 'W0', 'H0'], why: 'owns the height and groomed arrays, builds `terrain` from them and fills them' }],
+  ['src/view/colour-map.js', { names: ['H', 'M', 'W0', 'H0'], why: 'paints the colour map from the built arrays (D2 removes the colour map)' }],
+  ['src/view/view-state.js', { names: ['W0', 'H0'], why: 'sizes the colour map canvas, one pixel per map cell (D2 removes it)' }],
+  ['src/sim/step.js', { names: ['W0'], why: 'row stride of the colour map col for ski tracks (B2b moves tracks out of the sim, D2 removes col)' }],
 ]);
 // src/terrain.js may index its own grids, but it receives them as arguments and names none of these.
 
@@ -242,7 +241,8 @@ function terrainUses(src) {
 }
 
 describe('terrain arrays are read only through the terrain interface', () => {
-  const srcFiles = fs.readdirSync(path.join(ROOT, 'src')).filter((f) => f.endsWith('.js')).map((f) => 'src/' + f);
+  const srcFiles = fs.readdirSync(path.join(ROOT, 'src'), { recursive: true }).filter((f) => f.endsWith('.js'))
+    .map((f) => 'src/' + f.split(path.sep).join('/')).sort();
 
   it('the scanner finds direct access, and ignores comments, strings and other names', () => {
     const names = (s) => terrainUses(s).map((u) => u.name);

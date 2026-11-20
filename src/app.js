@@ -1,35 +1,130 @@
-// Fixed 120 Hz timestep with interpolation, the frame loop, and start-up (build, then the menu).
-// ---- fixed timestep ----
-// The simulation always advances in steps of SIM_DT, whatever the display's frame rate, so jumps, landings, crashes and
-// grinds come out the same at 30, 60, 120 or 144 Hz. Each frame adds its real duration to simAcc and runs as many whole
-// steps as fit, at most SIM_MAX in one frame; after a longer stall (background tab, slow device, GC pause) the rest is
-// dropped, so the game slows down rather than spiralling. draw() shows the rider interpolated between the last two
-// steps by the leftover fraction (alpha), so motion stays smooth when frames and steps don't line up.
-const SIM_DT=1/120, // s, one simulation step (120 Hz)
- SIM_MAX=8,         // steps, the most run in one frame (8/120 s = 67 ms of simulation)
- SIM_EPS=1e-9;      // s, slack so frame times that are exact multiples of SIM_DT don't lose a step to rounding
-let simAcc=0,        // s of real time not yet simulated
- ipX=0,ipY=0,ipZ=0;  // m, rider x, y and height above the ground before the latest step (where interpolation starts)
-// The rider pose the view shows: m, m, m above the ground, and the alpha it was blended with. View state, not sim state.
-const drawn={x:0,y:0,z:0,alpha:1};
-function ipSnap(){ipX=x;ipY=y;ipZ=jz} // no interpolation across a teleport (new run, place)
-function riderPose(alpha){
- // alpha 1, or a jump no step could make (more than 8 m), shows the current state as it is
- if(alpha>=1||Math.abs(x-ipX)+Math.abs(y-ipY)>8){drawn.x=x;drawn.y=y;drawn.z=jz;drawn.alpha=1;return}
- drawn.x=ipX+(x-ipX)*alpha;drawn.y=ipY+(y-ipY)*alpha;drawn.z=ipZ+(jz-ipZ)*alpha;drawn.alpha=alpha}
-// One simulation step: physics, spray and the popup timer.
-function simTick(){ipX=x;ipY=y;ipZ=jz;step(SIM_DT);stepParts(SIM_DT);popT=Math.max(0,popT-SIM_DT)}
-let last=0;
-function loop(ts){const dt=Math.max(0,(ts-last)/1000||0);last=ts;let alpha=1;
- if(state==='run'){simAcc+=dt;let n=0;
-  while(state==='run'&&n<SIM_MAX&&simAcc>=SIM_DT-SIM_EPS){simTick();simAcc-=SIM_DT;n++}
-  if(state!=='run'||simAcc>=SIM_DT)simAcc=0; // run ended, or a stall longer than SIM_MAX steps: drop the rest
-  simAcc=Math.max(0,simAcc);
-  if(state==='run')alpha=simAcc/SIM_DT}
- else simAcc=0;
- // the camera and animation get the real frame time, capped like the simulation
- if(state!=='load')draw(Math.min(dt,SIM_MAX*SIM_DT),alpha);requestAnimationFrame(loop)}
-setTimeout(()=>{build();state='ready';x=cx(60);y=60;vx=vy=0;a=1.57;crash=0;crashes=0;time=0;spin=0;camA=1.57;camH=terrain.height(x,60)+CAMH;
- msgT.textContent='Ride from the Encampadors ridge down to Pas de la Casa. Hold the left or right side of the screen to turn. Press both sides together to jump, then tap left or right in the air to spin. Swipe down to brake. Avoid the trees.';go.hidden=false},60);
-requestAnimationFrame(loop);
+// createGame(env): makes one game's state objects, wires the modules together, runs the boot and the frame loop.
+import { SIM_DT, SIM_MAX } from './core/config.js';
+import { createRng, reseed } from './core/rng.js';
+import { cx } from './world/course.js';
+import { createWorld, buildWorld } from './world/build.js';
+import { createRider, createSession } from './sim/state.js';
+import { createTimestep, snapInterpolation, advance } from './sim/timestep.js';
+import { createInput } from './input/input.js';
+import { bindInput } from './input/bind-input.js';
+import { createView, resizeScreen } from './view/view-state.js';
+import { buildColourMap } from './view/colour-map.js';
+import { createCamera, resetCamera, menuCamera } from './view/camera.js';
+import { draw } from './view/draw.js';
+import { getUi } from './ui/dom.js';
+import { updateHud, showGloves } from './ui/hud.js';
+import { bindMenu, loadStance, MENU_TEXT } from './ui/menu.js';
+import { createFacade } from './debug.js';
 
+const START_Y = 60;     // m, where a run starts, down from the top of the map
+const START_SPEED = 2;  // m/s down the slope at the drop
+const MENU_HEADING = 1.57; // rad, straight down the map
+const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
+
+/**
+ * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
+ * requestAnimationFrame, setTimeout, HANGA, RiderAnim}; localStorage and devicePixelRatio are read at each use.
+ * Every piece of state lives in the objects made here; the modules hold none (docs/adr/0002). Returns the frozen
+ * test and debug façade (debug.js), which main.js puts on window.Gresca.
+ */
+export function createGame(env) {
+ const hanga = env.HANGA;
+ const world = createWorld();
+ const view = createView(env.document, hanga);
+ const ui = getUi(env.document);
+ const resize = () => resizeScreen(view, ui.canvas, env.devicePixelRatio);
+ env.window.addEventListener('resize', resize);
+ resize();
+
+ const camera = createCamera();
+ const rider = createRider();
+ const session = createSession();
+ const input = createInput();
+ const rng = createRng(1);
+ const spray = { particles: [], rng };
+ const timestep = createTimestep();
+ const clock = { lastMs: 0 }; // ms, the last frame's timestamp
+ // What step() reads and writes (sim/step.js). gradient: scratch for the slope under the rider, so no allocation.
+ const sim = {
+  rider, input, session, terrain: world.terrain, trees: world.trees, spray, gradient: { gx: 0, gy: 0 }, view, ui,
+ };
+ // What draw() reads (view/draw.js).
+ const scene = {
+  canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, treeArr: world.treeArr,
+  particles: spray.particles, timestep, hanga, riderAnim: env.RiderAnim,
+ };
+
+ // A new run from the top: what the Drop in button does.
+ function startRun() {
+  rider.x = cx(START_Y);
+  rider.y = START_Y;
+  rider.vx = 0;
+  rider.vy = START_SPEED;
+  rider.heading = Math.PI / 2;
+  rider.crashTimer = 0;
+  session.crashes = 0;
+  session.time = 0;
+  rider.wipeoutSpin = 0;
+  session.score = 0;
+  session.popup.t = 0;
+  rider.airTime = 0;
+  rider.fromKicker = false;
+  spray.particles.length = 0;
+  rider.z = rider.vz = input.jump = 0;
+  rider.rotation = 0;
+  input.both = false;
+  rider.grind = null;
+  rider.grindDist = 0;
+  reseed(rng);
+  view.col.set(view.col0); // wipe the ski tracks
+  resetCamera(camera, world.terrain.height(rider.x, START_Y));
+  session.phase = 'run';
+  ui.msg.hidden = true;
+  timestep.acc = 0;
+  snapInterpolation(timestep, rider);
+ }
+
+ // Draws one frame and the HUD. dt: s since the last frame; alpha: see view/draw.js riderPose().
+ function frame(dt, alpha) {
+  draw(view, scene, dt, alpha);
+  updateHud(ui, view.drawn, rider, session, world.terrain.bounds);
+ }
+
+ function loop(ts) {
+  const dt = Math.max(0, (ts - clock.lastMs) / 1000 || 0);
+  clock.lastMs = ts;
+  const alpha = advance(sim, timestep, dt);
+  // the camera and animation get the real frame time, capped like the simulation
+  if (session.phase !== 'load') frame(Math.min(dt, SIM_MAX * SIM_DT), alpha);
+  env.requestAnimationFrame(loop);
+ }
+
+ // Builds the mountain, then shows the menu over the top of the run.
+ function boot() {
+  buildWorld(world);
+  buildColourMap(view, world, ui.minimap);
+  session.phase = 'ready';
+  rider.x = cx(START_Y);
+  rider.y = START_Y;
+  rider.vx = rider.vy = 0;
+  rider.heading = MENU_HEADING;
+  rider.crashTimer = 0;
+  session.crashes = 0;
+  session.time = 0;
+  rider.wipeoutSpin = 0;
+  menuCamera(camera, world.terrain.height(rider.x, START_Y));
+  ui.msgT.textContent = MENU_TEXT;
+  ui.go.hidden = false;
+ }
+
+ bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right));
+ ui.go.addEventListener('click', startRun);
+ bindMenu(ui, session, env);
+ loadStance(session, env, hanga);
+ env.setTimeout(boot, BOOT_DELAY_MS);
+ env.requestAnimationFrame(loop);
+
+ return createFacade({
+  rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, hanga, startRun, frame,
+ });
+}

@@ -1,11 +1,10 @@
-'use strict';
 // The real game loop (requestAnimationFrame) runs the simulation at a fixed 120 Hz whatever the frame rate, caps the
 // steps per frame, draws the rider interpolated between steps, and takes all its randomness from a seeded RNG (A3).
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-const g = load();
+const g = await load();
 // The loop draws every frame. The terrain raycast cost scales with the canvas width; a narrow canvas keeps these
 // tests quick and changes nothing in the simulation.
 g.el('c').clientWidth = 40;

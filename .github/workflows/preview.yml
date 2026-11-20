@@ -46,7 +46,7 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           # What gets published: the page and every folder it loads files from. Add new runtime folders here.
-          SITE: index.html src art maps assets
+          SITE: index.html src art styles maps assets
           KEEP: 3 # builds kept per pull request (and for main), so a tab left open on an older build keeps working
         run: |
           set -euo pipefail

@@ -1,11 +1,10 @@
-'use strict';
 // Baseline behaviour: terrain, riding physics, braking, jumping, kickers, trees, finish.
 // These must keep passing through every later change to the game.
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load } = require('./harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-const g = load();
+const g = await load();
 const W = g.world;
 const st = () => g.state();
 

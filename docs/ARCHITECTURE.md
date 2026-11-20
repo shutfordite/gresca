@@ -2,7 +2,7 @@
 
 Audit of `shutfordite/gresca` at `main` 9928948 (after PR #3, D1 fog and sky), 20 Nov 2026. PR #4 (D2 camera) has since been merged. The open branch `design/02-camera` (391c3da) was also read. All 146 tests pass on main (`npm test`, about 104 s).
 
-## 0. Status (20 Nov 2026, main a304c86)
+## 0. Status (20 Nov 2026, main a1c6833)
 
 | Package | State |
 |---|---|
@@ -12,13 +12,14 @@ Audit of `shutfordite/gresca` at `main` 9928948 (after PR #3, D1 fog and sky), 2
 | PR previews on GitHub Pages | done, PR #9 (not in the original plan) |
 | B1 game split into `src/` scripts (ADR 0001, no build step) | done, PR #12 |
 | Fix: black ski tracks at low speed | this PR |
-| **B3 terrain interface** | **next**, then B2. *Order changed:* B2 now converts every `src/` file to ES modules and B3 touches every terrain read, so they run one after the other, smaller first. |
-| B2, C1–C4, D1–D3 | to do. Phase C and B3 are amended by `docs/REAL-WORLD-DATA.md` (R1–R6) |
+| B3 terrain interface (layer stack, R1) | done, PR #14 |
+| B2 state objects and events | **split in two.** **B2a** (this PR): `src/` becomes native ES modules by layer, every piece of state in objects made by one `createGame(env)` call, no module-level state (ADR 0002). **B2b** (next): the simulation becomes pure, talks outwards through events, and the DOM and camera side effects move out of `step()` and `draw()` (marked `TODO(B2b)` in the code). |
+| C1–C4, D1–D3 | to do. Phase C is amended by `docs/REAL-WORLD-DATA.md` (R1–R6) |
 
 Follow-ups from the A reviews, to fold into the package named:
 - ~~B1~~ (done in #12): pin Node with `"engines": {"node": ">=22.8"}` and make the README match (L1, A2 review). Replace the `debug.drawSource()` test (it reads `draw.toString()`) with call-order recording in the harness's ctx stub.
-- B2: `Gresca.sim()` should call the same `simTick()` as the loop; `Gresca.set()` must reset interpolation when it writes the position; record input per sim step (for replays and ghosts later).
-- B3: rename `world.height` (raw cell) to `world.cellHeight` and add an interpolated `height`.
+- B2b: `Gresca.sim()` should call the same `simTick()` as the loop; record input per sim step (for replays and ghosts later). ~~`Gresca.set()` must reset interpolation when it writes the position~~ (done in B2a).
+- ~~B3: rename `world.height` (raw cell) to `world.cellHeight` and add an interpolated `height`.~~ Done in #14.
 
 ## 1. Summary
 
@@ -99,42 +100,59 @@ The terrain is a voxel-style column raycaster (152 samples × up to 360 columns,
 
 ## 4. Target architecture
 
-A static site with no build step and no runtime dependencies (ADR 0001): `index.html` loads `art/` and `src/` directly and fetches `maps/`. Source in `src/` starts as ordered classic scripts (B1) and becomes native ES modules in B2.
+A static site with no build step and no runtime dependencies (ADR 0001): `index.html` loads `art/` as classic scripts and then one ES module, `src/main.js`, and (from C4) fetches `maps/`. Since B2a every file in `src/` is a native ES module with no state of its own: `createGame(env)` makes all of a game's state objects, and `env` carries everything from the browser (ADR 0002).
+
+The layout as it is after B2a (files to come in later packages are marked):
 
 ```
 src/
-  core/      config.js (all tunables, units in comments), rng.js (seeded), math.js, events.js (tiny emitter)
-  world/     terrain.js   Terrain interface + Heightfield (bilinear/bicubic sampling, normals, slope)
-             course.js    Course: centreline polyline, arc length s, signed lateral d, corridor, finish
-             park.js      kickers / rails / boxes placed in (s, d); queries: kickerAt, railNear
-             trees.js     placement from map data (spec trees.placement), spatial hash
-             maps/        procedural.js (today's world, re-expressed), loader.js (gresca-map-1 JSON)
-  sim/       rider.js     RiderState (plain object) + step(state, input, world, dt) — pure
-             rules.js     scoring, landings, crashes, grinds → events
-             fixedstep.js accumulator, 120 Hz
-  input/     input.js     pointers + keys → InputState {left,right,brake,jumpPressed}; no DOM side-effects
-  view/      camera.js    camera state + update(cam, rider, world, dt), spec cameraPitch
-             terrainRender.js  raycaster; per-pixel tone from normals (spec terrain.*)
-             sprites.js   trees, rails, flags, poles, particles
-             rider.js     drawRider (today's), fed by RiderAnim
-             sky.js
-  ui/        hud.js, menu.js  subscribe to sim events; own all DOM
-  app.js     wiring + loop: input → fixed-step sim → camera → render → hud
-  debug.js   window.Gresca test/debug façade (see A1)
-art/         unchanged (HANGA, RiderAnim)
-maps/        procedural.json? / el-tarter.json (gresca-map-1)
-tools/       map compiler (pure JS core + Node CLI + bake page), validate-map.js
-docs/adr/    one short decision record per choice below
+  main.js        entry: builds env from the browser (document, window, localStorage, rAF, setTimeout, pixel ratio,
+                 HANGA, RiderAnim) and calls createGame(env). The only file that reads browser globals.
+  app.js         createGame(env): makes the state objects, wires the modules, the boot and the frame loop
+  debug.js       the window.Gresca test and debug façade over one game's objects
+  package.json   {"type": "module"} so Node loads src/*.js as ES modules (the browser ignores it)
+  core/          config.js (tunables, units in comments), rng.js (seeded mulberry32 on an {seed, state} object)
+                 later: math.js, events.js (B2b)
+  world/         terrain.js   Terrain interface, layer stack, bicubic grid (B3)
+                 course.js    the procedural course: map size, centreline cx(), finish, kickers, rails (C1: polyline)
+                 noise.js     value noise, fbm, row-wise fbm
+                 build.js     createWorld() (grids, trees, terrain) and buildWorld() (fills them)
+                 later: trees.js, maps/procedural.js, maps/loader.js (C3, C4)
+  sim/           state.js     createRider(), createSession()
+                 step.js      step(sim, dt): steering, gravity, grip, friction, braking, trees, finish
+                 jump.js      take-off, flight, landing, crash and air scoring
+                 grind.js     rails and boxes
+                 particles.js snow spray on a {particles, rng} object
+                 timestep.js  fixed 120 Hz accumulator, simTick, interpolation start
+                 later: rules.js and events (B2b)
+  input/         input.js       InputState from pointers and keys (pure)
+                 bind-input.js  the DOM event listeners for it
+  view/          view-state.js  createView(): screen size, render buffers, colour map, drawn pose, animation
+                 camera.js      camera state, followRider(), cameraTilt(), camCompass()
+                 draw.js        draw(): terrain raycast, trees, spray, rider; riderPose()
+                 sky.js         sky gradient, sun disc, fog
+                 sprites.js     project(), flags, rails
+                 colour-map.js  paints the colour map from the built world (D2 removes it)
+                 rider-animation.js, rider-draw.js  RiderAnim glue and the Hanga rider
+  ui/            dom.js (the page's elements), hud.js, menu.js (rig picker, stance, menu text)
+art/             unchanged (HANGA, RiderAnim), UMD classic scripts
+styles/          base.css, hud.css, menu.css (index.html links them; no inline CSS)
+maps/            later: el-tarter.json (gresca-map-1)
+tools/           map compiler (pure JS core + Node CLI + bake page), validate-map.js
+docs/adr/        one short decision record per choice below
 ```
 
+One game's state, all made in `createGame(env)` and passed to the functions that need it: `world` (H, M, trees, terrain), `rider`, `session` (phase, score, time, crashes, popup, rig, stance), `input` (left, right, brake, jump, pointers, keys), `rng`, `spray` (particles and rng), `timestep`, `camera`, `view`, `ui` (elements). Modules export functions and frozen constants only; `test/page.test.js` checks that.
+
 Rules the layers keep:
-- `world` and `sim` never touch the DOM, canvas or `HANGA` colours. They can be `require`d in Node with no stubs.
+- `world` and `sim` never touch the DOM, canvas or `HANGA` colours. They are imported in Node with no stubs (`test/sim.test.js`, `test/terrain.test.js`).
+- No module holds state; nothing but `main.js` reads a browser global (ADR 0002).
 - `sim` talks outwards only through returned events (`land`, `crash`, `grindStart`, `grindEnd`, `finish`, `score`). `ui` and `view` subscribe.
 - `view` reads sim state and never writes it. The camera is updated in the app loop, not inside `draw()`.
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians internally and compass degrees only at the spec boundary.
 - The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it.
 
-Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); (2) ENU world frame; (3) course as polyline (s, d); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
+Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame; (3) course as polyline (s, d); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
 
 ## 5. Work packages for agents
 

@@ -1,11 +1,17 @@
-'use strict';
-// Runs the game's scripts (the <script src> files index.html loads, in page order) inside one Node vm with just
+// Imports the game's ES modules (the files src/main.js loads in the browser) and calls createGame(env) with just
 // enough browser stubs, so tests exercise the real game code with no dependencies.
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 
-const GAME = process.env.GAME_FILE || path.join(__dirname, '..', 'index.html');
+const require = createRequire(import.meta.url);
+const ROOT = path.join(import.meta.dirname, '..');
+export const GAME = path.join(ROOT, 'index.html');
+
+// Evaluates a code string with the names in scope visible (a sloppy-mode function, so `with` and the completion
+// value of eval work, as running it in a vm context used to). Returns the value of the last statement.
+// eslint-disable-next-line no-new-func
+const evalIn = new Function('scope', 'code', 'with (scope) { return eval(code); }');
 
 // Drawing calls whose order tests may check. While canvas._calls is an array, each fillRect, arc, drawImage and
 // putImageData on that canvas's context is appended to it as [name, tag], where tag says what is drawn: the fill
@@ -70,24 +76,21 @@ function makeEl(id, w, h) {
   return el;
 }
 
-// The scripts a page runs, in page order: {file, src, code}. A <script src> is read from its path relative to the
-// page; an inline <script> (older single-file versions of the game, for GAME_FILE comparisons) is taken as it is.
-function pageScripts(page = GAME) {
-  const html = fs.readFileSync(page, 'utf8');
-  const out = [...html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/g)].map((m, i) => {
-    const src = /\ssrc="([^"]+)"/.exec(m[1] || '');
-    if (!src) return { file: `${page}#script${i}`, src: null, code: m[2] };
-    const file = path.resolve(path.dirname(page), src[1]);
-    return { file, src: src[1], code: fs.readFileSync(file, 'utf8') };
-  });
-  if (!out.length) throw new Error('No <script> found in ' + page);
-  return out;
+// The game's entry for tests: src/app.js exports createGame(env). (src/main.js calls it with the real browser.)
+const APP = pathToFileURL(path.join(ROOT, 'src', 'app.js')).href;
+const ART = ['gresca-hanga-spec.js', 'gresca-rider-anim.js'].map((f) => path.join(ROOT, 'art', f));
+
+// A fresh copy of the art modules (UMD classic scripts) for each game, so a test that changes HANGA in one game
+// leaves every other game alone. gresca-rider-anim.js requires the spec, so it gets the same fresh copy.
+function loadArt() {
+  for (const f of ART) delete require.cache[f];
+  return { HANGA: require(ART[0]), RiderAnim: require(ART[1]) };
 }
 
-function load(opts = {}) {
-  // The art modules (HANGA, RiderAnim) come before the game's src/ files.
-  const scripts = pageScripts();
-
+// A new, independent game: the game's modules hold no state of their own (docs/adr/0002-es-modules-and-create-game.md),
+// so every load() in one process gets its own world, rider and page stubs.
+export async function load(opts = {}) {
+  const { createGame } = await import(APP);
   const els = {}, timers = [], raf = [], wl = {};
   const document = {
     getElementById(id) {
@@ -96,33 +99,31 @@ function load(opts = {}) {
     createElement() { return makeEl('created'); },
   };
   const store = Object.assign({}, opts.store);
-  const sandbox = {
-    document, devicePixelRatio: 1, console,
-    localStorage: {
-      getItem: (k) => (k in store ? store[k] : null),
-      setItem: (k, v) => { store[k] = String(v); },
-    },
-    addEventListener(t, fn) { (wl[t] = wl[t] || []).push(fn); },
+  const localStorage = {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+  };
+  const art = loadArt();
+  const env = {
+    document,
+    window: { addEventListener(t, fn) { (wl[t] = wl[t] || []).push(fn); } },
+    localStorage,
+    devicePixelRatio: 1,
     setTimeout(fn) { timers.push(fn); },
     requestAnimationFrame(fn) { raf.push(fn); },
+    HANGA: art.HANGA,
+    RiderAnim: art.RiderAnim,
   };
-  // DONT_CONTEXTIFY gives the scripts an ordinary global object, as in a browser. A contextified sandbox routes
-  // every global lookup (Math, the game's function declarations) through interceptors, which made the game run
-  // about ten times slower here than in a browser: build() alone took about 8.7 s.
-  // (Node 22.8+; older Nodes fall back to the slow contextified sandbox.)
-  const plain = vm.constants && vm.constants.DONT_CONTEXTIFY;
-  const ctx = plain ? vm.createContext(plain) : vm.createContext({});
-  Object.assign(ctx, sandbox);
-  ctx.window = ctx;
-  // Top-level let/const are shared between classic scripts, as in a browser, so run them in one context.
-  for (const s of scripts) vm.runInContext(s.code, ctx, { filename: s.file });
+  const Gresca = createGame(env);
+  // g.run(code) evaluates a code string that may name only the art modules and storage of this game (and the
+  // language's own globals such as Math): there is no game state in its scope, by construction.
+  const scope = Object.freeze({ HANGA: art.HANGA, RiderAnim: art.RiderAnim, localStorage });
 
-  // Everything below goes through the game's façade, window.Gresca (src/debug.js), so tests never
-  // name the game's globals. g.run stays for evaluating the art modules (HANGA, RiderAnim) in the game's realm.
-  const G = () => ctx.Gresca;
+  // Everything below goes through the game's façade, Gresca (src/debug.js), so tests never see the game's state
+  // objects.
+  const G = () => Gresca;
   const g = {
-    ctx,
-    run: (code) => vm.runInContext(code, ctx),
+    run: (code) => evalIn(scope, code),
     el: (id) => document.getElementById(id),
     // dispatch a window-level event such as keydown
     fire(type, ev) { (wl[type] || []).forEach((fn) => fn(Object.assign({ preventDefault() {} }, ev))); },
@@ -153,5 +154,3 @@ function load(opts = {}) {
   while (timers.length) timers.shift()(); // runs build() and shows the start screen
   return g;
 }
-
-module.exports = { load, GAME, pageScripts };

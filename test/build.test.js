@@ -1,13 +1,13 @@
-'use strict';
 // The world that build() makes, pinned bit for bit. Speed-ups to build() (M2, A2) must not change a single value.
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const crypto = require('crypto');
-const { load } = require('./harness');
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import { load } from './harness.js';
 
 // Reference digests of the world built by main at 280d796 (before A2 touched build()). Produced by running this
 // file against that version's game: `git show 280d796:index.html > /tmp/main.html` then
-// `GAME_FILE=/tmp/main.html node --test test/build.test.js`; the failure messages print the actual digests.
+// `GAME_FILE=/tmp/main.html node --test test/build.test.js`; the failure messages print the actual digests. (B2a dropped
+// GAME_FILE: to compare against an older version now, run that version's own tests.)
 // The digest code below reads only the façade, so it runs unchanged against that version. Checked with both the
 // old (contextified) harness and the A2 one: same digests.
 const WANT = {
@@ -17,7 +17,7 @@ const WANT = {
   trees: '342e6a4470bdd839a927d085bd5e0d8953115495fc8e24f57a8846c0861618f1',
 };
 
-const g = load();
+const g = await load();
 const W = g.world, D = g.debug;
 const { x: NX, y: NY } = W.size;
 // The raw cell heights. Before B3 the façade called this world.height, so fall back to it for older versions.

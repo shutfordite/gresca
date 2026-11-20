@@ -1,18 +1,21 @@
-'use strict';
 // The test and debug façade, window.Gresca. Tests read and drive the game only through it, so the game's state can
 // move into objects or modules without touching them. This file checks that rule and the façade itself.
-const fs = require('node:fs');
-const path = require('node:path');
-const { describe, it } = require('node:test');
-const assert = require('node:assert/strict');
-const { load, pageScripts } = require('./harness');
+import fs from 'node:fs';
+import path from 'node:path';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { load } from './harness.js';
 
-// Names that may appear in a g.run('...') string even though the game script (src/) declares them at top level.
-// Each entry needs a one-line reason. Keep it empty: extend the façade instead.
-const ALLOW = new Map([
-]);
-// Roots that a run() string may always use: the art modules (their own scripts) and the façade.
-const ROOTS = new Set(['HANGA', 'RiderAnim', 'Gresca']);
+// The game's modules hold no top-level game state (ADR 0002): every game's state lives in the objects its
+// createGame(env) call made, and the only way in is the façade that call returned. So the rules are:
+// 1. A g.run('...') string evaluates in a scope with only the art modules and this game's storage stub in it. It may
+//    name only these roots (and names it binds itself, such as an arrow function's parameter): no game state.
+// 2. A test file imports nothing from src/ except the pure layers (core/, world/, sim/, and input/input.js, the input
+//    state without its DOM binding), which get direct unit tests.
+//    Only the harness imports the game's wiring (src/app.js); nothing imports main.js, view/, ui/, input/ or debug.js.
+const RUN_ROOTS = new Set(['HANGA', 'RiderAnim', 'localStorage', 'Math', 'globalThis']);
+const PURE = /^src\/(core|world|sim)\/|^src\/input\/input\.js$/;
+const HARNESS_ONLY = new Set(['src/app.js']);
 
 // ---- a tiny scanner for JavaScript source: enough for this game script and the tests, no parser package ----
 
@@ -35,44 +38,6 @@ function codeChars(src, fn) {
     fn(i, 'code');
     i++;
   }
-}
-
-// Top-level const/let/var/function names of a classic script.
-function topLevelNames(src) {
-  const names = new Set();
-  let depth = 0, decl = false, want = false, lastSig = '';
-  const isId = (ch) => /[\w$]/.test(ch);
-  let i = 0;
-  const marks = [];
-  codeChars(src, (j, kind) => marks.push([j, kind]));
-  for (let m = 0; m < marks.length; m++) {
-    const [j, kind] = marks[m];
-    if (kind === 'quote') { lastSig = 'q'; continue; }
-    if (j < i) continue;
-    const c = src[j];
-    if ('([{'.includes(c)) { depth++; lastSig = c; continue; }
-    if (')]}'.includes(c)) { depth--; lastSig = c; continue; }
-    if (depth !== 0) { if (!/\s/.test(c)) lastSig = c; continue; }
-    if (c === ';') { decl = false; want = false; lastSig = c; continue; }
-    if (c === '\n') { if (decl && lastSig !== ',') { decl = false; want = false; } continue; }
-    if (c === ',' && decl) { want = true; lastSig = c; continue; }
-    if (isId(c) && (j === 0 || !isId(src[j - 1]))) {
-      let e = j;
-      while (e < src.length && isId(src[e])) e++;
-      const word = src.slice(j, e);
-      i = e;
-      if (src[j - 1] === '.') { lastSig = 'w'; continue; }
-      if (word === 'const' || word === 'let' || word === 'var') { decl = true; want = true; }
-      else if (word === 'function' && !decl) {
-        const name = /^\s*([A-Za-z_$][\w$]*)/.exec(src.slice(e));
-        if (name) names.add(name[1]);
-      } else if (want) { names.add(word); want = false; }
-      lastSig = 'w';
-      continue;
-    }
-    if (!/\s/.test(c)) lastSig = c;
-  }
-  return names;
 }
 
 // Every .run( call in a test file (g.run, goofy.run, ...): the literal argument with ${...} parts blanked out (they
@@ -112,70 +77,113 @@ function rootIdentifiers(code) {
   return ids;
 }
 
-// The game script is the src/ files the page loads; as classic scripts they share one set of top-level names.
-const gameFiles = pageScripts().filter((s) => s.src && s.src.startsWith('src/'));
-assert.ok(gameFiles.length, 'the page loads no src/ files');
-const GAME_NAMES = new Set(gameFiles.flatMap((s) => [...topLevelNames(s.code)]));
-const TEST_DIR = __dirname;
-// This file is left out: it holds planted bad run() strings on purpose, and never runs code strings itself.
-const testFiles = fs.readdirSync(TEST_DIR).filter((f) => f.endsWith('.test.js') && f !== path.basename(__filename));
+const ROOT = path.join(import.meta.dirname, '..');
+const TEST_DIR = import.meta.dirname;
+// This file is left out: it holds planted bad run() strings and imports on purpose, and never runs code strings.
+const testFiles = fs.readdirSync(TEST_DIR).filter((f) => f.endsWith('.test.js') && f !== path.basename(import.meta.filename));
 
+// Names a code string binds itself: arrow function parameters (s=>..., (a,b)=>...) and declarations.
+function boundNames(code) {
+  const out = new Set();
+  for (const m of code.matchAll(/\(([\w$\s,]*)\)\s*=>|([A-Za-z_$][\w$]*)\s*=>|\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) {
+    for (const n of (m[1] || m[2] || m[3] || '').split(',')) if (n.trim()) out.add(n.trim());
+  }
+  return out;
+}
+
+const KEYWORDS = new Set(['typeof', 'void', 'new', 'true', 'false', 'null', 'undefined', 'return', 'const', 'let', 'var']);
+
+// Problems with the run() strings of a test file: each may name only RUN_ROOTS and what it binds itself.
 function lint(src) {
   const bad = [];
   for (const { line, code } of runArgs(src)) {
     if (code === null) { bad.push(`line ${line}: run() with a non-literal argument (cannot be checked)`); continue; }
+    const own = boundNames(code);
     for (const id of rootIdentifiers(code)) {
-      if (GAME_NAMES.has(id) && !ROOTS.has(id) && !ALLOW.has(id)) bad.push(`line ${line}: run('${code.trim()}') names game global \`${id}\``);
+      if (!RUN_ROOTS.has(id) && !own.has(id) && !KEYWORDS.has(id)) bad.push(`line ${line}: run('${code.trim()}') names \`${id}\`, which is not an art module or storage`);
     }
   }
   return bad;
 }
 
-describe('tests use the façade, not game globals', () => {
-  it('finds the game script\'s top-level names', () => {
-    for (const n of ['x', 'y', 'a', 'jz', 'jv', 'crash', 'camA', 'cam', 'grind', 'state', 'KICK', 'RAILS', 'FIN', 'cx', 'H', 'M',
-      'FAR', 'fogAt', 'MAP_ID', 'ptrs', 'kb', 'anim', 'riderList', 'draw', 'step', 'start', 'stepParts', 'animTick', 'last'])
-      assert.ok(GAME_NAMES.has(n), `missed top-level name ${n}`);
-    for (const n of ['Gresca', 'HANGA', 'RiderAnim', 'snapshot', 'dt', 'ix', 'o4', 'k'])
-      assert.ok(!GAME_NAMES.has(n), `${n} is not a top-level name of the game script`);
-    assert.ok(GAME_NAMES.size > 80, `only ${GAME_NAMES.size} names found`);
-  });
+// The module specifiers a file imports or requires (static import, dynamic import(), require()).
+function specifiers(src) {
+  return [...src.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)['"]([^'"]+)['"]/g)].map((m) => m[1]);
+}
 
-  it('catches a test that names a game global', () => {
+// Problems with what a test file (at test/<name>) imports from src/: see rule 2 above.
+function importLint(name, src) {
+  const bad = [];
+  for (const spec of specifiers(src)) {
+    if (!spec.startsWith('.')) continue;
+    const target = path.posix.normalize(path.posix.join('test', spec));
+    if (!target.startsWith('src/')) continue;
+    if (name === 'harness.js' && HARNESS_ONLY.has(target)) continue;
+    if (!PURE.test(target)) bad.push(`imports ${spec}: tests import only the pure layers (core/, world/, sim/)`);
+  }
+  // A src/ path built with path.join(ROOT, 'src', ...) (for import(pathToFileURL(...))) follows the same rule.
+  if (name !== 'harness.js') {
+    for (const m of src.matchAll(/path\.join\(\s*ROOT,\s*'src',\s*((?:'[\w.-]+',?\s*)+)\)/g)) {
+      const target = 'src/' + m[1].split(',').map((p) => p.trim().replace(/'/g, '')).filter(Boolean).join('/');
+      if (!PURE.test(target)) bad.push(`imports ${target}: tests import only the pure layers (core/, world/, sim/)`);
+    }
+  }
+  return bad;
+}
+
+describe('tests use the façade, not game state', () => {
+  it('catches a run() string that reaches for anything but the art modules and storage', () => {
     for (const planted of ["g.run('jz')", 'g.run(`x=${1};crash=0`)', "g.run('HANGA.fogAmount(1,FAR)')", 'g.run(code)',
-      "g.run(\"state='done'\")", "goofy.run('anim.pose')", "g.run('Math.hypot(vx,vy)')"])
+      "g.run(\"state='done'\")", "goofy.run('anim.pose')", "g.run('Math.hypot(vx,vy)')", "g.run('Gresca.state().x')",
+      "g.run('rider.x')", "g.run('createGame({})')", "g.run('window.Gresca')", "g.run('document.title')"])
       assert.ok(lint(planted).length > 0, `lint missed ${planted}`);
     assert.deepEqual(lint("g.run('HANGA.camera.slopeFollow.tilt=1');g.run(\"localStorage.getItem('gresca-rig')\")"), []);
-    assert.deepEqual(lint("g.run(`HANGA.fogAmount(${far},2)`);g.run('Gresca.state().x')"), []);
+    assert.deepEqual(lint("g.run(`HANGA.fogAmount(${far},2)`);g.run('HANGA.sky.stops.map(s=>[s[0],HANGA.colour(s[1])])')"), []);
+    assert.deepEqual(lint("g.run('globalThis.__m=Math.random;Math.random=()=>{globalThis.__n++;return globalThis.__m()}')"), []);
+  });
+
+  it('catches a test that imports the game\'s modules other than the pure layers', () => {
+    for (const planted of ["import { createGame } from '../src/app.js';", "await import('../src/view/draw.js')",
+      "const d = require('../src/debug.js');", "import '../src/main.js';", "import { x } from '../src/ui/hud.js';",
+      "import { bindInput } from '../src/input/bind-input.js';"])
+      assert.ok(importLint('x.test.js', planted).length > 0, `import lint missed ${planted}`);
+    assert.deepEqual(importLint('x.test.js', "import { Terrain } from '../src/world/terrain.js';\nimport fs from 'node:fs';" +
+      "\nimport { rnd } from '../src/core/rng.js';\nimport { load } from './harness.js';"), []);
+    assert.deepEqual(importLint('harness.js', "const APP = '../src/app.js'; import('../src/app.js');"), []);
+    assert.ok(importLint('harness.js', "import('../src/view/draw.js')").length > 0);
   });
 
   for (const f of testFiles) {
     it(`${f} reads and writes the game only through Gresca`, () => {
-      assert.deepEqual(lint(fs.readFileSync(path.join(TEST_DIR, f), 'utf8')), []);
+      const src = fs.readFileSync(path.join(TEST_DIR, f), 'utf8');
+      assert.deepEqual(lint(src), []);
+      assert.deepEqual(importLint(f, src), []);
     });
   }
 
-  it('the harness drives the game only through Gresca too', () => {
+  it('the harness imports only the game\'s entry and hands tests nothing but the façade', async () => {
     const src = fs.readFileSync(path.join(TEST_DIR, 'harness.js'), 'utf8');
-    assert.ok(!/runInContext\(\s*['"`]/.test(src), 'harness evaluates a code string');
-  });
-
-  it('every ALLOW entry is still needed and has a reason', () => {
-    const all = testFiles.map((f) => fs.readFileSync(path.join(TEST_DIR, f), 'utf8')).join('\n');
-    for (const [id, why] of ALLOW) {
-      assert.ok(typeof why === 'string' && why.length > 10, `ALLOW ${id} needs a reason`);
-      assert.ok(runArgs(all).some(({ code }) => code && rootIdentifiers(code).has(id)), `ALLOW ${id} is unused`);
-    }
+    assert.deepEqual(importLint('harness.js', src), []);
+    assert.ok(!/runInContext|vm\./.test(src), 'the harness runs code in a vm context');
+    assert.ok(/path\.join\(ROOT, 'src', 'app\.js'\)/.test(src), 'the harness loads src/app.js');
+    const g = await load();
+    // the run() scope holds the art modules and storage, and nothing of the game
+    for (const name of ['Gresca', 'createGame', 'rider', 'session', 'camera', 'view', 'world', 'input', 'env', 'game'])
+      assert.equal(g.run(`typeof ${name}`), 'undefined', `${name} is visible to run()`);
+    assert.equal(g.run('typeof HANGA.colour'), 'function');
+    assert.equal(g.run('typeof RiderAnim.create'), 'function');
+    assert.equal(globalThis.Gresca, undefined, 'the game put itself on the Node global');
+    assert.ok(!('ctx' in g), 'the harness exposes a game context');
   });
 });
 
-describe('Gresca façade', () => {
-  const g = load();
+describe('Gresca façade', async () => {
+  const g = await load();
   const G = g.game;
 
-  it('is on window, frozen, and adds no top-level name to the game script', () => {
+  it('is frozen, and createGame() returns it rather than putting it on a global', () => {
     assert.ok(G && Object.isFrozen(G) && Object.isFrozen(G.world) && Object.isFrozen(G.debug));
-    assert.ok(!GAME_NAMES.has('Gresca'));
+    assert.equal(globalThis.Gresca, undefined);
   });
 
   it('set(state()) changes nothing, riding or grinding', () => {
@@ -254,5 +262,29 @@ describe('Gresca façade', () => {
     assert.throws(() => G.set({ jz: 1 }), /unknown field jz/);
     assert.throws(() => G.set({ camera: { camA: 1 } }), /unknown field camera.camA/);
     assert.throws(() => G.place({ a: 1 }), /unknown field a/);
+  });
+});
+
+describe('Gresca.set() and render interpolation', async () => {
+  const g = await load();
+
+  it('writing the position restarts interpolation there, so a teleport is not drawn as a slide', () => {
+    g.place({ vy: 10 });
+    g.sim(0.5); // the physics moved on; interpolation still starts where place() put the rider
+    assert.ok(g.debug.view().from.y < g.state().y - 1);
+    g.set({ x: g.state().x + 1 });
+    const s = g.state();
+    assert.deepEqual({ ...g.debug.view().from }, { x: s.x, y: s.y, z: s.z });
+    g.sim(0.2);
+    g.set({ z: 1.5 });
+    assert.equal(g.debug.view().from.z, 1.5);
+  });
+
+  it('writing anything else leaves interpolation alone', () => {
+    g.place({ vy: 10 });
+    g.sim(0.5);
+    const from = { ...g.debug.view().from };
+    g.set({ vx: 3, score: 5, heading: 1.2, camera: { heading: 1 } });
+    assert.deepEqual({ ...g.debug.view().from }, from);
   });
 });
