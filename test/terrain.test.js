@@ -212,7 +212,6 @@ const OWNERS = new Map([
   ['src/world/build.js', { names: ['H', 'M', 'W0', 'H0'], why: 'owns the height and groomed arrays, builds `terrain` from them and fills them' }],
   ['src/view/colour-map.js', { names: ['H', 'M', 'W0', 'H0'], why: 'paints the colour map from the built arrays (D2 removes the colour map)' }],
   ['src/view/view-state.js', { names: ['W0', 'H0'], why: 'sizes the colour map canvas, one pixel per map cell (D2 removes it)' }],
-  ['src/sim/step.js', { names: ['W0'], why: 'row stride of the colour map col for ski tracks (B2b moves tracks out of the sim, D2 removes col)' }],
 ]);
 // src/terrain.js may index its own grids, but it receives them as arguments and names none of these.
 

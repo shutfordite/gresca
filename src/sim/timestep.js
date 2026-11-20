@@ -7,6 +7,8 @@
 import { SIM_DT, SIM_MAX, SIM_EPS } from '../core/config.js';
 import { step } from './step.js';
 import { stepParticles } from './particles.js';
+import { publish, afterStep } from '../core/events.js';
+import { recordInput } from '../core/input-log.js';
 
 /** A new timestep: acc (s not yet simulated), fromX, fromY, fromZ (m, the rider before the latest step). */
 export function createTimestep() {
@@ -20,12 +22,17 @@ export function snapInterpolation(timestep, rider) {
  timestep.fromZ = rider.z;
 }
 
-/** One simulation step of SIM_DT: physics, spray and the popup timer (sim: see step()). */
-export function simTick(sim, timestep) {
- snapInterpolation(timestep, sim.rider);
- step(sim, SIM_DT);
- stepParticles(sim.spray.particles, SIM_DT);
- sim.session.popup.t = Math.max(0, sim.session.popup.t - SIM_DT);
+/**
+ * One simulation tick of dt (s, SIM_DT in the loop): records the input (if recording), runs the physics, moves the
+ * spray, then hands the step's events to their subscribers and runs the per-step hooks (bus, core/events.js).
+ * sim: {state (see step()), input, world, bus, inputLog}. Does not touch render interpolation (advance() does).
+ */
+export function simTick(sim, dt = SIM_DT) {
+ recordInput(sim.inputLog, sim.input);
+ const events = step(sim.state, sim.input, sim.world, dt);
+ stepParticles(sim.state.spray.particles, dt);
+ publish(sim.bus, events);
+ afterStep(sim.bus, dt);
 }
 
 /**
@@ -33,13 +40,14 @@ export function simTick(sim, timestep) {
  * 0..1, how far between the last two steps the view should show the rider (1 outside a run).
  */
 export function advance(sim, timestep, dt) {
- const session = sim.session;
+ const session = sim.state.session;
  let alpha = 1;
  if (session.phase === 'run') {
   timestep.acc += dt;
   let n = 0;
   while (session.phase === 'run' && n < SIM_MAX && timestep.acc >= SIM_DT - SIM_EPS) {
-   simTick(sim, timestep);
+   snapInterpolation(timestep, sim.state.rider);
+   simTick(sim);
    timestep.acc -= SIM_DT;
    n++;
   }

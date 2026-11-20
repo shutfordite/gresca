@@ -9,8 +9,9 @@ const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs
  * A new view: W, Hh (screen canvas px), lo/lx (the low-res terrain render canvas and context), occ (per render
  * column and terrain sample, the screen row the terrain reached: hides trees behind ridges), map/mx (the W0 × H0
  * colour map canvas, one px per m) and col/col0 (its live RGBA, with ski tracks, and as built; set after the build),
- * fog (spec terrain.fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), the rider
- * animation (anim, animPrev, riderList, riderYaw deg) and counts of what the last frame drew.
+ * fog (spec terrain.fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), groundM (m, the
+ * ground under it, from updateCamera()), the rider animation (anim, animPrev, riderList, riderYaw deg) and counts of
+ * what the last frame drew.
  */
 export function createView(doc, hanga) {
  const map = doc.createElement('canvas');
@@ -29,6 +30,7 @@ export function createView(doc, hanga) {
   occ: new Int16Array(MAX_RENDER_COLUMNS * RAY_SAMPLES),
   fog: hanga.terrain.fog.rgb.slice(),
   drawn: { x: 0, y: 0, z: 0, alpha: 1 },
+  groundM: 0,
   anim: null,
   animPrev: null,
   riderList: null,

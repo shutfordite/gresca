@@ -1,5 +1,5 @@
-// draw(): one frame of the behind-the-rider view: camera follow, terrain raycast, sky and sun, trees, rails, flags,
-// spray and the rider. Reads the simulation's state and never writes it.
+// draw(): one frame of the behind-the-rider view: terrain raycast, sky and sun, trees, rails, flags, spray and the
+// rider; updateCamera() moves the camera before it, in the loop. Reads the simulation's state and never writes it.
 import { FOV, RAY_SAMPLES, RAY_EXACT_M, CAM_BACK, RIDER_SCALE } from '../core/config.js';
 import { followRider } from './camera.js';
 import { fogAt, drawSky, drawSun } from './sky.js';
@@ -41,24 +41,35 @@ export function riderPose(view, rider, timestep, alpha) {
 }
 
 /**
- * Draws one frame. dt: s since the last drawn frame (camera smoothing and animation). alpha: see riderPose().
- * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, treeArr, particles, timestep, hanga,
- * riderAnim}. Mutates view and the camera.
+ * Before a frame is drawn, in the loop (app.js): sets the drawn rider pose (riderPose(), alpha 0..1), sizes the
+ * low-res render to the canvas and moves the camera after the rider, dt s after the last frame. Writes view.drawn,
+ * view.lo's size, view.groundM (m, the ground under the drawn rider) and the camera; reads the sim's state only.
  */
-export function draw(view, scene, dt, alpha) {
- const { canvas, ctx, camera, rider, terrain, hanga } = scene;
+export function updateCamera(view, scene, dt, alpha) {
+ const { canvas, camera, rider, terrain, hanga } = scene;
  riderPose(view, rider, scene.timestep, alpha);
- const pose = view.drawn; // the rider as drawn; draw() reads the simulation but never writes it
  const W = view.W;
- const Hh = view.Hh;
  const RW = Math.min(MAX_RENDER_W, Math.round(canvas.clientWidth / CSS_PX_PER_RENDER_PX));
- const RH = Math.round(RW * Hh / W);
+ const RH = Math.round(RW * view.Hh / W);
  if (view.lo.width !== RW || view.lo.height !== RH) {
   view.lo.width = RW;
   view.lo.height = RH;
  }
- // TODO(B2b): advance the camera in the loop, not inside draw().
- const gR = followRider(camera, terrain, hanga, pose, rider, RW, RH, W, dt);
+ view.groundM = followRider(camera, terrain, hanga, view.drawn, rider, RW, RH, W, dt);
+}
+
+/**
+ * Draws one frame from the camera and pose updateCamera() set. dt: s since the last drawn frame (animation).
+ * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, treeArr, particles, timestep, hanga,
+ * riderAnim}. Mutates view (render buffers, animation, counts); reads everything else.
+ */
+export function draw(view, scene, dt) {
+ const { ctx, camera, terrain, hanga } = scene;
+ const W = view.W;
+ const Hh = view.Hh;
+ const RW = view.lo.width;
+ const RH = view.lo.height;
+ const gR = view.groundM;
  const im = view.lx.createImageData(RW, RH);
  raycast(view, camera, terrain, hanga, im.data, RW, RH);
  view.lx.putImageData(im, 0, 0);

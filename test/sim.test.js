@@ -1,8 +1,13 @@
 // The pure layers on their own (core/, world/, sim/): imported straight into Node with no stubs, no DOM, no art
 // modules and no createGame. Plain objects in, plain objects out.
 import { describe, it } from 'node:test';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 import { createRng, reseed, rnd } from '../src/core/rng.js';
+import { createEventBus } from '../src/core/events.js';
+import { createInputLog } from '../src/core/input-log.js';
 import { RIGS, SIM_DT } from '../src/core/config.js';
 import { KICK, RAILS, cx, bump } from '../src/world/course.js';
 import { Terrain } from '../src/world/terrain.js';
@@ -23,15 +28,16 @@ function plane(slope, n = 64) {
  return Terrain.create({ base: Terrain.grid(data, n, n, 1), groomed: () => 1 });
 }
 
-// Everything step() takes, around a rider at (x, y) on a plane, with no trees, ui or colour map in use.
+// Everything simTick() takes, around a rider at (x, y) on a plane, with no trees and no subscribers. rider and session
+// are the state's own objects, for reading.
 function simOn(terrain, x, y) {
  const rider = createRider();
  Object.assign(rider, { x, y, heading: Math.PI / 2 });
- const W0 = 1000;
- const col = new Uint8ClampedArray(W0 * 4 * 80);
- return { rider, input: createInput(), session: createSession(), terrain, trees: new Map(), spray: spray(),
-  gradient: { gx: 0, gy: 0 }, view: { col, col0: col.slice() }, ui: null };
+ const session = createSession();
+ return { state: { rider, session, spray: spray(), gradient: { gx: 0, gy: 0 } }, input: createInput(),
+  world: { terrain, trees: new Map() }, bus: createEventBus(), inputLog: createInputLog(), rider, session };
 }
+const stepOn = (sim) => step(sim.state, sim.input, sim.world, SIM_DT);
 
 describe('core/rng.js', () => {
  it('is the same sequence from the same seed, and reseed restarts it', () => {
@@ -108,7 +114,7 @@ describe('sim/ on plain objects', () => {
  it('step: gravity pulls down the fall line and braking slows the rider', () => {
   const free = simOn(plane(0.3), 32, 20), braked = simOn(plane(0.3), 32, 20);
   braked.input.brake = 1;
-  for (let i = 0; i < 120; i++) { step(free, SIM_DT); step(braked, SIM_DT); }
+  for (let i = 0; i < 120; i++) { stepOn(free); stepOn(braked); }
   assert.ok(free.rider.vy > 3, `speed ${free.rider.vy}`);
   assert.ok(braked.rider.vy < free.rider.vy / 2);
   assert.ok(Math.abs(free.session.time - 1) < 1e-9);
@@ -121,7 +127,7 @@ describe('sim/ on plain objects', () => {
    sim.session.rig = rig;
    sim.rider.vy = 5;
    sim.input.right = 1;
-   for (let i = 0; i < 30; i++) step(sim, SIM_DT);
+   for (let i = 0; i < 30; i++) stepOn(sim);
    return sim.rider.heading - Math.PI / 2;
   };
   assert.ok(turned('ski') > turned('board') && RIGS.ski.turn > RIGS.board.turn);
@@ -152,5 +158,32 @@ describe('input/input.js', () => {
   const k = createInput();
   keyDown(k, 'w');
   assert.equal(k.jump, 1);
+ });
+});
+
+describe('the pure layers load with no DOM', () => {
+ const SRC = path.join(import.meta.dirname, '..', 'src');
+ const files = ['core', 'world', 'sim'].flatMap((d) => fs.readdirSync(path.join(SRC, d))
+  .filter((f) => f.endsWith('.js')).map((f) => path.join(d, f)));
+ // Browser globals, the art modules and wall-clock or unseeded randomness: none of them belong in core/, world/, sim/.
+ const BANNED = /\b(document|window|localStorage|requestAnimationFrame|HANGA|RiderAnim|Math\.random|Date|performance)\b/;
+ const code = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/'[^'\n]*'/g, "''");
+
+ it('every module in core/, world/ and sim/ imports in Node with no browser globals defined', async () => {
+  assert.ok(files.length >= 15, files.join());
+  assert.equal(typeof globalThis.document, 'undefined');
+  assert.equal(typeof globalThis.window, 'undefined');
+  for (const f of files) {
+   const mod = await import(pathToFileURL(path.join(SRC, f)).href);
+   assert.ok(Object.keys(mod).length > 0, f + ' exports something');
+  }
+ });
+
+ it('and none of them names a browser global, the art modules, Date, performance or Math.random', () => {
+  for (const f of files) {
+   const m = code(fs.readFileSync(path.join(SRC, f), 'utf8')).match(BANNED);
+   assert.equal(m && m[0], null, f);
+  }
+  assert.ok(BANNED.test(code('const w = window.innerWidth;')) && !BANNED.test(code('// no window here')));
  });
 });
