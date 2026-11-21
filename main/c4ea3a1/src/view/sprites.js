@@ -4,11 +4,6 @@ import { FOV } from '../core/config.js';
 const NEAR_M = 3;          // m, nearer than this along the view is not drawn
 const FOV_MARGIN = 0.08;   // rad, project() keeps points this far outside the field of view
 const DRAW_AHEAD_M = 260;  // m down the piste (along s) past the camera that flags and rails are drawn
-const POLE_COLOUR = '#3a3f58';
-const KICKER_FLAG = '#ff6b3d';
-const BIG_KICKER_FLAG = '#ffd23d';
-const RAIL_COLOUR = '#c9372c';
-const BOX_COLOUR = '#6fcfa0';
 const RAIL_SEGMENT_M = 1.5; // m, rails are drawn as segments this long, so the near end can run off screen
 const RAIL_POST_EVERY_M = 6; // m between the posts under a rail
 const KICKER_FLAG_D = 11;  // m across from a kicker's centre to its flags
@@ -40,13 +35,13 @@ export function project(camera, wx, wy, h) {
  };
 }
 
-// A pole hgt m tall at (wx, wy) with a pennant of the given colour. Returns 1 if drawn, else 0.
-function pole(ctx, camera, terrain, wx, wy, hgt, color) {
+// A pole hgt m tall at (wx, wy) with a pennant of the given colour (sprites: the Look's). Returns 1 if drawn, else 0.
+function pole(ctx, camera, terrain, sprites, wx, wy, hgt, color) {
  const gh = terrain.height(wx, wy);
  const A = project(camera, wx, wy, gh);
  const T = project(camera, wx, wy, gh + hgt);
  if (!A || !T) return 0;
- ctx.strokeStyle = POLE_COLOUR;
+ ctx.strokeStyle = sprites.pole.colour;
  ctx.lineWidth = Math.max(1, A.s * 0.08);
  ctx.beginPath();
  ctx.moveTo(A.X, A.Y);
@@ -67,10 +62,11 @@ function pole(ctx, camera, terrain, wx, wy, hgt, color) {
 /**
  * Orange flags on both sides of every kicker lip (yellow ones up the ramp of the big ones), and a flag at the start
  * of each rail, so features can be spotted from far up the slope. course: the Course; view: its where and point
- * scratch; frame: the MapFrame (the big kickers' ramp flags and the rail flags are offset along the map's axes).
- * Returns the number of flags drawn.
+ * scratch; frame: the MapFrame (the big kickers' ramp flags and the rail flags are offset along the map's axes);
+ * sprites: the Look's sprite colours. Returns the number of flags drawn.
  */
-export function drawFlags(ctx, camera, terrain, course, view, frame) {
+export function drawFlags(ctx, camera, terrain, course, view, frame, sprites) {
+ const flag = sprites.flag;
  let n = 0;
  const cs = course.project(camera.x, camera.y, view.where).s;
  const P = view.point;
@@ -78,32 +74,32 @@ export function drawFlags(ctx, camera, terrain, course, view, frame) {
   if (k.s + KICKER_DROP_M < cs || k.s - KICKER_RAMP_M > cs + DRAW_AHEAD_M) continue;
   const h = k.big ? 3.2 : 2.4;
   course.point(k.s, k.d - KICKER_FLAG_D, P);
-  n += pole(ctx, camera, terrain, P.x, P.y, h, KICKER_FLAG);
+  n += pole(ctx, camera, terrain, sprites, P.x, P.y, h, flag.kicker);
   course.point(k.s, k.d + KICKER_FLAG_D, P);
-  n += pole(ctx, camera, terrain, P.x, P.y, h, KICKER_FLAG);
+  n += pole(ctx, camera, terrain, sprites, P.x, P.y, h, flag.kicker);
   if (k.big) {
    // Still placed up the map's grid from the lip (where they have always been drawn): C1 moves them to
    // point(s - RAMP_FLAG_BACK_M, d +- KICKER_FLAG_D), beside the ramp itself.
    frame.vecToWorld(-KICKER_FLAG_D, -RAMP_FLAG_BACK_M, P);
-   n += pole(ctx, camera, terrain, k.x + P.x, k.y + P.y, h, BIG_KICKER_FLAG);
+   n += pole(ctx, camera, terrain, sprites, k.x + P.x, k.y + P.y, h, flag.bigKicker);
    frame.vecToWorld(KICKER_FLAG_D, -RAMP_FLAG_BACK_M, P);
-   n += pole(ctx, camera, terrain, k.x + P.x, k.y + P.y, h, BIG_KICKER_FLAG);
+   n += pole(ctx, camera, terrain, sprites, k.x + P.x, k.y + P.y, h, flag.bigKicker);
   }
  }
  for (const r of course.rails) {
   if (r.s1 < cs || r.s0 > cs + DRAW_AHEAD_M) continue;
-  const colour = r.t === 'box' ? BOX_COLOUR : RAIL_COLOUR;
+  const colour = r.t === 'box' ? sprites.box.colour : sprites.rail.colour;
   frame.vecToWorld(r.d > 0 ? RAIL_FLAG_D : -RAIL_FLAG_D, 0, P); // further out across the map than the rail
-  n += pole(ctx, camera, terrain, r.x0 + P.x, r.y0 + P.y, 1.8, colour);
+  n += pole(ctx, camera, terrain, sprites, r.x0 + P.x, r.y0 + P.y, 1.8, colour);
  }
  return n;
 }
 
 /**
- * Rails are red bars on posts, boxes are wider mint-green bars. course: the Course; view: its where scratch. Returns
- * the number of segments drawn.
+ * Rails are red bars on posts, boxes are wider mint-green bars. course: the Course; view: its where scratch;
+ * sprites: the Look's sprite colours. Returns the number of segments drawn.
  */
-export function drawRails(ctx, camera, terrain, course, view) {
+export function drawRails(ctx, camera, terrain, course, view, sprites) {
  let n = 0;
  const cs = course.project(camera.x, camera.y, view.where).s;
  for (const r of course.rails) {
@@ -117,7 +113,7 @@ export function drawRails(ctx, camera, terrain, course, view) {
    const gh = terrain.height(wx, wy);
    const P = project(camera, wx, wy, gh + r.h);
    if (P && prev) {
-    ctx.strokeStyle = isBox ? BOX_COLOUR : RAIL_COLOUR;
+    ctx.strokeStyle = isBox ? sprites.box.colour : sprites.rail.colour;
     ctx.lineWidth = Math.max(isBox ? 5 : 3, P.s * (isBox ? 1.3 : 0.5));
     ctx.lineCap = 'round';
     ctx.beginPath();
@@ -129,7 +125,7 @@ export function drawRails(ctx, camera, terrain, course, view) {
    if (P && t % RAIL_POST_EVERY_M < RAIL_SEGMENT_M) {
     const G = project(camera, wx, wy, gh);
     if (G) {
-     ctx.strokeStyle = POLE_COLOUR;
+     ctx.strokeStyle = sprites.pole.colour;
      ctx.lineWidth = Math.max(1, P.s * 0.12);
      ctx.beginPath();
      ctx.moveTo(P.X, P.Y);
