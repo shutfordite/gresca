@@ -6,6 +6,7 @@ import { emit } from './particles.js';
 import { jumpStep } from './jump.js';
 import { railCheck, grindStep } from './grind.js';
 import { pushEvent } from './state.js';
+import { brakeStrength, brakeYaw, skidKept } from './brake.js';
 
 const AIRBORNE_Z = 0.05;     // m above the snow, higher counts as in the air
 const WIPEOUT_SPIN_RATE = 14; // rad/s, tumble while crashed
@@ -13,13 +14,10 @@ const CARVE_RATE = 2.7;      // rad/s, turn rate when standing still
 const CARVE_SPEED_LOSS = 0.045; // rad/s less turn rate per m/s of speed (up to 30 m/s)
 const CARVE_SPEED_CAP = 30;  // m/s, faster doesn't turn any slower
 const CARVE_LIMIT = 0.15;    // rad, the board stays this far from straight across the slope
-const BRAKE_GRAVITY = 0.3;   // dimensionless, share of the slope's pull left while braking
 const AIR_GRIP = 0.4;        // 1/s, how fast sideways slip dies in the air
-const BRAKE_GRIP = 2.2;      // 1/s, the same while braking (a skid)
 const DRAG_PER_SPEED = 0.0035; // 1/m, air drag: fraction of speed lost per second per m/s
 const SNOW_FRICTION = 0.02;  // 1/s, fraction of speed lost per second on any snow
 const POWDER_FRICTION = 0.18; // 1/s, extra off the groomed piste
-const BRAKE_DECEL = 16;      // m/s², braking
 const EDGE_M = 6;            // m, the rider stays this far inside the map
 const TREE_RADIUS_M = 2.4;   // m, closer to a trunk than this is a crash
 const TREE_TOP_M = 1.5;      // m above the snow, higher jumps clear the trees
@@ -63,8 +61,14 @@ function ride(state, input, world, dt, course, where) {
  const rider = state.rider;
  const session = state.session;
  const s = Math.hypot(rider.vx, rider.vy);
- steer(rider, input, RIGS[session.rig], s, dt, (world.frame || DEFAULT_FRAME).rotation);
- const slip = rider.crashTimer > 0 ? 0 : glide(state, input, world.terrain, s, dt);
+ const brake = rider.crashTimer <= 0 && rider.z <= AIRBORNE_Z ? brakeStrength(input) : 0; // 0..1, on the snow only
+ if (brake > 0) {
+  rider.wipeoutSpin = 0;
+  brakeYaw(rider, brake, course.fallLine(rider.x, rider.y, state.gradient).heading, dt);
+ } else {
+  steer(rider, input, RIGS[session.rig], s, dt, (world.frame || DEFAULT_FRAME).rotation);
+ }
+ const slip = rider.crashTimer > 0 ? 0 : glide(state, brake, world.terrain, s, dt);
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
  jumpStep(rider, input, session, state.spray, dt, course, where);
@@ -131,39 +135,38 @@ function steer(rider, input, rig, s, dt, across) {
  }
 }
 
-// Gravity along the slope, grip against sideways slip, friction and braking. Returns the sideways slip (m/s).
-function glide(state, input, terrain, s, dt) {
+// Gravity along the slope, grip against sideways slip, friction and the brake's skid. brake: 0..1, on the snow only.
+// Returns the sideways slip (m/s).
+function glide(state, brake, terrain, s, dt) {
  const rider = state.rider;
- const isBraking = input.brake;
  const rig = RIGS[state.session.rig];
  const grav = terrain.gradient(rider.x, rider.y, state.gradient);
  const m = terrain.groomed(rider.x, rider.y);
  const air = rider.z > AIRBORNE_Z;
- const gk = (air ? 0 : (isBraking ? BRAKE_GRAVITY : 1)) * GRAVITY * GRAVITY_GAIN;
+ const gk = (air ? 0 : 1) * GRAVITY * GRAVITY_GAIN;
  let vx = rider.vx - grav.gx * gk * dt;
  let vy = rider.vy - grav.gy * gk * dt;
  const dx = Math.cos(rider.heading);
  const dy = Math.sin(rider.heading);
- const al = vx * dx + vy * dy;
- const sx = vx - al * dx;
- const sy = vy - al * dy;
- const k = Math.exp(-(air ? AIR_GRIP : (isBraking ? BRAKE_GRIP : rig.grip)) * dt);
- const slip = Math.hypot(sx, sy);
- vx = dx * al + sx * k;
- vy = dy * al + sy * k;
- const f = Math.max(0, 1 - (DRAG_PER_SPEED * s + SNOW_FRICTION + (air ? 0 : (1 - m) * POWDER_FRICTION)) * dt);
- vx *= f;
- vy *= f;
- if (isBraking && !air) {
-  const sn = Math.hypot(vx, vy);
-  if (sn > 0) {
-   const ns = Math.max(0, sn - BRAKE_DECEL * dt);
-   vx *= ns / sn;
-   vy *= ns / sn;
-  }
+ let slip;
+ if (brake <= 0) {
+  const al = vx * dx + vy * dy;
+  const sx = vx - al * dx;
+  const sy = vy - al * dy;
+  const k = Math.exp(-(air ? AIR_GRIP : rig.grip) * dt);
+  slip = Math.hypot(sx, sy);
+  vx = dx * al + sx * k;
+  vy = dy * al + sy * k;
+ } else {
+  // a skid: the equipment is yawed across the motion and the slip is lost as speed, not as a turn (brake.js)
+  slip = Math.abs(vx * dy - vy * dx);
+  const kept = skidKept(vx, vy, rider.heading, brake, dt);
+  vx *= kept;
+  vy *= kept;
  }
- rider.vx = vx;
- rider.vy = vy;
+ const f = Math.max(0, 1 - (DRAG_PER_SPEED * s + SNOW_FRICTION + (air ? 0 : (1 - m) * POWDER_FRICTION)) * dt);
+ rider.vx = vx * f;
+ rider.vy = vy * f;
  return slip;
 }
 

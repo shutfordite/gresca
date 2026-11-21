@@ -47,7 +47,7 @@ function riderAnimInput(view, game, dt) {
  return {
   wiped: a.wiped, grinding: a.grinding, airborne: air, braking: a.braking, landed,
   impact: a.impact, speed: s, pathTurn: turn, riderSide: a.riderSide, approach: !air && a.approach,
-  feetAccelUp: ga, slopeDeg: terrain.slopeDeg(x, y), meanSlopeDeg: look.rider.meanSlopeDeg,
+  feetAccelUp: ga, facing: a.facing, travelDir: dir, slopeDeg: terrain.slopeDeg(x, y), meanSlopeDeg: look.rider.meanSlopeDeg,
  };
 }
 
@@ -64,7 +64,7 @@ export function animTick(view, game, dt) {
  }
  game.riderAnim.update(view.anim, riderAnimInput(view, game, dt), dt);
  const seen = view.riderView;
- seen.yawDeg = view.riderYaw;
+ seen.yawDeg = view.riderYaw - view.anim.twist; // the upper body's heading: the equipment's, less the twist
  seen.stance = game.session.stance;
  view.riderList = game.look.rider.project(r, view.anim, seen);
  return view.riderList;
