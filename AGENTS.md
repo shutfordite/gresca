@@ -56,7 +56,8 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | The seam lint (no `cx`, park constants, `H[`, "+y is downhill" or the map's old axes outside the procedural map) | `test/frame.test.js` | `frame` |
 | How tests see the façade (on the map's grid, through its frame) | `test/map-view.js`, `test/harness.js` | all |
 | Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
-| Riding physics: steer, grip, brake, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
+| Riding physics: steer, grip, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
+| The brake (yaw across the fall line, skid friction) and its tunables | `src/sim/brake.js`, `src/sim/tuning.js` | `brake`, `physics`, `golden` |
 | Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
 | Rails and boxes | `src/sim/grind.js` | `park`, `sim` |
 | Snow spray | `src/sim/particles.js` | `features`, `sim` |

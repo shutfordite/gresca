@@ -100,6 +100,7 @@ internals). The pure layers (`core/`, `world/`, `sim/`, `input/input.js`) are al
 - `test/sim.test.js`: the pure modules (RNG, course, particles, jumps, rails, physics step, timestep, input) on plain
   objects.
 - `test/terrain.test.js`: the terrain interface on its own and in the game, and that nothing else indexes the grids.
+- `test/brake.test.js`: the brake as a skid across the fall line.
 - `test/physics.test.js`: terrain, gravity, brake, steering, jumping, kickers, trees, finish.
 - `test/features.test.js`: touch and keyboard input, camera framing, snow look, spin and switch riding, rendering
   smoke tests and full-run integration tests with an autopilot.
