@@ -5,6 +5,10 @@ import { hash } from '../world/noise.js';
 const MINIMAP_W = 42;  // px, the minimap canvas (index.html #mc)
 const MINIMAP_H = 103;
 const CORDUROY_RAD_PER_M = 2.1; // rad per m across the piste, the corduroy stripes' wave
+const RELIEF_RADIUS_M = 4;      // m, how far around a texel the relief (hollow or ridge) is measured
+const RELIEF_FULL_M = 1;        // m below its surroundings that counts as a full hollow (above: a full ridge)
+const DRIFT_CELL_M = 8;         // m, the size of the soft wind-blown drifts in the snow's grain
+const DRIFT_SHARE = 0.6;        // 0..1, how much of the grain is drifts (the rest is per-texel speckle)
 
 /**
  * Paints the colour map of the built world into view.map (one px per m of the map's grid), keeps its pixels as
@@ -39,16 +43,24 @@ function paintColourMap(mx, world, look, afterSnow) {
  paintVillage(mx, colour);
 }
 
-// Colour map: lavender shadows, warm lit snow, grey rock, and fine corduroy stripes on the groomed piste. tone: the
-// Look's terrainTone.
+// Colour map: lavender shadows, warm lit snow, grey rock, fine corduroy stripes on the groomed piste, bluer hollows,
+// brighter ridges and a wind-blown grain. tone: the Look's terrainTone.
 function paintSnow(mx, H, M, tone) {
  const img = mx.createImageData(W0, H0);
  const D = img.data;
  const rgb = [0, 0, 0];
+ const drift = driftLattice();
+ const R = RELIEF_RADIUS_M;
  for (let y = 0; y < H0; y++) {
   const c = cx(y);
+  const yUp = Math.max(0, y - R) * W0;
+  const yDown = Math.min(H0 - 1, y + R) * W0;
   for (let x = 0; x < W0; x++) {
    const i = y * W0 + x;
+   const row = y * W0;
+   const around = (H[row + Math.max(0, x - R)] + H[row + Math.min(W0 - 1, x + R)] + H[yUp + x] + H[yDown + x]) / 4;
+   const cavity = Math.max(-1, Math.min(1, (around - H[i]) / RELIEF_FULL_M));
+   const grain = DRIFT_SHARE * driftAt(drift, x, y) + (1 - DRIFT_SHARE) * speckle(x, y);
    let gx = 0;
    let gy = 0;
    if (x > 0 && x < W0 - 1 && y > 0 && y < H0 - 1) {
@@ -61,7 +73,7 @@ function paintSnow(mx, H, M, tone) {
    const m = M[i] / 255;
    const rk = Math.max(0, Math.min(1, (sl - 0.5) * 4)) * (1 - m);
    const wave = m > 0 ? Math.sin((x - c) * CORDUROY_RAD_PER_M) : 0;
-   tone(lit, m, wave, rk, rgb);
+   tone(lit, m, wave, rk, rgb, cavity, grain);
    const o = i * 4;
    D[o] = rgb[0];
    D[o + 1] = rgb[1];
@@ -70,6 +82,36 @@ function paintSnow(mx, H, M, tone) {
   }
  }
  mx.putImageData(img, 0, 0);
+}
+
+// The drifts' lattice: one value -1..1 every DRIFT_CELL_M m of the grid, read smoothly by driftAt(). Built once per
+// map (about 40 000 values, 160 KB, dropped after painting).
+function driftLattice() {
+ const nx = Math.ceil(W0 / DRIFT_CELL_M) + 2;
+ const ny = Math.ceil(H0 / DRIFT_CELL_M) + 2;
+ const v = new Float32Array(nx * ny);
+ for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = hash(i + 517, j + 911) * 2 - 1;
+ return { nx, v };
+}
+
+// -1..1, the drifts at texel (x, y): smoothstep between the four lattice values around it.
+function driftAt(drift, x, y) {
+ const fx = x / DRIFT_CELL_M;
+ const fy = y / DRIFT_CELL_M;
+ const i = Math.floor(fx);
+ const j = Math.floor(fy);
+ const u = (fx - i) * (fx - i) * (3 - 2 * (fx - i));
+ const w = (fy - j) * (fy - j) * (3 - 2 * (fy - j));
+ const k = j * drift.nx + i;
+ const v = drift.v;
+ return (v[k] * (1 - u) + v[k + 1] * u) * (1 - w) + (v[k + drift.nx] * (1 - u) + v[k + drift.nx + 1] * u) * w;
+}
+
+// -1..1, a fixed speckle for texel (x, y): an integer hash, no Math.sin, so the whole map costs little.
+function speckle(x, y) {
+ let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
+ h = Math.imul(h ^ (h >>> 13), 1274126177);
+ return ((h ^ (h >>> 16)) & 0xffff) / 32767.5 - 1;
 }
 
 function paintLift(mx, colour) {
