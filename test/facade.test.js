@@ -11,10 +11,13 @@ import { load } from './harness.js';
 // 1. A g.run('...') string evaluates in a scope with only the art modules and this game's storage stub in it. It may
 //    name only these roots (and names it binds itself, such as an arrow function's parameter): no game state.
 // 2. A test file imports nothing from src/ except the pure layers (core/, world/, sim/, and input/input.js, the input
-//    state without its DOM binding), which get direct unit tests.
+//    state without its DOM binding, and the Look and its Hanga factory, view/look/look.js and hanga.js, which read no
+//    game state), which get direct unit tests. lab.test.js alone imports the look lab's root (view/look/lab.js: the
+//    lab page, no game in it).
 //    Only the harness imports the game's wiring (src/app.js); nothing imports main.js, view/, ui/, input/ or debug.js.
 const RUN_ROOTS = new Set(['HANGA', 'RiderAnim', 'localStorage', 'Math', 'globalThis']);
-const PURE = /^src\/(core|world|sim)\/|^src\/input\/input\.js$/;
+const PURE = /^src\/(core|world|sim)\/|^src\/input\/input\.js$|^src\/view\/look\/(look|hanga)\.js$/;
+const ONLY_FOR = { 'src/view/look/lab.js': 'lab.test.js' };
 const HARNESS_ONLY = new Set(['src/app.js']);
 
 // ---- a tiny scanner for JavaScript source: enough for this game script and the tests, no parser package ----
@@ -119,6 +122,7 @@ function importLint(name, src) {
     const target = path.posix.normalize(path.posix.join('test', spec));
     if (!target.startsWith('src/')) continue;
     if (name === 'harness.js' && HARNESS_ONLY.has(target)) continue;
+    if (ONLY_FOR[target] === name) continue;
     if (!PURE.test(target)) bad.push(`imports ${spec}: tests import only the pure layers (core/, world/, sim/)`);
   }
   // A src/ path built with path.join(ROOT, 'src', ...) (for import(pathToFileURL(...))) follows the same rule.
@@ -145,8 +149,11 @@ describe('tests use the façade, not game state', () => {
   it('catches a test that imports the game\'s modules other than the pure layers', () => {
     for (const planted of ["import { createGame } from '../src/app.js';", "await import('../src/view/draw.js')",
       "const d = require('../src/debug.js');", "import '../src/main.js';", "import { x } from '../src/ui/hud.js';",
-      "import { bindInput } from '../src/input/bind-input.js';"])
+      "import { bindInput } from '../src/input/bind-input.js';", "import { createLab } from '../src/view/look/lab.js';",
+      "import { drawRider } from '../src/view/rider-draw.js';"])
       assert.ok(importLint('x.test.js', planted).length > 0, `import lint missed ${planted}`);
+    assert.deepEqual(importLint('x.test.js', "import { createHangaLook } from '../src/view/look/hanga.js';"), []);
+    assert.deepEqual(importLint('lab.test.js', "import { createLab } from '../src/view/look/lab.js';"), []);
     assert.deepEqual(importLint('x.test.js', "import { Terrain } from '../src/world/terrain.js';\nimport fs from 'node:fs';" +
       "\nimport { rnd } from '../src/core/rng.js';\nimport { load } from './harness.js';"), []);
     assert.deepEqual(importLint('harness.js', "const APP = '../src/app.js'; import('../src/app.js');"), []);
