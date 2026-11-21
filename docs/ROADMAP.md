@@ -50,7 +50,7 @@ The freeze is about four PRs (B2a, B2b, B2c and C2), plus the P1 docs PR between
 | **S1** controls and UI | `src/input`, `src/ui`, `styles/` | F4 bindings table → controls screen and pause → F3 flip input and air hints → stance picker |
 | **S2** sim feel | `src/sim` (+ `sim/tuning.js`) | F5 brake as a skid across the fall line → F6 edge and carve model, remove the heading clamp, ollie preload → F3 flip physics and scoring → (optional) gravity slope-law A/B |
 | **S3** rider animation | `art/gresca-rider-anim.js`, `src/view/rider` | body twist → F5 brake counter-rotation → F6 edge-driven lean and unweighting → F7 fakie look-over-shoulder (goggles wait for spec v1.4) → F3 flip tuck |
-| **S4** look, camera, render | `src/view/look`, `src/view/camera`, render | **D1** frame-time harness → F1 scale test and sizing (one scale, real camera pitch) → **D2** per-pixel shading through the Look → **D3** trees and backdrop from data → (if D1 says so on real maps) WebGL2 renderer as a phase E behind the same view interface |
+| **S4** look, camera, render | `src/view/look`, `src/view/camera`, render | **D1** frame-time harness → **E0** GPU terrain renderer test (three.js, `?renderer=gl`, ADR 0008) → if the owner accepts it on the iPad, F1 sizing, D2 shading and D3 trees are re-planned on the GPU renderer (tracks pressed into the snow, shadows, instanced trees, tilt-shift); if not, F1 → D2 → D3 on the CPU raycaster |
 | **S5** maps | `src/world`, `tools/`, `maps/` | **C1** polyline `Course.fromRun` (R4) → C3 course half (`<id>.course.json`) → **C4** map loading, corridor detail, load-your-own file, slope and data-defect rules (R5) |
 
 S2 and S3 meet only through `RiderState`, `AnimInput` and `SimEvent`. S1 and S2 meet only through `InputState`. S4 and
@@ -76,3 +76,9 @@ S3 meet through `Look.rider.project`. All of these are fixed in B2b, B2c and P4.
 5. **Code freeze** for B2b, B2c and C2: yes.
 6. **Repo docs are canonical**; the project docs point to them.
 7. Still open, from C4 onwards: may the game fetch map data at runtime (D0 in `docs/REAL-WORLD-DATA.md`)?
+
+## Decisions (owner, 21 Nov)
+1. **Graphics target:** the snow and light should compete with Grand Mountain Adventure 2. The CPU raycaster cannot
+   (its render is about 244 px wide, upscaled, from a 1 px per metre colour map), so the GPU renderer is pulled
+   forward from phase E as the test package **E0**, behind `?renderer=gl`; the CPU renderer stays the default until
+   E0 wins on the iPad. three.js, vendored and pinned (ADR 0008 in the E0 PR), is the coordinator's choice of library.
