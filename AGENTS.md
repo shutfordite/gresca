@@ -81,6 +81,7 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Named scenes (`Gresca.scene(name)`, `?scene=<name>`): fixed paused states for screenshots | `src/scenes.js` (data), `src/debug.js` | `scenes` |
 | Recorded RiderState traces (`node tools/record-trace.mjs` rewrites them) | `tools/record-trace.mjs`, `test/fixtures/traces/`, loader `test/traces.js` | `traces` |
 | Screenshots of every scene, board and skis, 820x1180 (`npm run shot` -> `shots/`; Playwright is dev-only, ADR 0003) | `tools/shot.mjs`, `.github/workflows/test.yml` | none (CI `shots` job on `src/view/`, `art/`, `styles/` PRs) |
+| Frame time by stage (`npm run bench`, `-- --chrome` for headless Chrome), the recorded baseline, the CI regression check, pixel digests of every scene | `tools/bench/` (`core.mjs` path and stats, `baseline.json`, `compare.mjs`, `digest.mjs`); the stage timer is `view.timer` (`src/view/draw.js`) | `bench`, `timer` (CI `bench` job on PRs) |
 | The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `tools/map-compiler/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the file | `tools/map-compiler/core.js` (pure) | `map-compiler` |
 | DEM and piste sources (Terrarium PNG tiles; OpenSkiMap, Overpass) | `tools/map-compiler/sources/` | `map-compiler` |
