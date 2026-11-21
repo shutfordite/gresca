@@ -1,7 +1,7 @@
 # ADR 0008: a GPU terrain renderer with three.js, vendored
 
-Date: 21 Nov 2026. Status: accepted (owner, 21 Nov 2026: 50 to 60 fps on the iPad, "a big improvement"). Until E1
-makes it the default, the CPU renderer stays the default and `?renderer=gl` turns the GPU renderer on.
+Date: 21 Nov 2026. Status: accepted (owner, 21 Nov 2026: 50 to 60 fps on the iPad, "a big improvement"). Since E1a the
+GPU renderer is the default; `?renderer=cpu` (and any device without WebGL2) draws with the CPU raycaster.
 
 ## Context
 The terrain is drawn by a CPU voxel raycaster (`src/view/draw.js`): at most 360 columns, scaled up to the screen
@@ -22,8 +22,7 @@ iPad's 3.9 million pixels a frame.
 - **Vendored and pinned**: three.js r187 (`npm pack three@0.187.0`), the published `build/three.module.js` and
   `build/three.core.js` unmodified with its `LICENSE` in `vendor/three/` (MIT; 0.187 ships no minified build: 2.1 MB,
   about 420 KB gzipped). No build step and no npm runtime dependency (ADR 0001 holds): the page loads the ES module
-  by relative path. `src/main.js` imports it dynamically and only with `?renderer=gl`, so the default game downloads
-  nothing more. An upgrade is a new vendored copy in its own PR.
+  by relative path. `src/main.js` imports it dynamically, and not at all with `?renderer=cpu`. An upgrade is a new vendored copy in its own PR.
 - **WebGL2 renderer** (`THREE.WebGLRenderer`), which every iPad the game targets has. The WebGPU renderer would need
   iPadOS 26 or later; it can come later behind the same seam. Only WebGL2 core features are used: R32F read with
   `texelFetch` in the vertex shader (no float filtering), RG16F / R16F and RGBA8 with linear filtering (core in

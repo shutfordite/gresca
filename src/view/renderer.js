@@ -1,4 +1,4 @@
-// Which terrain renderer draws: the CPU raycaster (draw.js, the default) or, with ?renderer=gl, the GPU terrain.
+// Which terrain renderer draws: the GPU terrain (the default) or, with ?renderer=cpu or no WebGL2, the CPU raycaster.
 import { draw, drawSprites } from './draw.js';
 import { GL_STAGE } from './view-state.js';
 import { createGlTerrain } from './gl/gl-renderer.js';
