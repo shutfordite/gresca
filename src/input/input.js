@@ -11,6 +11,7 @@ import { BRAKE_SWIPE_PX, KEY_SLOTS } from './bindings.js';
 export function createInput() {
  return {
   left: 0, right: 0, brake: 0, jump: 0, both: false, steer: 0, jumpHeld: false, jumpPressed: 0, flip: 0, spin: 0,
+  lookBack: 0,
   pointers: new Map(), keys: { L: 0, R: 0, B: 0, J: 0 },
  };
 }
@@ -87,6 +88,6 @@ export function resetInput(input) {
  input.keys.L = input.keys.R = input.keys.B = input.keys.J = 0;
  input.left = input.right = input.brake = input.jump = 0;
  input.both = false;
- input.steer = input.flip = input.spin = input.jumpPressed = 0;
+ input.steer = input.flip = input.spin = input.jumpPressed = input.lookBack = 0;
  input.jumpHeld = false;
 }
