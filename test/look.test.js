@@ -43,6 +43,26 @@ describe('fog (spec terrain.fog)', () => {
   });
 });
 
+describe('terrain shading', () => {
+  it('shades each terrain sample\'s span smoothly, not as flat bands', () => {
+    // A flat colour per ray sample made near slopes a stack of bands: about 98% of neighbouring rows were identical in
+    // the near half of the render. Smooth spans blend into the next sample's colour.
+    for (const name of ['ride-board', 'brake']) {
+      g.raw.scene(name);
+      frames(1);
+      const { renderW: RW, renderH: RH } = g.state().camera, px = D.renderPixels();
+      let same = 0, pairs = 0;
+      for (let c = 0; c < RW; c += 3) for (let r = Math.floor(RH * 0.55); r < RH - 1; r++) {
+        const a = (r * RW + c) * 4, b = a + RW * 4;
+        pairs++;
+        if (px[a] === px[b] && px[a + 1] === px[b + 1] && px[a + 2] === px[b + 2]) same++;
+      }
+      assert.ok(same / pairs < 0.9, `${name}: ${(100 * same / pairs).toFixed(1)}% of neighbouring rows identical`);
+    }
+    g.place({ vy: 10 });
+  });
+});
+
 describe('sky (spec sky)', () => {
   const skyGrad = () => {
     const c = g.el('c');

@@ -132,6 +132,20 @@ describe('the Hanga look', () => {
   }
  });
 
+ it('shades hollows darker and bluer than ridges, and grains powder more than the groomed piste', () => {
+  const tone = (lit, m, cavity, grain) => look.terrainTone(lit, m, 0, 0, [0, 0, 0], cavity, grain);
+  for (const lit of [0, 0.5, 1]) {
+   const flat = tone(lit, 0, 0, 0);
+   const hollow = tone(lit, 0, 1, 0);
+   const ridge = tone(lit, 0, -1, 0);
+   for (let i = 0; i < 3; i++) assert.ok(hollow[i] < flat[i] && flat[i] < ridge[i], `channel ${i} at lit ${lit}`);
+   assert.ok(flat[0] - hollow[0] > flat[2] - hollow[2], 'a hollow is bluer: red falls more than blue');
+  }
+  const swing = (m) => tone(1, m, 0, 1)[1] - tone(1, m, 0, -1)[1];
+  assert.ok(swing(0) > 0 && swing(1) > 0, 'grain brightens at +1, darkens at -1');
+  assert.ok(swing(1) < swing(0) / 2, 'the groomed piste keeps less grain than powder');
+ });
+
  it('reads the camera framing from the spec at each use (tuning slopeFollow while a game runs)', () => {
   const H = require('../art/gresca-hanga-spec.js');
   const L = createHangaLook(H, RA);

@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 21 Nov 2026, main after PR #30.
+Updated 21 Nov 2026, main after PR #39.
 
 ## Done
 | Package | PR |
@@ -26,30 +26,32 @@ Updated 21 Nov 2026, main after PR #30.
 | C3a map compiler, terrain half: `tools/map-compiler/`, `gresca-map-1` terrain file (ADR 0006), validator | #29 |
 | P5 scenes (`Gresca.scene()`, `?scene=`), `RiderState` traces, `npm run shot` with Playwright (ADR 0003), per-area test scripts | #28 |
 | P4 Look interface (`src/view/look/`, ADR 0007), the Hanga look as the only `HANGA` reader, look lint, `lab.html` | #30 |
+| S3a body twist: the lower body follows the equipment | #32 |
+| F4a bindings table and a generated Controls screen | #33 |
+| F5 brake as a skid across the fall line | #34 |
+| C1 polyline `Course` and `Course.fromRun` | #35 |
+| D1 frame-time harness by stage, baseline, `ImageData` reuse | #37 |
+| F5-cam the camera follows the direction of travel | #38 |
 | P6 mechanical PR check (`tools/review/`, `PR check` workflow posting one report comment per PR) | #39 |
 
-## In progress (phase 3, the five streams, started 21 Nov; parallel, each in its own folders)
+## In progress (phase 3, the five streams; parallel, each in its own folders)
 | Stream | Package | Branch |
 |---|---|---|
-| S1 controls and UI | **F4a** bindings table (`src/input/bindings.js`) and a Controls screen generated from it, reachable from the menu | `ui/f4a-controls` |
-| S2 sim feel | **F5** brake as a skid across the fall line, analog strength, no fixed deceleration | `sim/f5-brake` |
-| S3 rider animation | **S3a** body twist: lower body and equipment follow `boardHeading`, upper body `travelHeading`/fall line (spec `twistDeg`) | `anim/s3a-twist` |
-| S4 look, camera, render | **D1** frame-time harness by stage, baseline, `ImageData` reuse, the slow-frame spikes | `perf/d1-harness` |
-| S5 maps | **C1** polyline `Course` and `Course.fromRun` (R4); the procedural map as one polyline source | `maps/c1-polyline` |
-These PRs don't edit this file. F5 and C1 may both re-record the golden trace: the second to merge merges
-`origin/main` and re-records, explaining the diff. The D1 bench lives in `tools/bench/` (agreed exception to S5
-owning `tools/`).
+| S4 look, camera, render | Quick win: smoother, more natural snow (raycast spans shaded as gradients; relief and grain in the colour map) | `look/snow-relief` (#40) |
+| S4 look, camera, render | **E0** GPU terrain renderer (three.js, ADR 0008), behind `?renderer=gl`. Accepted by the owner on the iPad (50 to 60 fps) | `view/e0-gl-terrain` (#42) |
+| Docs | GPU renderer pulled forward; the owner's E0 verdict and the S4 order | `docs/gpu-renderer-decision` (#41) |
 
 ## Next, in order
 - S1: F4b pause button and in-game controls → F3 flip input and air hints → stance picker.
 - S2: F6 edge and carve model (removes the heading clamp; flip yaw/turn rate to counter-clockwise) → F3 flip physics.
 - S3: F5 brake counter-rotation → F6 edge-driven lean → F7 fakie look → F3 flip tuck.
-- S4: **F5-cam** camera follows `travelHeading` (small; fixes the low-speed flip) → F1 sizing → D2 → D3.
+- S4: **E1** GPU renderer by default (`?renderer=cpu` fallback), lost-context handling, texture memory budget,
+  softer corduroy (the owner: "still a way to go"), ray constants into `core/config.js` (review notes on #42) → E2
+  soft shadows → E3 GPU trees and park objects → E4 tilt-shift and haze (`docs/ROADMAP.md`).
+- Later, its own workstream: **ski tracks** on the GPU (the owner: the line left in the snow needs a lot of work).
 - S5: C3b course file → C4 map loading (needs D0).
 
 ## Known issues (not yet fixed)
-- **Camera flips at low speed** when the board is across the slope and slides tail-first: the camera follows the
-  equipment heading (`back ? a+π : a`). This is fixed by F5 (the camera follows `travelHeading`, added in B2b).
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
   in D1.
 - **C2 leftovers, for later packages:** the carve limit (`CARVE_LIMIT`) is measured from the map frame's across axis
