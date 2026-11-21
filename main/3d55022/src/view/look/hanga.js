@@ -41,6 +41,9 @@ const SNOW_LIT_GAIN = Object.freeze([74, 78, 38]);  // added when fully lit
 const GROOMED_GAIN = Object.freeze([6, 6, 4]);      // added on the groomed piste
 const ROCK_RGB = Object.freeze([118, 120, 130]);    // bare rock
 const CORDUROY_DEPTH = 0.045;                       // dimensionless, the corduroy stripes' brightness swing
+const CAVITY_GAIN = Object.freeze([-26, -22, -6]);  // added in a full hollow (minus on a full ridge): sky-shaded blue
+const GRAIN_DEPTH = 0.035;                          // dimensionless, wind-blown grain's brightness swing off piste
+const GROOMED_GRAIN = 0.3;                          // dimensionless, how much grain is left on the groomed piste
 const SPRAY_MAX_ALPHA = 0.8;                        // opacity of a new snow puff
 
 // CSS custom properties for styles/*.css, not in the spec yet (spec ui.* has the v2 HUD; S1 moves to it).
@@ -65,11 +68,14 @@ function colourTable(palette) {
  return Object.freeze({ ...palette, ...UNSPECIFIED });
 }
 
-// The colour map's snow tone: shade, plus the sun, plus the groomed piste, times the corduroy, mixed toward rock.
-function terrainTone(lit, groomed, stripeWave, rock, out) {
+// The colour map's snow tone: shade, plus the sun, plus the groomed piste, plus the relief (hollows bluer and darker,
+// ridges brighter), times the corduroy and the grain, mixed toward rock. cavity and grain default to 0 (the old tone).
+function terrainTone(lit, groomed, stripeWave, rock, out, cavity = 0, grain = 0) {
+ const grainSwing = 1 + GRAIN_DEPTH * grain * (1 - (1 - GROOMED_GRAIN) * groomed);
  for (let i = 0; i < 3; i++) {
-  let c = SNOW_SHADE[i] + lit * SNOW_LIT_GAIN[i] + groomed * GROOMED_GAIN[i];
+  let c = SNOW_SHADE[i] + lit * SNOW_LIT_GAIN[i] + groomed * GROOMED_GAIN[i] + cavity * CAVITY_GAIN[i];
   if (groomed > 0) c *= 1 + CORDUROY_DEPTH * groomed * stripeWave;
+  c *= grainSwing;
   out[i] = c + (ROCK_RGB[i] - c) * rock;
  }
  return out;
@@ -84,6 +90,7 @@ function sky(H, colour) {
    radiusFracOfWidth: sun.radiusFracOfWidth,
    aboveHorizonFrac: sun.aboveHorizonFrac,
    azimuthDeg: H.maps[MAP_ID].sun.azimuthDeg,
+   elevationDeg: H.maps[MAP_ID].sun.elevationDeg,
   }),
  });
 }

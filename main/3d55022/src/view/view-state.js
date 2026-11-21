@@ -25,6 +25,19 @@ export const STAGE = Object.freeze({
 });
 
 /**
+ * The stages of a frame with the GPU terrain (?renderer=gl, renderer.js), in the order they run: STAGE's camera,
+ * then gl and horizon in place of the raycast, sky and blit, then STAGE's trees, sprites and rider.
+ */
+export const GL_STAGE = Object.freeze({
+ CAMERA: STAGE.CAMERA,
+ GL: 'gl',           // the GPU terrain and sky submitted (the GPU's own time is not in it: a flush measures that)
+ HORIZON: 'horizon', // the terrain horizon the trees hide behind (gl/horizon.js)
+ TREES: STAGE.TREES,
+ SPRITES: STAGE.SPRITES,
+ RIDER: STAGE.RIDER,
+});
+
+/**
  * A new view: W, Hh (screen canvas px), cssW (its CSS width, px, read at resize so a frame never forces a layout), lo/lx (the low-res terrain render canvas and context), occ (per render
  * column and terrain sample, the screen row the terrain reached: hides trees behind ridges), map/mx (the W0 × H0
  * colour map canvas, one px per m of the map's grid) and col/col0 (its live RGBA, with ski tracks, and as built) and
@@ -49,6 +62,7 @@ export function createView(doc, look) {
   mx: map.getContext('2d'),
   col: null,
   col0: null,
+  colSnow: null, // with the GPU terrain: the colour map's plain snow, before the features (colour-map.js)
   lo,
   lx: lo.getContext('2d'),
   occ: new Int16Array(MAX_RENDER_COLUMNS * RAY_SAMPLES),
@@ -77,6 +91,8 @@ export function createView(doc, look) {
   treeStyles: new Map(), // fill style strings by r, g, b, so a tree's colour is not built again each frame
   projA: createProjection(), projB: createProjection(), projG: createProjection(), // scratch (sprites.js)
   sun: { X: 0, Y: 0, r: 0, on: false }, // scratch: the sun disc (sky.js)
+  trackRows: { v0: 0, v1: -1 }, // colour map rows (grid v) the ski tracks changed since the GPU terrain last read them
+  renderer: { name: 'cpu', fallback: null }, // which terrain renderer draws, and why the GPU one did not (renderer.js)
   timer: null,
  };
 }

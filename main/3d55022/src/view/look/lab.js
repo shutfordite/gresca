@@ -80,7 +80,7 @@ function riderSheet(doc, parent, look, rig, stance, ratio) {
 function terrainSheet(doc, parent, look, ratio) {
  const LITS = [0, 0.25, 0.5, 0.75, 1];
  const ROWS = [['powder', 0, 0, 0], ['groomed +', 1, 1, 0], ['groomed −', 1, -1, 0], ['half rock', 0, 0, 0.5],
-  ['rock', 0, 0, 1]];
+  ['rock', 0, 0, 1], ['hollow', 0, 0, 0, 1], ['ridge', 0, 0, 0, -1]];
  const FOG_STEPS = 8;
  const w = LABEL_W + (LITS.length + 1 + FOG_STEPS) * SWATCH;
  const ctx = canvas(doc, parent, w, HEAD_H + ROWS.length * SWATCH, ratio);
@@ -92,16 +92,16 @@ function terrainSheet(doc, parent, look, ratio) {
  const rgb = [0, 0, 0];
  const fog = look.fog.rgb;
  const far = 300; // m, about the render's far edge
- ROWS.forEach(([name, groomed, wave, rock], r) => {
+ ROWS.forEach(([name, groomed, wave, rock, cavity = 0], r) => {
   const y = HEAD_H + r * SWATCH;
   ctx.fillStyle = look.colour('key');
   ctx.fillText(name, 4, y + SWATCH / 2);
   LITS.forEach((lit, i) => {
-   look.terrainTone(lit, groomed, wave, rock, rgb);
+   look.terrainTone(lit, groomed, wave, rock, rgb, cavity);
    ctx.fillStyle = cssRgb(rgb[0] | 0, rgb[1] | 0, rgb[2] | 0);
    ctx.fillRect(LABEL_W + i * SWATCH, y, SWATCH - 2, SWATCH - 2);
   });
-  look.terrainTone(1, groomed, wave, rock, rgb);
+  look.terrainTone(1, groomed, wave, rock, rgb, cavity);
   for (let k = 0; k < FOG_STEPS; k++) {
    const f = look.fog.amount(far * (k + 1) / FOG_STEPS, far);
    const mix = (i) => (rgb[i] + (fog[i] - rgb[i]) * f) | 0;
