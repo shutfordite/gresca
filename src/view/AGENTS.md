@@ -4,7 +4,7 @@
 - The camera is advanced in the loop (`updateCamera()`, called from `app.js` before `draw()`), never inside `draw()`.
 - Ski tracks are the view's (`ski-tracks.js`), marked from RiderState after each sim step (a bus step hook).
 - Colours, tones, sky, fog, sprite colours and camera framing come from the Look (`look/look.js`, built once by
-  `look/hanga.js` from `env.HANGA`; ADR 0006), never copied hex or numbers. Only `look/hanga.js` reads `HANGA`'s
+  `look/hanga.js` from `env.HANGA`; ADR 0007), never copied hex or numbers. Only `look/hanga.js` reads `HANGA`'s
   fields; `test/look-lint.test.js` checks. S3 and S4 meet only through `look.rider.project(rig, pose, view)`.
 - Check a look change in `lab.html` (every pose, rig, yaw and pitch, tones, sprites, roles).
 - No per-frame allocations in the raycast, tree or sprite loops: reuse the buffers in `view-state.js`.

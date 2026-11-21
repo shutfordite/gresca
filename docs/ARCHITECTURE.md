@@ -138,7 +138,7 @@ src/
                  colour-map.js  paints the colour map from the built world (D2 removes it)
                  rider-animation.js, rider-draw.js  RiderAnim glue and the Hanga rider
                  fields.js      the camera in Gresca.state(), and Gresca.debug
-                 look/          look.js  the Look (P4, ADR 0006): colours, terrain tone, sky, fog, sprite colours,
+                 look/          look.js  the Look (P4, ADR 0007): colours, terrain tone, sky, fog, sprite colours,
                                          camera framing, UI tokens, rider.project; validateLook()
                                 hanga.js createHangaLook(HANGA, RiderAnim): the only file reading HANGA's fields
                                 lab.js   the look lab (lab.html at the repo root), not loaded by the game
@@ -154,7 +154,7 @@ docs/adr/        one short decision record per choice below
 One game's state, all made in `createGame(env)` and passed to the functions that need it: `world` (H, M, trees, terrain), `rider`, `session` (phase, score, time, crashes, popup, rig, stance), `input` (left, right, brake, jump, pointers, keys), `rng`, `spray` (particles and rng), `timestep`, `camera`, `view`, `ui` (elements). Modules export functions and frozen constants only; `test/page.test.js` checks that.
 
 Rules the layers keep:
-- `world` and `sim` never touch the DOM, canvas or `HANGA` colours. The view gets every colour, tone and style from the `Look` (`view/look/`, ADR 0006); only `view/look/hanga.js` reads `HANGA`'s fields (`test/look-lint.test.js`). They are imported in Node with no stubs (`test/sim.test.js`, `test/terrain.test.js`).
+- `world` and `sim` never touch the DOM, canvas or `HANGA` colours. The view gets every colour, tone and style from the `Look` (`view/look/`, ADR 0007); only `view/look/hanga.js` reads `HANGA`'s fields (`test/look-lint.test.js`). They are imported in Node with no stubs (`test/sim.test.js`, `test/terrain.test.js`).
 - No module holds state; nothing but `main.js` reads a browser global (ADR 0002).
 - `sim` talks outwards only through returned events (`land`, `crash`, `grindStart`, `grindEnd`, `finish`, `score`). `ui` and `view` subscribe.
 - `view` reads sim state and never writes it. The camera is updated in the app loop, not inside `draw()`.

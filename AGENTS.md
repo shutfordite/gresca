@@ -110,7 +110,7 @@ Until then (the freeze, `docs/STATUS.md`), one code PR runs at a time and may to
   array outside the procedural map.
 - No `Math.random()` or wall-clock time in the simulation. Use the seeded RNG.
 - No per-frame allocations in hot loops. Anything map-sized needs a stated memory budget in the PR.
-- Colours come from the Look (`src/view/look/`, ADR 0006), never copied numbers: no hex or `rgb()` literal and no
+- Colours come from the Look (`src/view/look/`, ADR 0007), never copied numbers: no hex or `rgb()` literal and no
   `HANGA` outside `src/view/look/`, and CSS uses `var(--…)` tokens (`test/look-lint.test.js`).
 
 ## Style and design

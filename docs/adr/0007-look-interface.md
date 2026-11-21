@@ -1,4 +1,4 @@
-# ADR 0006: the Look, one seam for how the game looks
+# ADR 0007: the Look, one seam for how the game looks
 
 Date: 21 Nov 2026. Status: accepted (P4).
 

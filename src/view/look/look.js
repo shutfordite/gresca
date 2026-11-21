@@ -1,5 +1,5 @@
 // The Look: the one seam through which the view gets colours, tones, sky, fog, sprite styles, camera framing, UI
-// tokens and the rider projection (docs/adr/0006-look-interface.md). The interface, its validator and CSS helpers.
+// tokens and the rider projection (docs/adr/0007-look-interface.md). The interface, its validator and CSS helpers.
 
 /**
  * @typedef {object} Look
