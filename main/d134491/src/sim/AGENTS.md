@@ -11,6 +11,9 @@
 - World frame (ADR 0005): ENU metres, headings counter-clockwise from east, right turns clockwise. No "+y is
   downhill" and no fixed axes: ask the terrain (`terrain.gradient`), the course and `world.frame`. The heading clamp
   (`CARVE_LIMIT` in `step.js`, measured from the frame's across axis) goes in F6.
-- Tunables go in `core/config.js` (later `sim/tuning.js`), each with its unit.
+- Tunables go in `core/config.js`, or in `sim/tuning.js` for sim feel (the brake so far), each with its unit.
+- The brake (F5) is `brake.js`: `input.brake` is analog 0..1; it yaws the board across the fall line (`rider.fallLine`'s
+  source, `course.fallLine`) and wears the sideways slip off as speed, so `travelHeading` keeps its direction while
+  `boardHeading` turns. There is no fixed brake deceleration and no brake gravity cut.
 - Keep the empty piste between s 460 and 740 empty: `test/physics.test.js` measures there.
 - A feel change says in the PR what changed, measured through the façade at a fixed `dt`, and what to try.

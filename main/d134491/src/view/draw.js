@@ -3,10 +3,11 @@
 import { FOV, RAY_SAMPLES, RAY_EXACT_M, CAM_BACK, RIDER_SCALE } from '../core/config.js';
 import { followRider } from './camera.js';
 import { fogAt, drawSky, drawSun } from './sky.js';
-import { project, drawFlags, drawRails } from './sprites.js';
+import { projectInto, drawFlags, drawRails } from './sprites.js';
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
-import { cssRgb, cssRgba } from './look/look.js';
+import { cssRgba } from './look/look.js';
+import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
 
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
@@ -18,6 +19,7 @@ const TREE_FAR_M = 300;       // m along the view, further trees are not drawn
 const TREE_HEIGHT_M = 9;      // m, drawn height of a tree
 const SNAP_M = 8;             // m, a jump no step could make: show the current state as it is
 const SHADOW_ALPHA = 0.55;    // opacity of the rider's shadow
+const TREE_NEAR_M = 3;        // m along the view, nearer trees are not drawn (sprites.js drops them too)
 const WIPEOUT_PIVOT = 0.9;    // rider-scale units above the feet the wipeout tumbles around
 
 /**
@@ -46,16 +48,17 @@ export function riderPose(view, rider, timestep, alpha) {
  * view.lo's size, view.groundM (m, the ground under the drawn rider) and the camera; reads the sim's state only.
  */
 export function updateCamera(view, scene, dt, alpha) {
- const { canvas, camera, rider, terrain, look } = scene;
+ const { camera, rider, terrain, look } = scene;
  riderPose(view, rider, scene.timestep, alpha);
  const W = view.W;
- const RW = Math.min(MAX_RENDER_W, Math.round(canvas.clientWidth / CSS_PX_PER_RENDER_PX));
+ const RW = Math.min(MAX_RENDER_W, Math.round(view.cssW / CSS_PX_PER_RENDER_PX));
  const RH = Math.round(RW * view.Hh / W);
  if (view.lo.width !== RW || view.lo.height !== RH) {
   view.lo.width = RW;
   view.lo.height = RH;
  }
  view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt);
+ if (view.timer !== null) view.timer.lap(STAGE.CAMERA);
 }
 
 /**
@@ -71,18 +74,47 @@ export function draw(view, scene, dt) {
  const RW = view.lo.width;
  const RH = view.lo.height;
  const gR = view.groundM;
- const im = view.lx.createImageData(RW, RH);
+ const timer = view.timer;
+ const im = renderImage(view, RW, RH);
  raycast(view, camera, terrain, look.fog, im.data, RW, RH);
  view.lx.putImageData(im, 0, 0);
+ if (timer !== null) timer.lap(STAGE.RAYCAST);
  drawSky(ctx, look.sky, camera, W, Hh); // behind the terrain: transparent render pixels show the sky,
- drawSun(ctx, look.sky, camera, W, Hh, scene.frame); // and ridges cover the sun
+ drawSun(ctx, look.sky, camera, W, Hh, scene.frame, view.sun); // and ridges cover the sun
+ if (timer !== null) timer.lap(STAGE.SKY);
  ctx.imageSmoothingEnabled = true;
  ctx.drawImage(view.lo, 0, 0, W, Hh);
+ if (timer !== null) timer.lap(STAGE.BLIT);
  drawTrees(ctx, view, camera, terrain, look, scene.treeArr, RW);
+ if (timer !== null) timer.lap(STAGE.TREES);
  view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
  view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
- drawSpray(ctx, camera, terrain, scene.particles, look.sprites.spray);
+ drawSpray(ctx, camera, terrain, view, scene.particles, look.sprites.spray);
+ if (timer !== null) timer.lap(STAGE.SPRITES);
  drawRiderOnSnow(ctx, view, scene, gR, dt);
+ if (timer !== null) timer.lap(STAGE.RIDER);
+}
+
+// The low-res render's pixels, all transparent: view.loImage, made again only when the render size changes (the
+// raycast then fills in the terrain, and what it leaves is the sky showing through).
+function renderImage(view, RW, RH) {
+ let im = view.loImage;
+ if (im === null || im.width !== RW || im.height !== RH) im = view.loImage = view.lx.createImageData(RW, RH);
+ else im.data.fill(0);
+ return im;
+}
+
+// The terrain samples' distance and fog, the same for every column, in view.rayZ and rayFog; made again only if the
+// Look's fog is a different one.
+function rayTables(view, fog) {
+ if (view.rayFogFor === fog) return;
+ let z = RAY_START_M;
+ for (let k = 0; k < NS; k++) {
+  view.rayZ[k] = z;
+  view.rayFog[k] = fogAt(fog, z);
+  z += 1 + z * RAY_SPREAD;
+ }
+ view.rayFogFor = fog;
 }
 
 // Terrain raycast into D (RGBA, RW × RH render px), one column at a time, near to far; fills view.occ.
@@ -112,6 +144,9 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
  const pu = cam.u;
  const pv = cam.v;
  const ray = view.rayTexel;
+ rayTables(view, fog);
+ const rayZ = view.rayZ;
+ const rayFog = view.rayFog;
  for (let c = 0; c < RW; c++) {
   const ph = (c / RW - 0.5) * FOV;
   const cs = Math.cos(ph);
@@ -122,8 +157,8 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
   const ru = ray.u;
   const rv = ray.v;
   let ym = RH;
-  let z = RAY_START_M;
   for (let k = 0; k < NS; k++) {
+   const z = rayZ[k];
    const uu = pu + ru * z;
    const vv = pv + rv * z;
    occ[c * NS + k] = ym;
@@ -139,7 +174,7 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
     const ys = Math.floor((camH - h) / (z * cs) * sc + hz - pt);
     if (ys < ym) {
      const o4 = mi * 4;
-     const f = fogAt(fog, z);
+     const f = rayFog[k];
      let c0 = col[o4];
      let c1 = col[o4 + 1];
      let c2 = col[o4 + 2];
@@ -166,43 +201,70 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
      ym = Math.max(0, ys);
     }
    }
-   z += 1 + z * RAY_SPREAD;
   }
  }
 }
 
-// Trees, far to near, hidden when a nearer ridge covers them (view.occ from the raycast). look: the Look.
+// The trees' x and y (m) as two arrays, which the cull below reads faster than 15 000 objects: made on the first frame
+// after the world is built (and again if the list changes), in view.treePos.
+function treePositions(view, treeArr) {
+ const pos = view.treePos;
+ if (pos.src === treeArr && pos.n === treeArr.length) return pos;
+ pos.x = new Float64Array(treeArr.length);
+ pos.y = new Float64Array(treeArr.length);
+ for (let i = 0; i < treeArr.length; i++) {
+  pos.x[i] = treeArr[i].x;
+  pos.y[i] = treeArr[i].y;
+ }
+ pos.src = treeArr;
+ pos.n = treeArr.length;
+ return pos;
+}
+
+// Trees, far to near, hidden when a nearer ridge covers them (view.occ from the raycast). look: the Look. The visible
+// trees go in view.trees (typed arrays, no objects), sorted far to near (sortTrees()).
 function drawTrees(ctx, view, camera, terrain, look, treeArr, RW) {
  const FOG = view.fog;
  const TREE = look.sprites.tree.rgb; // before fog
  const occ = view.occ;
  const kx = camera.pixelScale;
  const sc = camera.focalPx;
- const vis = [];
- for (const T of treeArr) {
-  // project() would drop it anyway: skip the height lookup
-  const f = (T.x - camera.x) * camera.dirX + (T.y - camera.y) * camera.dirY;
-  if (f < 3 || f > TREE_FAR_M) continue;
-  const P = project(camera, T.x, T.y, terrain.height(T.x, T.y));
-  if (!P || P.f > TREE_FAR_M) continue;
-  vis.push({ P });
+ const buf = view.trees;
+ const P = view.projA;
+ const pos = treePositions(view, treeArr);
+ const xs = pos.x;
+ const ys = pos.y;
+ buf.n = 0;
+ for (let i = 0; i < pos.n; i++) {
+  // projectInto() would drop it anyway: skip the height lookup
+  const f = (xs[i] - camera.x) * camera.dirX + (ys[i] - camera.y) * camera.dirY;
+  if (f < TREE_NEAR_M || f > TREE_FAR_M) continue;
+  if (!projectInto(camera, xs[i], ys[i], terrain.height(xs[i], ys[i]), P) || P.f > TREE_FAR_M) continue;
+  buf.grow();
+  const n = buf.n++;
+  buf.X[n] = P.X;
+  buf.Y[n] = P.Y;
+  buf.f[n] = P.f;
+  buf.z[n] = P.z;
  }
- vis.sort((u, v) => v.P.f - u.P.f);
- for (const { P } of vis) {
-  const ci = Math.min(RW - 1, Math.max(0, (P.X / kx) | 0));
-  // the terrain sample nearest P.z: samples sit at z_k with z_{k+1} = 1 + 1.012 z_k from 3 m (closed form below)
-  const k = Math.max(0, Math.min(NS - 1, Math.floor(Math.log((P.z + 83.33) / 86.33) / Math.log(1.012))));
-  const ysb = P.Y / kx;
-  const hs = TREE_HEIGHT_M / P.f * sc;
+ sortTrees(buf);
+ for (let i = 0; i < buf.n; i++) {
+  const t = buf.order[i];
+  const X = buf.X[t];
+  const Y = buf.Y[t];
+  const pz = buf.z[t];
+  const ci = Math.min(RW - 1, Math.max(0, (X / kx) | 0));
+  // the terrain sample nearest pz: samples sit at z_k with z_{k+1} = 1 + 1.012 z_k from 3 m (closed form below)
+  const k = Math.max(0, Math.min(NS - 1, Math.floor(Math.log((pz + 83.33) / 86.33) / Math.log(1.012))));
+  const ysb = Y / kx;
+  const hs = TREE_HEIGHT_M / buf.f[t] * sc;
   if (occ[ci * NS + k] < ysb - hs * 0.6) continue;
-  const fg = fogAt(look.fog, P.z);
-  const X = P.X;
-  const Y = P.Y;
+  const fg = fogAt(look.fog, pz);
   const hh = hs * kx;
   const r = (TREE[0] + (FOG[0] - TREE[0]) * fg) | 0;
   const gn = (TREE[1] + (FOG[1] - TREE[1]) * fg) | 0;
   const b = (TREE[2] + (FOG[2] - TREE[2]) * fg) | 0;
-  ctx.fillStyle = cssRgb(r, gn, b);
+  ctx.fillStyle = treeStyle(view, r, gn, b);
   for (let j = 0; j < 3; j++) {
    const by = Y - hh * (0.12 + 0.27 * j);
    const w = hh * (0.34 - 0.07 * j);
@@ -215,11 +277,36 @@ function drawTrees(ctx, view, camera, terrain, look, treeArr, RW) {
  }
 }
 
-// Snow spray particles, fading and growing as they age. spray: the Look's sprites.spray.
-function drawSpray(ctx, camera, terrain, particles, spray) {
+// Which of the TREE_SLICES depth slices a tree f m along the view is in: 0 is the farthest.
+const depthSlice = (f) => Math.min(TREE_SLICES - 1, ((TREE_FAR_M - f) * TREE_SLICES / (TREE_FAR_M - TREE_NEAR_M)) | 0);
+
+// Puts buf.order[0..n) in far-to-near order (f descending), trees at equal f in the order they were found: a counting
+// sort into TREE_SLICES depth slices, then an insertion sort that only has to settle trees within a slice.
+function sortTrees(buf) {
+ const n = buf.n;
+ const counts = buf.counts;
+ const f = buf.f;
+ const order = buf.order;
+ counts.fill(0);
+ for (let t = 0; t < n; t++) counts[depthSlice(f[t]) + 1]++;
+ for (let b = 0; b < TREE_SLICES; b++) counts[b + 1] += counts[b];
+ for (let t = 0; t < n; t++) order[counts[depthSlice(f[t])]++] = t;
+ for (let i = 1; i < n; i++) {
+  const t = order[i];
+  let j = i;
+  while (j > 0 && f[order[j - 1]] < f[t]) {
+   order[j] = order[j - 1];
+   j--;
+  }
+  order[j] = t;
+ }
+}
+
+// Snow spray particles, fading and growing as they age. spray: the Look's sprites.spray. view: its projection scratch.
+function drawSpray(ctx, camera, terrain, view, particles, spray) {
+ const P = view.projA;
  for (const p of particles) {
-  const P = project(camera, p.x, p.y, terrain.height(p.x, p.y) + p.z);
-  if (!P) continue;
+  if (!projectInto(camera, p.x, p.y, terrain.height(p.x, p.y) + p.z, P)) continue;
   const k = p.t / p.life;
   ctx.fillStyle = cssRgba(spray.rgb, spray.maxAlpha * (1 - k));
   ctx.beginPath();
