@@ -80,7 +80,12 @@ async function download({ url, body }) {
  const init = { headers: { 'User-Agent': USER_AGENT } };
  if (body) Object.assign(init, { method: 'POST', body, headers: { ...init.headers,
   'Content-Type': 'application/x-www-form-urlencoded' } });
- const response = await fetch(url, init);
+ let response;
+ try {
+  response = await fetch(url, init);
+ } catch (e) {
+  throw new Error('map compiler: could not fetch ' + url + ' (' + (e.cause?.message || e.message) + ')', { cause: e });
+ }
  if (!response.ok) throw new Error('map compiler: ' + url + ' answered HTTP ' + response.status);
  const bytes = new Uint8Array(await response.arrayBuffer());
  if (bytes.length > MAX_DOWNLOAD_BYTES) throw new Error('map compiler: ' + url + ' is too large');
