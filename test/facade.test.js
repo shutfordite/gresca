@@ -244,7 +244,7 @@ describe('Gresca façade', async () => {
     assert.equal(s.crashTimer, 0);
     assert.equal(s.crashed, false);
     assert.equal(s.crashes, 0);
-    assert.deepEqual({ ...s.input }, { left: 0, right: 0, brake: 0, jump: 0 });
+    assert.deepEqual({ ...s.input }, { left: 0, right: 0, brake: 0, jump: 0, lookBack: 0 });
     assert.equal(s.speed, Math.hypot(o.vx, o.vy));
     R.place({ s: 700 });
     const at = R.world.course.point(700, 0); // on the centreline at s 700, heading straight down the map
