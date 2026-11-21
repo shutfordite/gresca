@@ -7,13 +7,28 @@ const MAX_RENDER_COLUMNS = 400; // the occlusion buffer has room for this many r
 const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs fill rate for nothing visible)
 
 /**
+ * The stages of a frame the optional timer (view.timer) is told about, in the order they run. The rest of a frame in
+ * app.js (the HUD) is whatever a caller measures outside them.
+ */
+export const STAGE = Object.freeze({
+ CAMERA: 'camera',   // updateCamera(): pose, render size, camera follow
+ RAYCAST: 'raycast', // the terrain raycast and putting its pixels on the low-res canvas
+ SKY: 'sky',         // sky gradient and sun
+ BLIT: 'blit',       // scaling the low-res render up onto the screen
+ TREES: 'trees',     // trees, far to near
+ SPRITES: 'sprites', // rails, flags, spray
+ RIDER: 'rider',     // animation step and the rider's drawing
+});
+
+/**
  * A new view: W, Hh (screen canvas px), lo/lx (the low-res terrain render canvas and context), occ (per render
  * column and terrain sample, the screen row the terrain reached: hides trees behind ridges), map/mx (the W0 × H0
  * colour map canvas, one px per m of the map's grid) and col/col0 (its live RGBA, with ski tracks, and as built) and
  * mapFrame (where its texels sit in the world; all three set after the build),
  * fog (the Look's fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), groundM (m, the
  * ground under it, from updateCamera()), the rider animation (anim, animPrev, riderList, riderYaw deg) and counts of
- * what the last frame drew. look: the Look (view/look/look.js).
+ * what the last frame drew, and timer (null, or {lap(stage)} from a profiler: draw.js calls timer.lap(STAGE.x) as
+ * each stage finishes; one branch when it is null). look: the Look (view/look/look.js).
  */
 export function createView(doc, look) {
  const map = doc.createElement('canvas');
@@ -46,6 +61,7 @@ export function createView(doc, look) {
   rayTexel: { u: 0, v: 0 }, // scratch: a ray direction in texels (draw.js)
   flagsDrawn: 0,
   railsDrawn: 0,
+  timer: null,
  };
 }
 

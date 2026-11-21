@@ -6,6 +6,7 @@ import { fogAt, sunDisc, sunAzimuthDeg } from './sky.js';
 import { project } from './sprites.js';
 import { riderPose } from './draw.js';
 import { animTick } from './rider-animation.js';
+import { STAGE } from './view-state.js';
 
 /** The view's state() fields: camera {...}, all writable (see the comments for units). */
 export function viewFields(c) {
@@ -47,6 +48,9 @@ export function viewDebug(g) {
   camCompass: () => camCompass(camera), // camera heading, compass degrees
   sunDisc: () => ({ ...sunDisc(look.sky, camera, view.W, view.Hh, world.frame) }), // {X,Y,r,on}, canvas pixels
   sunAzimuthDeg: () => sunAzimuthDeg(look.sky, world.frame), // compass deg, the sun in the world (turned with the map)
+  // Installs a frame-time profiler, {lap(stage)} (view-state.js STAGE), or null to remove it (tools/bench).
+  stages: STAGE, // the frame stages a timer is told about, in the order they run (view-state.js)
+  setTimer: (timer) => { view.timer = timer; },
   screen: () => ({ width: view.W, height: view.Hh }), // canvas pixels
   mapId: MAP_ID,
   // fog colour, distance of the last terrain sample (m), samples per column

@@ -7,6 +7,7 @@ import { project, drawFlags, drawRails } from './sprites.js';
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
 import { cssRgb, cssRgba } from './look/look.js';
+import { STAGE } from './view-state.js';
 
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
@@ -56,6 +57,7 @@ export function updateCamera(view, scene, dt, alpha) {
   view.lo.height = RH;
  }
  view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt);
+ if (view.timer !== null) view.timer.lap(STAGE.CAMERA);
 }
 
 /**
@@ -71,18 +73,25 @@ export function draw(view, scene, dt) {
  const RW = view.lo.width;
  const RH = view.lo.height;
  const gR = view.groundM;
+ const timer = view.timer;
  const im = view.lx.createImageData(RW, RH);
  raycast(view, camera, terrain, look.fog, im.data, RW, RH);
  view.lx.putImageData(im, 0, 0);
+ if (timer !== null) timer.lap(STAGE.RAYCAST);
  drawSky(ctx, look.sky, camera, W, Hh); // behind the terrain: transparent render pixels show the sky,
  drawSun(ctx, look.sky, camera, W, Hh, scene.frame); // and ridges cover the sun
+ if (timer !== null) timer.lap(STAGE.SKY);
  ctx.imageSmoothingEnabled = true;
  ctx.drawImage(view.lo, 0, 0, W, Hh);
+ if (timer !== null) timer.lap(STAGE.BLIT);
  drawTrees(ctx, view, camera, terrain, look, scene.treeArr, RW);
+ if (timer !== null) timer.lap(STAGE.TREES);
  view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
  view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
  drawSpray(ctx, camera, terrain, scene.particles, look.sprites.spray);
+ if (timer !== null) timer.lap(STAGE.SPRITES);
  drawRiderOnSnow(ctx, view, scene, gR, dt);
+ if (timer !== null) timer.lap(STAGE.RIDER);
 }
 
 // Terrain raycast into D (RGBA, RW × RH render px), one column at a time, near to far; fills view.occ.
