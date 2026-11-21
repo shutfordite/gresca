@@ -62,7 +62,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Snow spray | `src/sim/particles.js` | `features`, `sim` |
 | Fixed timestep and interpolation | `src/sim/timestep.js` | `timestep`, `facade` |
 | Rider and session state fields | `src/sim/state.js` (+ `src/sim/fields.js` to expose them) | `facade`, `sim` |
-| Touch and key controls | `src/input/input.js` (logic), `bind-input.js` (DOM) | `features`, `sim`, `contracts` |
+| Which keys and gestures do what (the one table; also read by the Controls screen) | `src/input/bindings.js` | `bindings`, `controls` |
+| Touch and key controls | `src/input/input.js` (logic, reads the table), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings` |
+| The Controls screen (generated from the table; gesture diagrams) | `src/ui/controls.js`, `styles/menu.css`, `index.html` | `controls` |
 | Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
 | Ski tracks | `src/view/ski-tracks.js` | `features`, `games` |

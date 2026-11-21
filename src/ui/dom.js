@@ -6,7 +6,7 @@ export function applyUiTokens(doc, tokens) {
  for (const name of Object.keys(tokens)) style.setProperty(name, tokens[name]);
 }
 
-/** The page's elements by role: canvas and ctx, the menu (msg, msgT, go, pb, ps), the HUD and the gloves. */
+/** The page's elements by role: canvas and ctx, the menu (msg, msgT, go, pb, ps, cb) and Controls screen (ctl, cc), the HUD and the gloves. */
 export function getUi(doc) {
  const $ = (id) => doc.getElementById(id);
  const canvas = $('c');
@@ -24,6 +24,11 @@ export function getUi(doc) {
   gr: $('gr'),       // right glove hint
   pb: $('pb'),       // Snowboard button
   ps: $('ps'),       // Skis button
+  menuMain: $('menu'), // the menu's own content (title, text, picker, buttons)
+  cb: $('cb'),       // Controls button
+  ctl: $('ctl'),     // the Controls screen
+  ctlBody: $('ctl-body'), // where the table's rows go
+  cc: $('cc'),       // Back button on the Controls screen
   minimap: $('mc'),  // minimap canvas
  };
 }
