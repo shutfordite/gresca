@@ -3,6 +3,8 @@
 //   --no-flush Chrome: do not force the canvas to finish drawing after each frame (shows its bursty rasterising)
 //   --repeat K runs each size K times (default 5) and reports the median of each statistic
 //   --chrome   also run in headless Chrome (set PLAYWRIGHT_CHROMIUM_EXECUTABLE); without it, Node only
+//   --gl       Chrome only: the GPU terrain (?renderer=gl), its stages, the flush waiting for the GPU. Headless Chrome
+//              with no GPU draws WebGL in software (SwiftShader): the numbers bound the CPU side, not an iPad's GPU
 //   --root DIR measure the game checked out in DIR (default: this repository)
 //   --notes T  free text kept in the JSON (what else was running, which commit)
 //   --json F   write the numbers to F (the baseline format)
@@ -65,6 +67,7 @@ async function main() {
   const root = path.resolve(arg('root', path.join(import.meta.dirname, '..', '..')));
   const opts = { frames: Number(arg('frames', FRAMES)), warmup: Number(arg('warmup', WARMUP)) };
   if (process.argv.includes('--no-flush')) opts.flush = false;
+  const gl = process.argv.includes('--gl');
   const report = {
     note: 'ms per frame by stage along tools/bench/core.mjs createPath() (the four recorded traces at 60 fps, repeated)',
     machine: { cpu: os.cpus()[0].model, cores: os.cpus().length, node: process.version, platform: `${os.platform()} ${os.arch()}` },
@@ -72,13 +75,15 @@ async function main() {
     ...(arg('notes') ? { notes: arg('notes') } : {}),
   };
   const repeat = Number(arg('repeat', REPEAT));
-  const node = fold(await runNode(root, SIZES, opts, repeat));
-  print('node', node);
-  report.node = node.map(({ size, stages, first, frames, skipped, runs, allocKB }) => ({ size, stages, first, frames, skipped, runs, allocKB }));
-  if (process.argv.includes('--chrome')) {
+  if (!gl) {
+    const node = fold(await runNode(root, SIZES, opts, repeat));
+    print('node', node);
+    report.node = node.map(({ size, stages, first, frames, skipped, runs, allocKB }) => ({ size, stages, first, frames, skipped, runs, allocKB }));
+  }
+  if (process.argv.includes('--chrome') || gl) {
     const { runChrome } = await import('./chrome-run.mjs');
     const dpr = Number(arg('dpr', 1));
-    const { results, version } = await runChrome(root, SIZES, opts, dpr, repeat);
+    const { results, version } = await runChrome(root, SIZES, gl ? { ...opts, query: '?renderer=gl' } : opts, dpr, repeat);
     const chrome = fold(results);
     print('chrome', chrome);
     report.machine.chrome = version;
