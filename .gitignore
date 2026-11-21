@@ -3,5 +3,6 @@ node_modules/
 *.log
 # baked terrain data is large and is added deliberately
 *.local.json
+shots/
 # raw downloads of the map compiler (tools/map-compiler/cli.mjs)
 .map-cache/

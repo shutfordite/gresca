@@ -75,6 +75,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Menu, rig and stance picker, finish screen | `src/ui/menu.js`, `styles/menu.css`, `index.html` | `park`, `page`, `events` |
 | State wiring, boot, frame loop | `src/app.js` | `games`, `facade`, `timestep` |
 | What tests can read and set | each area's `fields.js` (`sim/`, `view/`, `ui/`, `input/`, `world/`); `src/debug.js` composes them | `facade` |
+| Named scenes (`Gresca.scene(name)`, `?scene=<name>`): fixed paused states for screenshots | `src/scenes.js` (data), `src/debug.js` | `scenes` |
+| Recorded RiderState traces (`node tools/record-trace.mjs` rewrites them) | `tools/record-trace.mjs`, `test/fixtures/traces/`, loader `test/traces.js` | `traces` |
+| Screenshots of every scene, board and skis, 820x1180 (`npm run shot` -> `shots/`; Playwright is dev-only, ADR 0003) | `tools/shot.mjs`, `.github/workflows/test.yml` | none (CI `shots` job on `src/view/`, `art/`, `styles/` PRs) |
 | The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `tools/map-compiler/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the file | `tools/map-compiler/core.js` (pure) | `map-compiler` |
 | DEM and piste sources (Terrarium PNG tiles; OpenSkiMap, Overpass) | `tools/map-compiler/sources/` | `map-compiler` |
@@ -83,6 +86,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
 
 Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.
+Per area while working: `npm run test:sim`, `test:view`, `test:input`, `test:world`. To see the game, `npm run shot`
+(set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an installed Chrome), then open one or two PNGs from `shots/`; or append
+`?scene=<name>` to a preview link (names: `Gresca.scenes()`).
 
 ## Who owns what (from phase 3)
 Each stream in `docs/ROADMAP.md` owns its folders. During phase 3 a PR edits only its stream's folders; anything

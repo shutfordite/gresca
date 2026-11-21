@@ -80,7 +80,11 @@ rails, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites, ri
 npm test
 ```
 
-Needs Node 22.8 or newer (`"engines"` in `package.json`), and no packages. The tests are ES modules
+Per area: `npm run test:sim`, `test:view`, `test:input`, `test:world`. To see the game: `npm run shot` writes a PNG of
+every named scene (`src/scenes.js`) for board and skis to `shots/` (needs `npm ci`; dev-only Playwright, ADR 0003; set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an installed Chrome). `?scene=kicker-air` opens a scene, paused, in the browser.
+
+Needs Node 22.8 or newer (`"engines"` in `package.json`), and no packages to run the game or the tests. The tests are ES modules
 (`test/package.json`). `test/harness.js` imports `src/app.js` straight into Node and calls `createGame(env)` with
 stubbed browser APIs and a fresh copy of the art modules, so each `await load()` is an independent game running exactly
 the files the browser loads. Tests read and drive whole games only through `window.Gresca`, a small façade in

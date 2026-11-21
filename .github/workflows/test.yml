@@ -19,3 +19,35 @@ jobs:
       - run: npm test
       # the whole suite with the procedural map rotated 37 and 300 degrees (docs/adr/0005-enu-frame.md)
       - run: npm run test:rotated
+
+  # Screenshots of every scene for pull requests that change how the game looks (docs/adr/0003-playwright-dev-only.md).
+  # Separate from the test job, so `npm test` never needs a browser. The shots are an artifact of the run.
+  shots:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Does this pull request touch the look?
+        id: look
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(src/view/|art/|styles/)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.look.outputs.changed == 'true'
+        with:
+          node-version: 22
+      - if: steps.look.outputs.changed == 'true'
+        run: npm ci
+      - if: steps.look.outputs.changed == 'true'
+        run: npx playwright-core install --with-deps chromium
+      - if: steps.look.outputs.changed == 'true'
+        run: npm run shot
+      - if: steps.look.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: shots
+          path: shots/
+          if-no-files-found: error
