@@ -6,7 +6,7 @@ import {
  arcLengths, joinWays, toPolyline, smoothRun, MIN_SPACING_M, MAX_SPACING_M,
 } from './run-geometry.js';
 
-const CELL_M = 12;           // m, the side of a lookup cell: project() scans the cells around the point, nearest first
+const CELL_M = 16;            // m, the side of a lookup cell: project() scans the cells around the point, nearest first
 const FLAT_SLOPE = 1e-9;     // m/m, a gradient smaller than this is flat ground (no fall line)
 const DEFAULT_SPACING_M = 1.5; // m between centreline points made by fromRun
 const MIN_TURN_RADIUS_M = 15;  // m, the tightest turn fromRun keeps: 1.5 g at 15 m/s, about what a carve holds
@@ -80,6 +80,18 @@ function distance2(seg, i, px, py) {
  return dx * dx + dy * dy;
 }
 
+// m, how far (px, py) is from the nearest edge of the block of cells within `ring` of cell (cx, cy): no segment outside
+// the block is closer than this. A side of the block past the edge of the lookup grid holds no segments, so it
+// doesn't count.
+function clearance(grid, cx, cy, ring, px, py) {
+ let reach = Infinity;
+ if (cx - ring > 0) reach = Math.min(reach, px - (grid.x0 + (cx - ring) * CELL_M));
+ if (cx + ring < grid.nx - 1) reach = Math.min(reach, grid.x0 + (cx + ring + 1) * CELL_M - px);
+ if (cy - ring > 0) reach = Math.min(reach, py - (grid.y0 + (cy - ring) * CELL_M));
+ if (cy + ring < grid.ny - 1) reach = Math.min(reach, grid.y0 + (cy + ring + 1) * CELL_M - py);
+ return reach;
+}
+
 // The index of the segment nearest (px, py): the cells around the point are scanned in rings, and the search stops
 // once no unseen cell can be closer than the best segment found. The first of equally near segments wins.
 function nearestSegment(seg, grid, px, py) {
@@ -106,8 +118,10 @@ function nearestSegment(seg, grid, px, py) {
     }
    }
   }
-  const reach = ring * CELL_M;
-  if (bestAt >= 0 && best <= reach * reach) break;
+  if (bestAt >= 0) {
+   const reach = clearance(grid, cx, cy, ring, px, py);
+   if (best <= reach * reach) break;
+  }
  }
  return bestAt;
 }
