@@ -10,7 +10,7 @@ const g = await load();
 const BINDINGS = g.state().bindings;
 const bindingsFor = (device) => BINDINGS.filter((b) => b.device === device);
 const binding = (device, action) => BINDINGS.find((b) => b.device === device && b.action === action);
-const down = (px, py) => g.el('c').fire('pointerdown', { pointerId: 1, clientX: px, clientY: py });
+const down = (px, py, id = 1) => g.el('c').fire('pointerdown', { pointerId: id, clientX: px, clientY: py });
 const move = (px, py) => g.el('c').fire('pointermove', { pointerId: 1, clientX: px, clientY: py });
 
 // Keys that make the game do something: pressed on a fresh input, the key turns, brakes or jumps.
@@ -87,7 +87,7 @@ describe('bindings table', () => {
   g.el('c').fire('pointerup', { pointerId: 1 });
  });
 
- it('a finger swiped up past the look-back distance sets lookBack while it stays down, and still steers', () => {
+ it('a finger swiped up past the look-back distance sets lookBack while it stays down, and does not steer', () => {
   const swipe = binding('touch', 'look-back').minPx;
   assert.ok(swipe > SWIPE_PX, 'further than the brake swipe');
   g.resetInput();
@@ -96,7 +96,13 @@ describe('bindings table', () => {
   assert.equal(g.state().input.lookBack, 0, 'exactly the distance does not look back');
   move(100, 500 - swipe - 1);
   const held = g.state().input;
-  assert.deepEqual([held.lookBack, held.left, held.brake], [1, 1, 0], 'looks back, still steers, does not brake');
+  assert.deepEqual([held.lookBack, held.left, held.right, held.brake], [1, 0, 0, 0],
+   'looks back without steering or braking');
+  down(700, 500, 2);
+  const both = g.state().input;
+  assert.deepEqual([both.lookBack, both.right, both.left, both.jump], [1, 1, 0, 0],
+   'another finger steers while looking back, and the two are not a jump');
+  g.el('c').fire('pointerup', { pointerId: 2 });
   move(100, 500 - 5);
   assert.equal(g.state().input.lookBack, 0, 'sliding back down lets go');
   move(100, 500 - swipe - 1);

@@ -30,10 +30,13 @@ export function applyInput(input) {
  let b = input.keys.B;
  let k = input.keys.K;
  for (const p of input.pointers.values()) {
+  if (p.look) { // a look-back finger only turns the camera: steering it too would turn the rider all the while
+   k = 1;
+   continue;
+  }
   if (p.side < 0) l = 1;
   else r = 1;
   if (p.brake) b = 1;
-  if (p.look) k = 1;
  }
  if (l && r && !input.both) requestJump(input);
  input.both = !!(l && r);
