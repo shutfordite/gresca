@@ -90,6 +90,7 @@ function sky(H, colour) {
    radiusFracOfWidth: sun.radiusFracOfWidth,
    aboveHorizonFrac: sun.aboveHorizonFrac,
    azimuthDeg: H.maps[MAP_ID].sun.azimuthDeg,
+   elevationDeg: H.maps[MAP_ID].sun.elevationDeg,
   }),
  });
 }

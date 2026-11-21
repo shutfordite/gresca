@@ -38,6 +38,7 @@ export const OWNERS = Object.freeze([
  ['src/scenes.js', 'Shared'],
  ['index.html', 'Shared'],
  ['lab.html', 'S4'],
+ ['vendor/', 'S4'],
  ['test/harness.js', 'Shared'],
  ['.github/', 'Shared'],
  ['package.json', 'Shared'],

@@ -140,6 +140,12 @@ src/
                  colour-map.js  paints the colour map from the built world (D2 removes it)
                  rider-animation.js, rider-draw.js  RiderAnim glue and the Hanga rider
                  fields.js      the camera in Gresca.state(), and Gresca.debug
+                 renderer.js    chooseRenderer(): the CPU raycaster, or the GPU terrain with ?renderer=gl (E0,
+                                ADR 0008) and its fallback; fps-meter.js the ?fps=1 readout
+                 gl/            the GPU terrain (three.js, vendored in vendor/three/): gl-renderer.js (textures,
+                                clipmap meshes, sky, per-frame uniforms), gl-projection.js (the sprites' projection
+                                in GLSL), terrain-mesh.js, terrain-bake.js, detail-texture.js, snow-material.js,
+                                sky-material.js, horizon.js (view.occ for the trees, without the raycast)
                  look/          look.js  the Look (P4, ADR 0007): colours, terrain tone, sky, fog, sprite colours,
                                          camera framing, UI tokens, rider.project; validateLook()
                                 hanga.js createHangaLook(HANGA, RiderAnim): the only file reading HANGA's fields

@@ -30,6 +30,7 @@
  * @property {number} radiusFracOfWidth  disc radius as a fraction of the screen width
  * @property {number} aboveHorizonFrac  disc centre above the horizon line, as a fraction of the screen height
  * @property {number} azimuthDeg  compass degrees of the map's sun, before the map frame turns it
+ * @property {number} [elevationDeg]  optional: degrees of the map's sun above the horizon (the GPU terrain's light)
  */
 
 /**
@@ -109,6 +110,8 @@ function checkSkyAndFog(look) {
  const sun = sky.sun || {};
  check(isColour(sun.colour), 'sky.sun.colour', 'is not a colour');
  for (const k of ['radiusFracOfWidth', 'aboveHorizonFrac', 'azimuthDeg']) check(isNum(sun[k]), 'sky.sun.' + k, 'NaN');
+ check(sun.elevationDeg === undefined || (isNum(sun.elevationDeg) && sun.elevationDeg > 0 && sun.elevationDeg < 90),
+  'sky.sun.elevationDeg', 'must be 0..90 when given');
  const fog = look.fog || {};
  check(isRgb(fog.rgb), 'fog.rgb', 'must be [r, g, b] in 0..255');
  check(isFn(fog.amount), 'fog.amount', 'must be a function');
