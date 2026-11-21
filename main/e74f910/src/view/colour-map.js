@@ -9,11 +9,15 @@ const CORDUROY_RAD_PER_M = 2.1; // rad per m across the piste, the corduroy stri
 /**
  * Paints the colour map of the built world into view.map (one px per m of the map's grid), keeps its pixels as
  * view.col (live, ski tracks go here) and view.col0 (as built) and the frame that places it in the world as
- * view.mapFrame, and draws the minimap from it. look: the Look (view/look/look.js), for every colour.
+ * view.mapFrame, and draws the minimap from it. look: the Look (view/look/look.js), for every colour. keepSnow
+ * (optional): also keep the plain snow before the features are painted over it as view.colSnow (the GPU terrain
+ * shades the snow itself and takes only the features from the colour map).
  */
-export function buildColourMap(view, world, minimap, look) {
+export function buildColourMap(view, world, minimap, look, keepSnow = false) {
  view.mapFrame = world.frame;
- paintColourMap(view.mx, world, look);
+ paintColourMap(view.mx, world, look, () => {
+  if (keepSnow) view.colSnow = view.mx.getImageData(0, 0, W0, H0).data;
+ });
  view.col = view.mx.getImageData(0, 0, W0, H0).data;
  view.col0 = view.col.slice();
  minimap.getContext('2d').drawImage(view.map, 0, 0, W0, H0, 0, 0, MINIMAP_W, MINIMAP_H);
@@ -23,10 +27,12 @@ export function buildColourMap(view, world, minimap, look) {
  * Paints the built world (world/build.js) into mx, the 2D context of a W0 × H0 canvas, one pixel per map metre:
  * lavender shadows, warm lit snow, grey rock, corduroy on the groomed piste, then the lift line, the trees and their
  * shadows, the kickers, the rails, the village and the finish. Reads world.H, world.M, world.treeArr and world.frame.
+ * afterSnow() is called between the snow and the rest.
  */
-function paintColourMap(mx, world, look) {
+function paintColourMap(mx, world, look, afterSnow) {
  const colour = look.colour;
  paintSnow(mx, world.H, world.M, look.terrainTone);
+ afterSnow();
  paintLift(mx, colour);
  paintTrees(mx, world.treeArr, world.frame, colour);
  paintPark(mx, colour);
