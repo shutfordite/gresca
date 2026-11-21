@@ -11,7 +11,8 @@ import { BRAKE_SWIPE_PX, LOOK_BACK_SWIPE_PX, KEY_SLOTS } from './bindings.js';
  */
 export function createInput() {
  return {
-  left: 0, right: 0, brake: 0, jump: 0, both: false, steer: 0, jumpHeld: false, jumpPressed: 0, flip: 0, spin: 0, lookBack: 0,
+  left: 0, right: 0, brake: 0, jump: 0, both: false, steer: 0, jumpHeld: false, jumpPressed: 0, flip: 0, spin: 0,
+  lookBack: 0,
   pointers: new Map(), keys: { L: 0, R: 0, B: 0, J: 0, K: 0 },
  };
 }
@@ -53,7 +54,10 @@ export function pointerDown(input, id, px, py, halfWidth) {
  applyInput(input);
 }
 
-/** A finger moved: it brakes once it has moved SWIPE_PX down, looks back once it has moved further up, and can slide to the other half. False if unknown. */
+/**
+ * A finger moved: it brakes once it has moved SWIPE_PX down, looks back once it has moved further up, and can slide
+ * to the other half. False if unknown.
+ */
 export function pointerMove(input, id, px, py, halfWidth) {
  const p = input.pointers.get(id);
  if (!p) return false;

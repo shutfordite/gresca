@@ -160,7 +160,7 @@ tools/           map-compiler/ (C3a: pure core.js, sources/terrarium.js and open
 docs/adr/        one short decision record per choice below
 ```
 
-One game's state, all made in `createGame(env)` and passed to the functions that need it: `world` (H, M, trees, terrain), `rider`, `session` (phase, score, time, crashes, popup, rig, stance), `input` (left, right, brake, jump, pointers, keys), `rng`, `spray` (particles and rng), `timestep`, `camera`, `view`, `ui` (elements). Modules export functions and frozen constants only; `test/page.test.js` checks that.
+One game's state, all made in `createGame(env)` and passed to the functions that need it: `world` (H, M, trees, terrain), `rider`, `session` (phase, score, time, crashes, popup, rig, stance), `input` (left, right, brake, jump, lookBack, pointers, keys), `rng`, `spray` (particles and rng), `timestep`, `camera`, `view`, `ui` (elements). Modules export functions and frozen constants only; `test/page.test.js` checks that.
 
 Rules the layers keep:
 - `world` and `sim` never touch the DOM, canvas or `HANGA` colours. The view gets every colour, tone and style from the `Look` (`view/look/`, ADR 0007); only `view/look/hanga.js` reads `HANGA`'s fields (`test/look-lint.test.js`). They are imported in Node with no stubs (`test/sim.test.js`, `test/terrain.test.js`).

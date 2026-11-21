@@ -6,8 +6,8 @@ import { BINDINGS } from './bindings.js';
 const flag = (input, key) => field(() => input[key], (v) => { input[key] = v ? 1 : 0; });
 
 /**
- * The input's fields: input {left, right, brake, jump, lookBack}; jump is one-shot (writing it also sets jumpPressed); and
- * bindings, the frozen controls table (input/bindings.js), read only.
+ * The input's fields: input {left, right, brake, jump, lookBack}; jump is one-shot (writing it also sets
+ * jumpPressed); and bindings, the frozen controls table (input/bindings.js), read only.
  */
 export function inputFields(input) {
  const jump = field(() => input.jump, (v) => {
@@ -16,7 +16,8 @@ export function inputFields(input) {
  });
  return {
   input: nested('input', {
-   left: flag(input, 'left'), right: flag(input, 'right'), brake: flag(input, 'brake'), jump, lookBack: flag(input, 'lookBack'),
+   left: flag(input, 'left'), right: flag(input, 'right'), brake: flag(input, 'brake'), jump,
+   lookBack: flag(input, 'lookBack'),
   }),
   bindings: field(() => BINDINGS),
  };
