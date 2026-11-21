@@ -3,6 +3,7 @@
 // Everything here is authored on the map's grid (x across, y down the piste: grid u and v); the Course answers in
 // world metres (east, north), through the map frame (world/map-frame.js, docs/adr/0005-enu-frame.md).
 import { DEFAULT_FRAME } from './map-frame.js';
+import { createPolylineCourse } from './polyline-course.js';
 
 export const W0 = 1000; // cells (m) across the map
 export const H0 = 2450; // cells (m) down the map
@@ -11,7 +12,7 @@ const START_Y = 60;      // m, y where a run starts
 const PISTE_HALF_WIDTH = 26; // m either side of the centreline where the groomed mask is half (world/build.js)
 const KICKER_HALF_WIDTH = 9; // m either side of the centreline a kicker launches the rider
 const KICKER_LIP_DEPTH = 5;  // m past the lip (along s) where the launch happens
-const FLAT_SLOPE = 1e-9;     // m/m, a gradient smaller than this is flat ground (no fall line)
+const BISECT_STEPS = 100;    // halvings that place the centreline's first vertex (to machine precision)
 
 // Terrain park. Kickers launch fast riders; KBIG ones have taller ramps and give more air. Values are y of the lip, m.
 export const KICK = Object.freeze([260, 340, 400, 760, 840, 920, 1060, 1250, 1400, 1560, 1680, 1850, 1990, 2150]);
@@ -29,9 +30,6 @@ const BOX_HEIGHT_M = 0.55;  // m, top of a box above the snow
 
 /** m, x of the piste centreline at y (m). */
 export const cx = (y) => 500 + 170 * Math.sin(y / 350) + 70 * Math.sin(y / 130 + 1);
-
-/** m/m, the slope of the centreline, d cx / dy at y (m). */
-const cxSlope = (y) => 170 / 350 * Math.cos(y / 350) + 70 / 130 * Math.cos(y / 130 + 1);
 
 /**
  * A rail is a straight chord that follows the piste: x0,y0 to its end, unit direction dx,dy, length len (m), on the
@@ -66,93 +64,81 @@ export function bump(px, py) {
  return h;
 }
 
-// The kickers in course coordinates: lip at s (m), centred at d (m across), launching within halfWidth (m) across and
-// depth (m) past the lip; x, y (m) is the lip's centre in the world (frame: the MapFrame).
-function makeKickers(frame) {
- return Object.freeze(KICK.map((k) => {
-  const p = frame.toWorld(cx(k), k, { x: 0, y: 0 });
-  return Object.freeze({
-   s: k, d: 0, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k), x: p.x, y: p.y,
-  });
- }));
+// m, the chord length of the sampled centreline from y yFirst (m) to the run start, one vertex per whole metre of y.
+function arcToStart(yFirst) {
+ let len = 0;
+ let px = cx(yFirst);
+ let py = yFirst;
+ for (let y = Math.floor(yFirst) + 1; y <= START_Y; y++) {
+  len += Math.hypot(cx(y) - px, y - py);
+  px = cx(y);
+  py = y;
+ }
+ return len;
 }
 
-// A grid rail (RAILS) in the world: x0, y0, x1, y1 its ends (m), dx, dy its unit direction, y0 and y1 now world y.
-function placeRail(r, frame) {
+// The centreline on the grid, flat [u0, v0, ...]: a vertex at every whole metre of y down to the map's end, the first
+// one placed so that the arc length from it to the run start is exactly START_Y. That keeps startS = 60 and every
+// vertex on a kicker's or rail's y, so they sit where they always did. Returns {xy, first}: first is the whole y of
+// the second vertex, minus one (vertex i >= 1 is at y = first + i).
+function sampleCentreline() {
+ let lo = 0;
+ let hi = START_Y;
+ for (let i = 0; i < BISECT_STEPS; i++) {
+  const mid = (lo + hi) / 2;
+  if (arcToStart(mid) > START_Y) lo = mid;
+  else hi = mid;
+ }
+ const yFirst = (lo + hi) / 2;
+ const first = Math.floor(yFirst);
+ const xy = new Float64Array((H0 - first + 1) * 2);
+ xy[0] = cx(yFirst);
+ xy[1] = yFirst;
+ for (let y = first + 1; y <= H0; y++) {
+  xy[2 * (y - first)] = cx(y);
+  xy[2 * (y - first) + 1] = y;
+ }
+ return { xy, first };
+}
+
+// The kickers in course coordinates: lip at s (m) on the centreline (d 0), launching within halfWidth (m across) and
+// depth (m along) past the lip; x, y (m) is the lip's centre in the world. sOfY(y): the s of the vertex at grid y.
+function makeKickers(frame, sOfY) {
+ return KICK.map((k) => {
+  const p = frame.toWorld(cx(k), k, { x: 0, y: 0 });
+  return { s: sOfY(k), d: 0, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k),
+   x: p.x, y: p.y };
+ });
+}
+
+// A grid rail (RAILS) in the world: x0, y0, x1, y1 its ends (m), dx, dy its unit direction, y0 and y1 now world y;
+// s0 to s1 (m along) and d (m across, at its middle) from the base course, which has no rails.
+function placeRail(r, frame, base) {
  const a = frame.toWorld(r.x0, r.y0, { x: 0, y: 0 });
  const b = frame.toWorld(r.x1, r.y1, { x: 0, y: 0 });
  const dir = frame.vecToWorld(r.dx, r.dy, { x: 0, y: 0 });
- return Object.freeze({ ...r, x0: a.x, y0: a.y, x1: b.x, y1: b.y, dx: dir.x, dy: dir.y });
-}
-
-// Writes the unit tangent of the centreline at s (m) on the grid into out.tx, out.ty (down the piste).
-function tangentAt(s, out) {
- const c = cxSlope(s);
- const n = Math.hypot(c, 1);
- out.tx = c / n;
- out.ty = 1 / n;
- return out;
+ const pa = base.project(a.x, a.y, {});
+ const pb = base.project(b.x, b.y, {});
+ return { ...r, x0: a.x, y0: a.y, x1: b.x, y1: b.y, dx: dir.x, dy: dir.y, s0: pa.s, s1: pb.s, d: (pa.d + pb.d) / 2 };
 }
 
 /**
- * The procedural map's Course (core/contracts.js), in world metres. On the grid, s = y and d = x - cx(y) (not arc
- * length and perpendicular distance: C1 swaps those in), so today's numbers are kept exactly. terrain: the world's
- * Terrain, for fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the
- * grid in the world (default: the piste runs south). Frozen and stateless: every query writes into the caller's out.
+ * The procedural map's Course (core/contracts.js), in world metres: a polyline course (world/polyline-course.js) over
+ * the centreline cx(y) sampled at every metre of y, so s is arc length and d the perpendicular distance, with the
+ * park (kickers, rails) and the finish placed where they always were on the map. terrain: the world's Terrain, for
+ * fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the grid in the
+ * world (default: the piste runs south). Frozen and stateless: every query writes into the caller's out.
  */
 export function createProceduralCourse(terrain, frame = DEFAULT_FRAME) {
- const kickers = makeKickers(frame);
- const rails = Object.freeze(RAILS.map((r) => placeRail(r, frame)));
- const at = { u: 0, v: 0 }; // scratch: a world point on the grid
- const vec = { x: 0, y: 0 }; // scratch: a grid vector in the world
- // the unit tangent at grid s, written into out.tx, out.ty in the world
- function worldTangent(s, out) {
-  tangentAt(s, out);
-  frame.vecToWorld(out.tx, out.ty, vec);
-  out.tx = vec.x;
-  out.ty = vec.y;
-  return out;
- }
- function project(x, y, out) {
-  frame.toGrid(x, y, at);
-  out.s = at.v + 0; // + 0 turns a -0 from the frame's rounding into 0 (exact for every other value)
-  out.d = at.u - cx(at.v);
-  return worldTangent(at.v, out);
- }
- function point(s, d, out) {
-  return frame.toWorld(cx(s) + d, s, out);
- }
- function fallLine(x, y, out) {
-  let slope = 0;
-  if (terrain) {
-   terrain.gradient(x, y, out);
-   slope = Math.hypot(out.gx, out.gy);
-  } else {
-   out.gx = 0;
-   out.gy = 0;
-  }
-  if (slope > FLAT_SLOPE) {
-   out.fx = -out.gx / slope;
-   out.fy = -out.gy / slope;
-  } else {
-   frame.toGrid(x, y, at);
-   worldTangent(at.v, out);
-   out.fx = out.tx;
-   out.fy = out.ty;
-  }
-  out.slope = slope;
-  out.heading = Math.atan2(out.fy, out.fx);
-  return out;
- }
- function kickerAt(s, d) {
-  for (const k of kickers) {
-   if (Math.abs(d - k.d) < k.halfWidth && s >= k.s && s < k.s + k.depth) return k;
-  }
-  return null;
- }
- return Object.freeze({
-  length: H0, startS: START_Y, finishS: FIN, kickers, rails,
-  project, point, fallLine, kickerAt, widthAt: () => 2 * PISTE_HALF_WIDTH,
+ const { xy, first } = sampleCentreline();
+ const width = 2 * PISTE_HALF_WIDTH;
+ const base = createPolylineCourse(xy, { frame, width, terrain });
+ const baseS = base.centreline().s;
+ const sOfY = (y) => baseS[y - first]; // m, arc length at the vertex on whole grid y
+ return createPolylineCourse(xy, {
+  frame, width, terrain, startS: START_Y, finishS: sOfY(FIN),
+  kickers: makeKickers(frame, sOfY),
+  rails: RAILS.map((r) => placeRail(r, frame, base)),
  });
 }
 

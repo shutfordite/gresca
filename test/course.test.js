@@ -50,39 +50,64 @@ describe('Course (core/contracts.js)', () => {
  });
 });
 
-describe('the procedural course (on its grid: s = y, d = x - cx(y))', () => {
+describe('the procedural course (a polyline over cx(y): s is arc length, d perpendicular distance)', () => {
  const course = DEFAULT_COURSE;
  // the map's grid (x across, y down the piste) in the world, at the default placement (docs/adr/0005-enu-frame.md)
  const F = DEFAULT_FRAME;
  const world = (x, y) => F.toWorld(x, y, {});
  const grid = (x, y) => F.toGrid(x, y, {});
- it('project and point are exact inverses and give today\'s numbers', () => {
-  const w = world(cx(700) + 5, 700);
-  const p = course.project(w.x, w.y, {});
-  assert.equal(p.s, 700);
-  assert.equal(p.d, cx(700) + 5 - cx(700));
+ const TIGHT = 1e-9; // m: the centreline vertices sit exactly on cx(y) at whole metres of y
+ // m, s of the centreline where it is level with grid y (a whole number)
+ const sOfY = (y) => {
+  const w = world(cx(y), y);
+  return course.project(w.x, w.y, {}).s;
+ };
+ // m, the arc length of cx between y0 and y1, by the trapezoid rule at 0.01 m
+ const arc = (y0, y1) => {
+  let len = 0;
+  for (let y = y0; y < y1; y += 0.01) len += Math.hypot(cx(y + 0.01) - cx(y), 0.01);
+  return len;
+ };
+ it('project and point are exact inverses, and s is arc length and d perpendicular', () => {
+  const w = world(cx(700), 700);
+  const s700 = sOfY(700);
+  assert.ok(Math.abs(s700 - course.startS - arc(60, 700)) < 0.05, 's is arc length from the start');
+  const left = course.point(s700, 5, {});
+  const p = course.project(left.x, left.y, {});
+  // (off the centreline the nearest segment can be a neighbour's: well under a millimetre on a smooth piste)
+  assert.ok(Math.abs(p.s - s700) < 1e-3 && Math.abs(p.d - 5) < 1e-3, JSON.stringify(p));
+  const centre = course.point(s700, 0, {});
+  assert.ok(Math.abs(centre.x - w.x) < TIGHT && Math.abs(centre.y - w.y) < TIGHT);
   const t = F.vecToGrid(p.tx, p.ty, {}); // the tangent on the grid
   assert.ok(Math.abs(Math.hypot(p.tx, p.ty) - 1) < 1e-12 && t.v > 0, 'unit tangent, down the piste');
-  // the tangent follows the centreline: a step along it stays on the centreline to first order
-  const q = course.point(700 + t.v, 0, {});
-  assert.ok(Math.abs(grid(q.x, q.y).u - (cx(700) + t.u)) < 1e-3);
-  assert.deepEqual(course.point(60, 0, {}), world(cx(60), 60));
-  assert.equal(course.finishS, FIN);
+  // positive d is the rider's left facing down the piste: +x on the procedural map
+  assert.ok(grid(left.x, left.y).u > cx(700) - 1, 'left is across, towards +x');
+  const q = course.point(s700 + 1, 0, {});
+  assert.ok(Math.abs(Math.hypot(q.x - centre.x, q.y - centre.y) - 1) < 1e-3, 'one metre of s is one metre of piste');
+ });
+
+ it('the start and the finish are where they were (60 and FIN on the grid)', () => {
   assert.equal(course.startS, 60);
-  assert.ok(course.length >= FIN && course.widthAt(700) > 0);
+  const a = grid(...Object.values(course.point(course.startS, 0, {})));
+  assert.ok(Math.abs(a.u - cx(60)) < TIGHT && Math.abs(a.v - 60) < TIGHT);
+  const b = grid(...Object.values(course.point(course.finishS, 0, {})));
+  assert.ok(Math.abs(b.u - cx(FIN)) < TIGHT && Math.abs(b.v - FIN) < TIGHT);
+  assert.ok(course.length > course.finishS && course.widthAt(700) > 0);
  });
 
  it('kickers and rails are the park, in s and d', () => {
-  assert.deepEqual(course.kickers.map((k) => k.s), [...KICK]);
-  assert.deepEqual(course.kickers.filter((k) => k.big).map((k) => k.s), [...KBIG]);
+  assert.deepEqual(course.kickers.map((k) => k.s), KICK.map(sOfY));
+  assert.deepEqual(course.kickers.filter((k) => k.big).map((k) => grid(k.x, k.y).v), [...KBIG]);
+  assert.deepEqual(course.kickers.map((k) => grid(k.x, k.y).v), [...KICK]);
   assert.equal(course.rails.length, RAILS.length);
   course.rails.forEach((r, i) => {
    const R = RAILS[i]; // the rail as authored on the grid
    assert.deepEqual([grid(r.x0, r.y0), grid(r.x1, r.y1)], [{ u: R.x0, v: R.y0 }, { u: R.x1, v: R.y1 }]);
    assert.deepEqual(F.vecToGrid(r.dx, r.dy, {}), { u: R.dx, v: R.dy });
-   assert.equal(r.s0, R.y0);
-   assert.equal(r.s1, R.y1);
-   assert.equal(r.d, R.x0 - cx(R.y0) > 0 ? 9 : -9);
+   assert.ok(r.s0 < r.s1 && Math.abs(r.s0 - sOfY(R.y0)) < 7 && Math.abs(r.s1 - sOfY(R.y1)) < 7, 'along the rail');
+   // 9 m off the centreline across the grid is 6 to 9 m across the piste (the piste leans up to 45 degrees), on the same side
+   assert.equal(Math.sign(r.d), R.x0 - cx(R.y0) > 0 ? 1 : -1);
+   assert.ok(Math.abs(r.d) > 6 && Math.abs(r.d) <= 9, 'd ' + r.d);
   });
   assert.ok(Object.isFrozen(course.rails) && Object.isFrozen(course.rails[0]));
  });
@@ -94,7 +119,13 @@ describe('the procedural course (on its grid: s = y, d = x - cx(y))', () => {
   assert.equal(course.kickerAt(k.s + 5, 0), null);
   assert.equal(course.kickerAt(k.s - 0.01, 0), null);
   assert.equal(course.kickerAt(k.s, -9), null);
-  assert.equal(course.kickerAt(600, 0), null, 'no kicker in the practice stretch');
+  assert.equal(course.kickerAt(sOfY(600), 0), null, 'no kicker in the practice stretch');
+ });
+
+ it('the practice stretch (grid y 460 to 740) has no kicker zone and no rail', () => {
+  const [from, to] = [sOfY(460), sOfY(740)];
+  for (const k of course.kickers) assert.ok(k.s + k.depth < from || k.s > to, 'kicker at s ' + k.s);
+  for (const r of course.rails) assert.ok(r.s1 < from || r.s0 > to, 'rail at s ' + r.s0);
  });
 
  it('fallLine: straight down a plane, its heading, and the tangent on flat ground', () => {
@@ -159,12 +190,16 @@ describe('the course through the façade (Gresca.world.course)', async () => {
  it('reports the course the game rides, in copies, and it agrees with the procedural map', () => {
   // in world metres, through the map frame (the façade itself, g.raw): exact at any placement
   const R = g.raw.world, C = R.course, F = R.frame;
-  assert.equal(C.finishS, FIN);
-  assert.deepEqual(C.point(700, 0), F.toWorld(cx(700), 700));
-  const o = C.project(F.originX, F.originY); // grid (0, 0): on the grid, s = y and d = x - cx(y)
-  assert.deepEqual([o.s, o.d], [0, 0 - cx(0)]);
-  assert.deepEqual(C.kickers.map((k) => k.s), [...KICK]);
-  assert.equal(C.kickerAt(KICK[0] + 1, 0).s, KICK[0]);
+  const fin = C.point(C.finishS, 0);
+  assert.ok(Math.abs(fin.x - F.toWorld(cx(FIN), FIN).x) < 1e-9 && Math.abs(fin.y - F.toWorld(cx(FIN), FIN).y) < 1e-9);
+  const w700 = F.toWorld(cx(700), 700);
+  const at700 = C.point(C.project(w700.x, w700.y).s, 0);
+  assert.ok(Math.abs(at700.x - w700.x) < 1e-9 && Math.abs(at700.y - w700.y) < 1e-9, 'the centreline at grid y 700');
+  const o = C.project(F.originX, F.originY); // grid (0, 0): level with the top, 400 m or so to the left of the piste
+  assert.ok(o.d < -300 && o.d > -600 && o.s < C.startS, JSON.stringify(o));
+  const lips = C.kickers.map((k) => F.toGrid(k.x, k.y).v);
+  lips.forEach((v, i) => assert.ok(Math.abs(v - KICK[i]) < 1e-9, 'lip ' + i + ' at grid y ' + v)); // rotated: rounding
+  assert.equal(C.kickerAt(C.kickers[0].s + 1, 0).s, C.kickers[0].s);
   assert.ok(Object.isFrozen(C));
   g.place({ y: 700, vy: 10, heading: 0.3 });
   g.sim(SIM_DT);
