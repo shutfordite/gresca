@@ -57,7 +57,7 @@ export function updateCamera(view, scene, dt, alpha) {
   view.lo.width = RW;
   view.lo.height = RH;
  }
- view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt);
+ view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt, scene.input.lookBack);
  if (view.timer !== null) view.timer.lap(STAGE.CAMERA);
 }
 
