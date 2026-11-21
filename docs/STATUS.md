@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 21 Nov 2026, main after PR #25.
+Updated 21 Nov 2026, main after PR #26.
 
 ## Done
 | Package | PR |
@@ -22,17 +22,21 @@ Updated 21 Nov 2026, main after PR #25.
 | P1 docs: code map and stream ownership in `AGENTS.md`, per-folder `AGENTS.md` in `src/sim`, `src/view`, `art` | #23 |
 | B2b state contracts (InputState, RiderState, SimEvent), `step() -> events` on a bus, input recording, façade per area | #24 |
 | B2c world seams: the `Course` interface (ADR 0004), `RiderState.fallLine`/`downhillSide`, `AnimInput`, the course seam lint, the golden trace | #25 |
+| C2 one world frame (ENU, ADR 0005): `MapFrame`, headings counter-clockwise from east, `npm run test:rotated` in CI, `test/map-view.js`. Ends the freeze | #26 |
 
-## Open PRs
-- **C2 one world frame (ENU)** (`refactor/c2-enu-frame`, the last freeze package): everything in east-north-up
-  metres, headings counter-clockwise from east (ADR 0005); a `MapFrame` places the procedural grid (default: the
-  piste runs south, bit for bit as before, golden hash unchanged); the run start, camera start, carve limit, ramp
-  flags and `keepOnMap` come from the frame; `npm run test:rotated` (in CI) runs the whole suite at 37°;
-  `test/map-view.js` lets tests stay on the map's grid.
+## In progress (phase 2, started 21 Nov; parallel, different files)
+- **P4 Look interface** (`design/p4-look`): `src/view/look/`, the Hanga look as the only reader of `HANGA`, a lint
+  against hex and `HANGA.` outside it, `lab.html` look lab. No pixel change.
+- **P5 scenes, traces, screenshots** (`tooling/p5-scenes`): `Gresca.scene()` and `?scene=`, `RiderState` traces in
+  `test/fixtures/traces/`, `npm run shot` with Playwright (ADR 0003), per-area test scripts.
+- **C3a map compiler, terrain half** (`maps/c3a-compiler`): `tools/map-compiler/`, the `gresca-map-1` terrain file
+  (ADR 0006), its validator. No `src/` changes.
+P4 and P5 may both touch `src/app.js` and `src/main.js` lightly: the second to merge merges `origin/main`.
+These PRs don't edit this file; the coordinator updates it as each one merges.
 
 ## Next, in order
-1. Phase 2 once C2 is merged (P4 Look interface, P5 scenes and screenshots with Playwright under ADR 0003, C3a map
-   compiler) and the five streams. All are in `docs/ROADMAP.md`.
+1. Phase 3, the five streams, once P4 and P5 are merged (S5 can start C1 as soon as C3a is in). All are in
+   `docs/ROADMAP.md`.
 
 ## Known issues (not yet fixed)
 - **Camera flips at low speed** when the board is across the slope and slides tail-first: the camera follows the
