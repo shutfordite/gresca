@@ -1,7 +1,7 @@
 # ADR 0008: a GPU terrain renderer with three.js, vendored
 
-Date: 21 Nov 2026. Status: proposed (experimental, E0). It becomes accepted when the owner accepts E0 on the iPad;
-until then the CPU renderer stays the default and `?renderer=gl` is a test.
+Date: 21 Nov 2026. Status: accepted (owner, 21 Nov 2026: 50 to 60 fps on the iPad, "a big improvement"). Until E1
+makes it the default, the CPU renderer stays the default and `?renderer=gl` turns the GPU renderer on.
 
 ## Context
 The terrain is drawn by a CPU voxel raycaster (`src/view/draw.js`): at most 360 columns, scaled up to the screen
