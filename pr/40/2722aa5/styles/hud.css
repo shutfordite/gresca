@@ -1,0 +1,10 @@
+/* The in-game HUD: score and speed, trick popup, minimap, glove hints. */
+.hud{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:14px;font-size:13px;line-height:1.2;text-shadow:0 1px 4px var(--halo);pointer-events:none}
+.hud b{display:block;font-size:26px;letter-spacing:.5px}
+#pop{position:absolute;left:60%;top:56%;font-weight:700;font-size:20px;color:var(--light);text-shadow:0 1px 5px var(--halo-strong);opacity:0;pointer-events:none}
+#mini{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px;width:42px;height:103px;border-radius:6px;border:2px solid var(--mini-edge);overflow:hidden;opacity:.8;pointer-events:none}
+#mini canvas{width:100%;height:100%;display:block}
+#dot{position:absolute;width:6px;height:6px;margin:-3px;border-radius:50%;background:var(--acc);border:1px solid var(--light)}
+.glove{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:18px;width:46px;height:54px;color:var(--light);opacity:.3;pointer-events:none;transition:opacity .08s}
+.glove.r{left:auto;right:18px;transform:scaleX(-1)}
+.glove.on{opacity:.85}
