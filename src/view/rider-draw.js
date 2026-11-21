@@ -1,14 +1,14 @@
-// The Hanga Dawn rider: draws the list HANGA.projectRider makes (via RiderAnim.project) onto a 2D context.
+// The rider: draws the list the Look's rider.project makes (look/look.js) onto a 2D context.
 
 /**
  * Draws the rider's draw list (in metres with +y up) on c, scaled by m px per metre. Each item is outlined in the key
- * colour, then filled (spec section 3: keyline 0.012 m, never under 1 px). The shadow ellipse is skipped: the caller
- * draws it on the ground.
+ * colour, then filled (the Look's rider.keylineM, never under 1 px). The shadow ellipse is skipped: the caller
+ * draws it on the ground. look: the Look, for the colour roles.
  */
-export function drawRider(c, hanga, m, list) {
- const K = hanga.colour('key');
- const kl = Math.max(1, hanga.rider.widths.keyline * m);
- const col = (r) => hanga.colour(r);
+export function drawRider(c, look, m, list) {
+ const K = look.colour('key');
+ const kl = Math.max(1, look.rider.keylineM * m);
+ const col = look.colour;
  const path = (pts) => {
   c.beginPath();
   c.moveTo(pts[0][0] * m, -pts[0][1] * m);

@@ -62,8 +62,12 @@ test('every <script src> exists', () => {
   for (const s of srcs) assert.ok(fs.existsSync(path.join(ROOT, s)), `${s} is missing`);
 });
 
-test('every module in src/ is reached from src/main.js through static imports, and every import exists', () => {
-  const seen = new Set(), todo = [ENTRY];
+// The look lab (lab.html, P4) is a second page: its one module script imports src/view/look/lab.js, the lab's root.
+const LAB_ROOTS = ['src/view/look/lab.js'];
+
+test('every module in src/ is reached from src/main.js (or, for the look lab, from lab.html\'s module) through ' +
+  'static imports, and every import exists', () => {
+  const seen = new Set(), todo = [ENTRY, ...LAB_ROOTS];
   while (todo.length) {
     const f = todo.pop();
     if (seen.has(f)) continue;
@@ -78,6 +82,17 @@ test('every module in src/ is reached from src/main.js through static imports, a
     }
   }
   assert.deepEqual([...seen].sort(), listJs('src'), 'a file in src/ that main.js does not reach is an orphan');
+  const fromMain = new Set(), walk = [ENTRY];
+  while (walk.length) {
+    const f = walk.pop();
+    if (fromMain.has(f)) continue;
+    fromMain.add(f);
+    for (const spec of staticImports(fs.readFileSync(path.join(ROOT, f), 'utf8')))
+      walk.push(path.posix.normalize(path.posix.join(path.posix.dirname(f), spec)));
+  }
+  for (const f of LAB_ROOTS) assert.ok(!fromMain.has(f), `${f} is the lab's root: the game must not load it`);
+  const orphans = listJs('src').filter((f) => !fromMain.has(f) && !LAB_ROOTS.includes(f));
+  assert.deepEqual(orphans, [], 'only the lab root may be outside what main.js reaches');
 });
 
 test('the import scanner finds static imports and re-exports', () => {

@@ -23,7 +23,8 @@ definitions: `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3. 
 - `index.html` is only HTML: its CSS is in `styles/*.css`, linked with `<link rel="stylesheet">` (no inline
   `<style>`). It loads `art/*.js` as classic `<script src>` tags, then the game as one ES
   module, `<script type="module" src="src/main.js">`. Every other file in `src/` is reached from `main.js` through
-  static imports (`test/page.test.js` checks there are no orphans).
+  static imports (`test/page.test.js` checks there are no orphans), except `src/view/look/lab.js`, which only the
+  look lab `lab.html` loads (a dev page: its own small inline style and module entry; `test/lab.test.js`).
 - `src/` is laid out by layer: `core/` (tunables, RNG, contracts, event bus), `world/` (terrain, course, build),
   `sim/` (rider state, step, jump, grind, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites,
   rider, sky, ski tracks), `ui/` (HUD, menu), `app.js` (`createGame(env)`: state objects, wiring, loop), `debug.js`
@@ -65,13 +66,15 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
 | Ski tracks | `src/view/ski-tracks.js` | `features`, `games` |
-| Snow, rock, park colours (until D2) | `src/view/colour-map.js` | `features`, `build` |
+| Every colour, terrain tone, sky and fog value, sprite colour, camera framing value, CSS token, rider projection (the Look) | `src/view/look/look.js` (interface), `src/view/look/hanga.js` (from the spec; the only reader of `HANGA`'s fields) | `look-contract`, `look-lint`, `look` |
+| The look lab (every pose, yaw, pitch, tone, sprite and role) | `lab.html`, `src/view/look/lab.js` | `lab` |
+| Where snow, rock and park colours are painted (until D2) | `src/view/colour-map.js` (colours from the Look) | `features`, `build` |
 | Sky, sun, fog | `src/view/sky.js` | `look` |
 | Flags, poles, rails on screen | `src/view/sprites.js` | `park` |
 | Rider pose and body motion | `art/gresca-rider-anim.js`, `src/view/rider-animation.js` | `rider-anim` |
 | Drawing the rider | `src/view/rider-draw.js` | `rider-anim` |
 | Rider shapes, poses, palette (spec) | `art/gresca-hanga-spec.js` (new version only) | `hanga-v14` |
-| HUD, popup, minimap | `src/ui/hud.js`, `styles/hud.css` | `facade`, `features`, `events` |
+| HUD, popup, minimap | `src/ui/hud.js`, `styles/hud.css` (colours: `var(--…)` from the Look's `ui`) | `facade`, `features`, `events`, `look-lint` |
 | Menu, rig and stance picker, finish screen | `src/ui/menu.js`, `styles/menu.css`, `index.html` | `park`, `page`, `events` |
 | State wiring, boot, frame loop | `src/app.js` | `games`, `facade`, `timestep` |
 | What tests can read and set | each area's `fields.js` (`sim/`, `view/`, `ui/`, `input/`, `world/`); `src/debug.js` composes them | `facade` |
@@ -99,7 +102,7 @@ else (a contract in `src/core/`, `app.js`, `debug.js`, `index.html`) is its own 
 | S1 controls and UI | `src/input/`, `src/ui/`, `styles/` |
 | S2 sim feel | `src/sim/` |
 | S3 rider animation | `art/gresca-rider-anim.js`, the rider files in `src/view/` |
-| S4 look, camera, render | `src/view/` except the rider files, `art/gresca-hanga-spec.js` versions |
+| S4 look, camera, render | `src/view/` (with `src/view/look/`) except the rider files, `art/gresca-hanga-spec.js` versions |
 | S5 maps | `src/world/`, `tools/`, `maps/` |
 | Shared (coordinator) | `src/core/`, `src/app.js`, `src/debug.js`, `src/main.js`, `index.html`, `docs/`, `test/harness.js` |
 
@@ -118,7 +121,8 @@ Until then (the freeze, `docs/STATUS.md`), one code PR runs at a time and may to
   array outside the procedural map.
 - No `Math.random()` or wall-clock time in the simulation. Use the seeded RNG.
 - No per-frame allocations in hot loops. Anything map-sized needs a stated memory budget in the PR.
-- Colours come from palette roles and values from `HANGA`, never copied numbers.
+- Colours come from the Look (`src/view/look/`, ADR 0007), never copied numbers: no hex or `rgb()` literal and no
+  `HANGA` outside `src/view/look/`, and CSS uses `var(--…)` tokens (`test/look-lint.test.js`).
 
 ## Style and design
 Before writing or substantially changing code, read `docs/STYLE.md` (SOLID applied to a small game, readability,

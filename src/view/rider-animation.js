@@ -1,4 +1,4 @@
-// Rider animation glue: game state in, RiderAnim (art/gresca-rider-anim.js) on top of the Hanga spec out.
+// Rider animation glue: game state in, RiderAnim (art/gresca-rider-anim.js) steps it, the Look's rider projects it.
 import { animInput } from '../sim/anim-input.js';
 
 const AIRBORNE_Z = 0.05;    // m above the snow, higher counts as in the air
@@ -11,7 +11,7 @@ const wrap = (d) => Math.atan2(Math.sin(d), Math.cos(d));
 // RiderAnim's input: the sim's AnimInput (sim/anim-input.js) plus what the view measures once per drawn frame at the
 // drawn pose (ground motion under the feet, path turn rate, slope, landing). Updates view.animPrev, view.riderYaw.
 function riderAnimInput(view, game, dt) {
- const { rider, session, course, camera, terrain, hanga } = game;
+ const { rider, session, course, camera, terrain, look } = game;
  const a = animInput(rider, session, course, view.animIn);
  const x = view.drawn.x; // the drawn rider pose (interpolated), not the simulation's
  const y = view.drawn.y;
@@ -47,13 +47,14 @@ function riderAnimInput(view, game, dt) {
  return {
   wiped: a.wiped, grinding: a.grinding, airborne: air, braking: a.braking, landed,
   impact: a.impact, speed: s, pathTurn: turn, riderSide: a.riderSide, approach: !air && a.approach,
-  feetAccelUp: ga, slopeDeg: terrain.slopeDeg(x, y), meanSlopeDeg: hanga.maps.procedural.meanSlopeDeg,
+  feetAccelUp: ga, slopeDeg: terrain.slopeDeg(x, y), meanSlopeDeg: look.rider.meanSlopeDeg,
  };
 }
 
 /**
  * Advances the rider animation dt (s) from the pose in view.drawn and returns its draw list (also kept in
- * view.riderList). game: {rider, session, course, camera, terrain, hanga, riderAnim}. Mutates view's animation state.
+ * view.riderList). game: {rider, session, course, camera, terrain, look, riderAnim}: riderAnim steps the animation,
+ * look.rider.project draws it. Mutates view's animation state.
  */
 export function animTick(view, game, dt) {
  const r = game.session.rig === 'ski' ? 'ski' : 'board';
@@ -62,6 +63,9 @@ export function animTick(view, game, dt) {
   view.animPrev = null;
  }
  game.riderAnim.update(view.anim, riderAnimInput(view, game, dt), dt);
- view.riderList = game.riderAnim.project(view.anim, view.riderYaw, null, game.session.stance);
+ const seen = view.riderView;
+ seen.yawDeg = view.riderYaw;
+ seen.stance = game.session.stance;
+ view.riderList = game.look.rider.project(r, view.anim, seen);
  return view.riderList;
 }
