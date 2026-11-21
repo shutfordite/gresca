@@ -67,15 +67,15 @@ with layers from the start, even if the procedural map has only one layer.
 
 ### R3. The baker is an offline, deterministic "map compiler" with pluggable sources *(changes C3)*
 - Node 22 script, run by the owner (the agents' sandbox can't reach tile or OSM hosts). Raw downloads cached in
-  `.cache/` (git-ignored) so re-runs are offline and reproducible; the output records source URLs, dates and hashes.
+  `.map-cache/` (git-ignored) so re-runs are offline and reproducible; the output records source URLs, dates and hashes.
 - **DEM adapters**: Terrarium tiles (AWS or Mapterhorn) and local GeoTIFF/ASC (for IGN/ICGC national data). Start
   with Mapterhorn-or-AWS Terrarium, since it's the existing decoder.
 - **Piste adapters**: OpenSkiMap GeoJSON first, Overpass as a fallback.
 - Converts everything to a **local ENU frame** around the map origin at bake time (WGS84 → local tangent plane), so
   the game never sees Mercator pixels or lat/lon.
 - Computes what the art spec needs: `meanSlopeDeg` of the chosen run, horizon profile, sun, tree set and treeline.
-- Store heights compactly: int16 decimetres, base64 (as today) or an embedded Terrarium PNG, tiled so C4 can decode
-  only what it needs. Budget: one map file under ~2 MB.
+- Store heights compactly: one block of Uint16 decimetres above a base height, base64 (C3a, ADR 0006; int16 absolute
+  decimetres overflow above 3276 m). Budget: one map file under ~2 MB (a 4 × 4 km map at 10 m is 430 KB), so no tiles.
 
 ### R4. Course geometry pipeline *(adds to C1)*
 `Course.fromRun(ways)`: join the ways into one chain in downhill order → resample at 1–2 m → smooth (e.g. a

@@ -78,6 +78,11 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Named scenes (`Gresca.scene(name)`, `?scene=<name>`): fixed paused states for screenshots | `src/scenes.js` (data), `src/debug.js` | `scenes` |
 | Recorded RiderState traces (`node tools/record-trace.mjs` rewrites them) | `tools/record-trace.mjs`, `test/fixtures/traces/`, loader `test/traces.js` | `traces` |
 | Screenshots of every scene, board and skis, 820x1180 (`npm run shot` -> `shots/`; Playwright is dev-only, ADR 0003) | `tools/shot.mjs`, `.github/workflows/test.yml` | none (CI `shots` job on `src/view/`, `art/`, `styles/` PRs) |
+| The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `tools/map-compiler/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
+| Map compiler: lat/lon to ENU, resampling, piste clipping, the file | `tools/map-compiler/core.js` (pure) | `map-compiler` |
+| DEM and piste sources (Terrarium PNG tiles; OpenSkiMap, Overpass) | `tools/map-compiler/sources/` | `map-compiler` |
+| Map validator (pure; the game reuses it in C4) | `tools/map-compiler/validate.js` | `map-validate` |
+| Baking a map: download cache, `--fetch` (run by the owner) | `tools/map-compiler/cli.mjs`, `maps/sources/<id>.json` | `map-compiler` |
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
 
 Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.
