@@ -1,6 +1,7 @@
 // The golden trace (tools/golden-trace.mjs): three fixed-seed, fixed-dt rides through the park, per step, bitwise.
 // The hash was recorded on main before B2c moved the game onto the Course interface; a refactor must not change it.
-// A deliberate feel change updates GOLDEN_HASH in the same PR and says so (last: F5, the brake, from step 1001 of each ride).
+// A deliberate feel change updates GOLDEN_HASH in the same PR and says so (last: F5-cam, the camera follows travel; only
+// the rider's on-screen yaw and sprite visibility changed, the rider, HUD and events are identical).
 // The same rides with the map rotated (docs/adr/0005-enu-frame.md) must match it step for step, within ROTATED_TOL:
 // not bit for bit, because turning every position, velocity and gradient through cos and sin of an angle that is not a
 // multiple of 90 degrees rounds in the last bits, and those differences carry along the ride.
@@ -9,7 +10,7 @@ import assert from 'node:assert/strict';
 import { goldenTrace } from '../tools/golden-trace.mjs';
 import { MAP_ROTATION_DEG } from './harness.js';
 
-const GOLDEN_HASH = 'b647584c17d846d62efb3ebf4652a71af0936ba5808cce73fcca783dd9c71e1a';
+const GOLDEN_HASH = 'df0f77f777ec7bd5f1fc9053509f673fdce750ec55dd961c2f171299be8bdd60';
 const ROTATED_DEG = MAP_ROTATION_DEG || 37; // deg, the placement the rotated rides use (npm run test:rotated sets it)
 const ROTATED_TOL = 1e-9; // m, m/s, rad, points, px: the most any number in the rotated trace may differ
 
