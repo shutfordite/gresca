@@ -11,6 +11,18 @@ export const FOG_LUT_SIZE = 64;       // samples of the Look's fog curve from 0 
 const DEFAULT_SUN_ELEVATION_DEG = 20; // deg, for a Look without sky.sun.elevationDeg (optional field)
 const DEG = Math.PI / 180;
 
+/** GLSL: uFar, uFogLut and fogAmount(d), the Look's fog (0..1) at d m from the camera. Shared with the track ribbon. */
+export const FOG_GLSL = `
+uniform float uFar;        // m, where the fog curve ends and the terrain stops (RAY_FAR)
+uniform float uFogLut[${FOG_LUT_SIZE}];
+float fogAmount(float d) {
+ float x = clamp(d / uFar, 0.0, 1.0) * float(${FOG_LUT_SIZE - 1});
+ int i = int(floor(x));
+ int j = min(i + 1, ${FOG_LUT_SIZE - 1});
+ return mix(uFogLut[i], uFogLut[j], x - float(i));
+}
+`;
+
 // Shader tunables (GLSL constants). Slopes are m/m added to the terrain's; distances m from the camera.
 const TUNE = `
 const float LIT_FROM = -0.08;       // sun cosine where snow starts to catch the sun (lit 0)
@@ -92,7 +104,7 @@ in vec2 vGrid;
 in float vDist;
 in vec3 vToCam;
 uniform sampler2D uSlope;  // RG16F: dh/du, dh/dv (m/m)
-uniform sampler2D uAux;    // RGBA8: relief, groomed, ski track (terrain-bake.js bakeAux)
+uniform sampler2D uAux;    // RGBA8: relief, groomed (terrain-bake.js bakeAux)
 uniform sampler2D uPaint;  // RGBA8: the colour map as built (painted features) and the feature weight (bakePaint)
 uniform sampler2D uPiste;  // R16F: the piste's across coordinate (m) every uPisteStep m
 uniform sampler2D uDetail; // RGBA8: ripple slope, grain, sparkle seed (detail-texture.js), tiling
@@ -109,16 +121,8 @@ uniform vec3 uRock;
 uniform vec3 uSunTint;     // the sun's colour over its brightest channel
 uniform vec3 uFog;
 uniform float uCorduroy;   // the Look's corduroy brightness swing
-uniform float uFar;        // m, where the fog curve ends and the terrain stops (RAY_FAR)
-uniform float uFogLut[${FOG_LUT_SIZE}];
+${FOG_GLSL}
 out vec4 outColour;
-
-float fogAmount(float d) {
- float x = clamp(d / uFar, 0.0, 1.0) * float(${FOG_LUT_SIZE - 1});
- int i = int(floor(x));
- int j = min(i + 1, ${FOG_LUT_SIZE - 1});
- return mix(uFogLut[i], uFogLut[j], x - float(i));
-}
 
 // Texture coordinates for a crisp lookup of a 1 m texture: bilinear only within a pixel of each texel edge, so a
 // painted feature keeps a sharp edge however close it is, and far away (texels under a pixel) it is plain bilinear.
@@ -144,7 +148,6 @@ void main() {
  vec4 aux = texture(uAux, tc);
  float relief = (aux.r * 255.0 - 128.0) * uReliefPerByte;
  float groomed = aux.g;
- float track = aux.b;
  float steep = length(g);
 
  float near = 1.0 - smoothstep(DETAIL_NEAR_M, DETAIL_FAR_M, vDist);
@@ -188,7 +191,6 @@ void main() {
 
  vec4 paint = texture(uPaint, crispUv(vGrid));
  c = mix(c, paint.rgb * mix(0.82, 1.06, lit), smoothstep(FEATURE_FROM, FEATURE_TO, paint.a));
- c *= vec3(track, min(1.0, track + 0.02), min(1.0, track + 0.07));
 
  c = mix(c, uFog, fogAmount(vDist));
  c += (hash12(gl_FragCoord.xy) - 0.5) / 255.0; // dither: no banding in the long gradients

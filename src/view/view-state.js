@@ -4,6 +4,7 @@ import { W0, H0 } from '../world/course.js';
 import { createAnimInput } from '../sim/anim-input.js';
 import { createProjection } from './sprites.js';
 import { cssRgb } from './look/look.js';
+import { createTrail } from './track-trail.js';
 
 const MAX_RENDER_COLUMNS = 400; // the occlusion buffer has room for this many render columns (draw.js uses <= 360)
 export const TREE_SLICES = 48;  // depth slices the trees are counted into before they are sorted exactly (draw.js)
@@ -47,7 +48,8 @@ export const GL_STAGE = Object.freeze({
  * what the last frame drew, the buffers a frame reuses (loImage, the low-res render's pixels; rayZ and rayFog, the
  * terrain samples' distances and fog; trees, the visible trees; treePos, all trees' x and y; treeStyles; projA, projB, projG and sun, scratch)
  * and timer (null, or {lap(stage)} from a profiler: draw.js calls timer.lap(STAGE.x) as
- * each stage finishes; one branch when it is null). look: the Look (view/look/look.js).
+ * each stage finishes; one branch when it is null), trail (the equipment's track ring, track-trail.js). look: the
+ * Look (view/look/look.js).
  */
 export function createView(doc, look) {
  const map = doc.createElement('canvas');
@@ -92,6 +94,7 @@ export function createView(doc, look) {
   projA: createProjection(), projB: createProjection(), projG: createProjection(), // scratch (sprites.js)
   sun: { X: 0, Y: 0, r: 0, on: false }, // scratch: the sun disc (sky.js)
   trackRows: { v0: 0, v1: -1 }, // colour map rows (grid v) the ski tracks changed since the GPU terrain last read them
+  trail: createTrail(), // the equipment's track (track-trail.js), drawn as a ribbon by the GPU terrain
   renderer: { name: 'cpu', fallback: null }, // which terrain renderer draws, and why the GPU one did not (renderer.js)
   timer: null,
  };

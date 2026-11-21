@@ -5,8 +5,9 @@ import { createGlTerrain } from './gl/gl-renderer.js';
 import { guardContext } from './gl/context-loss.js';
 import { fillHorizon, horizonSamples } from './gl/horizon.js';
 
-// The GL canvas's context: no alpha (the 2D canvas over it carries the sprites), no MSAA (2x device pixels instead).
-const GL_ATTRIBUTES = Object.freeze({ alpha: false, antialias: false, depth: true, stencil: false,
+// The GL canvas's context: no alpha (the 2D canvas over it carries the sprites), no MSAA (2x device pixels instead),
+// a stencil (the ski track darkens each pixel once).
+const GL_ATTRIBUTES = Object.freeze({ alpha: false, antialias: false, depth: true, stencil: true,
  powerPreference: 'high-performance' });
 
 // Puts the GL canvas under the screen canvas, filling the same box (the screen canvas is drawn over it).
