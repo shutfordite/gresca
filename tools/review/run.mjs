@@ -63,7 +63,10 @@ export function buildReport(base) {
  ];
  const pr = pullRequest();
  const template = read('.github/pull_request_template.md') || '';
- if (pr) sections.push(['Title and template', templateChecks(pr.title, pr.body, template, changed)]);
+ if (pr) {
+  const found = templateChecks(pr.title, pr.body, template, changed);
+  sections.push(['Title and template', found.length ? found : [[INFO, 'title and every template section filled in']]]);
+ }
  const packageJson = read('package.json');
  sections.push(['Docs and style', docsAndStyleChecks({ added, changed, diffFiles, read, packageJson })]);
  const smoke = arg('smoke');
