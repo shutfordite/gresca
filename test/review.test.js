@@ -24,6 +24,7 @@ test('asserts and skips are counted, commented-out ones are not', () => {
  const src = "assert.equal(a, 1);\nassert(b);\n// assert.ok(c);\ntest.skip('x', () => {});\nit('y', { skip: true });";
  assert.deepEqual(countAsserts(src), { asserts: 2, skips: 2 });
  assert.deepEqual(countAsserts("it('y', { skip: false });"), { asserts: 0, skips: 0 });
+ assert.deepEqual(countAsserts('const fixture = "test.skip(1); assert(2)";'), { asserts: 0, skips: 0 });
 });
 
 test('the diff parser keeps line numbers on each side', () => {
@@ -162,7 +163,8 @@ test('the smoke findings tell new problems from ones also on main', () => {
 });
 
 test('the report leads with the worst finding and lists moved assert counts', () => {
- const md = renderReport([['A', [[INFO, 'fine'], [FAIL, 'broken']]], ['B', []]], [['test/a.test.js', 2, 1]], '<!-- m -->');
+ const sections = [['A', [[INFO, 'fine'], [FAIL, 'broken']]], ['B', []]];
+ const md = renderReport(sections, [['test/a.test.js', 2, 1]], '<!-- m -->');
  const lines = md.split('\n');
  assert.equal(lines[0], '<!-- m -->');
  assert.match(lines[1], /❌ 1 to explain/);

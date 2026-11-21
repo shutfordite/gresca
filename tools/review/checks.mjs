@@ -51,9 +51,9 @@ export function ownerOf(file) {
  return hit ? hit[1] : null;
 }
 
-/** Number of assert calls and of skip/todo markers in a test file's source. */
+/** Number of assert calls and of skip/todo markers in a test file's source (not in comments or quoted strings). */
 export function countAsserts(src) {
- const code = src.replace(/^\s*\/\/.*$/gm, '');
+ const code = src.replace(/^\s*\/\/.*$/gm, '').replace(/'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g, "''");
  return { asserts: (code.match(ASSERT_RE) || []).length, skips: (code.match(SKIP_RE) || []).length };
 }
 
