@@ -56,8 +56,8 @@ export function camCompass(camera) {
 
 // cam.slope is the slope ahead (metres dropped per metre). The camera height still follows it, but the view tilt
 // (pitchPx = focalPx * tilt) follows it only partly, from cameraTilt below.
-// Partial slope follow (the Look's camera framing: spec camera.slopeFollow). The game's view is "full tilt": its look-down
-// grows by atan(s). The spec's rule is applied as a change to that: aim at the ground lookAheadM ahead of the rider
+// Partial slope follow (the Look's camera framing, spec camera.slopeFollow). The game's view is "full tilt": its
+// look-down grows by atan(s). The spec's rule is applied as a change to that: aim at the ground lookAheadM ahead of the rider
 // from a camera rel metres above them, and look down by (fullPitch - partialPitch) less. Level ground: no change.
 /**
  * The view tilt (tan). s: full-tilt slope (tan); rel: m, camera height above the rider's ground; drop: m, how far the

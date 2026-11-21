@@ -63,7 +63,7 @@ const SPRITES = Object.freeze({
  tree: ['colour'], flag: ['kicker', 'bigKicker'], pole: ['colour'], rail: ['colour'], box: ['colour'], spray: [],
 });
 // #rgb, #rrggbb, or rgb()/rgba() with numbers: the colour forms the game's canvas and CSS code uses.
-const COLOUR_RE = /^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\))$/;
+const COLOUR_RE = /^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgba?\((?:\s*[\d.]+\s*,){2}\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\))$/;
 
 /** True if s is a CSS colour in one of the forms the game uses (#rgb, #rrggbb, rgb(), rgba()). */
 export const isColour = (s) => typeof s === 'string' && COLOUR_RE.test(s);

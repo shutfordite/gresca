@@ -3,7 +3,7 @@ import { MAP_ID } from '../../core/config.js';
 import { validateLook, hexRgb } from './look.js';
 
 // Colours the game draws that the spec has no role for yet. They are the game's current values, kept here so the
-// look is the one place colours live; each is a request for a later spec version (docs/art/LOOK-REQUESTS.md).
+// look is the one place colours live; each is a request for a later spec version.
 const SIGNAL_ORANGE = '#ff6b3d';
 const FINISH_RED = '#d33';
 const UNSPECIFIED = Object.freeze({
@@ -119,7 +119,10 @@ function rider(H, riderAnim) {
   return riderAnim.project(pose, view.yawDeg, view.pitchDeg, view.stance);
  }
  return Object.freeze({
-  poses: Object.freeze({ ski: Object.freeze(R.poseOrder.ski.slice()), board: Object.freeze(R.poseOrder.board.slice()) }),
+  poses: Object.freeze({
+   ski: Object.freeze(R.poseOrder.ski.slice()),
+   board: Object.freeze(R.poseOrder.board.slice()),
+  }),
   project,
   keylineM: R.widths.keyline,
   meanSlopeDeg: H.maps[MAP_ID].meanSlopeDeg,

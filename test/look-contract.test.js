@@ -75,7 +75,7 @@ describe('the Hanga look', () => {
   assert.deepEqual(look.rider.poses, { ski: HANGA.rider.poseOrder.ski, board: HANGA.rider.poseOrder.board });
  });
 
- it('projects every rig × pose × 8 yaws × pitches (and both board stances) to finite points and known colours', () => {
+ it('projects every rig × pose × 8 yaws × pitch (both board stances) to finite points and known colours', () => {
   const bad = [];
   let n = 0;
   for (const rig of ['ski', 'board']) {
@@ -158,7 +158,7 @@ describe('the Hanga look', () => {
 describe('validateLook rejects a broken look', () => {
  const broken = {
   'no version': { ...look, version: '' },
-  'a role that is not a colour': { ...look, roles: [...look.roles, 'x'], colour: (r) => (r === 'x' ? 'banana' : '#000') },
+  'a role that is not a colour': { ...look, roles: ['x'], colour: () => 'banana' },
   'an unknown role in roles': { ...look, roles: ['nope'] },
   'a sky stop out of 0..1': { ...look, sky: { ...look.sky, stops: [[0, '#000'], [2, '#fff']] } },
   'fog rgb with two channels': { ...look, fog: { ...look.fog, rgb: [1, 2] } },
