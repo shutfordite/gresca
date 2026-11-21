@@ -37,13 +37,13 @@ export const cx = (y) => 500 + 130 * Math.sin(y / 450) + 45 * Math.sin(y / 190 +
 
 // Kickers: y of the lip (m). BIG ones are taller and launch harder. Each sits on a steep pitch, with 100 m or more of
 // steep ground below it for the landing.
-export const KICK = Object.freeze([260, 430, 560, 880, 1010, 1200, 1640, 1800, 1960, 2080]);
+export const KICK = Object.freeze([260, 430, 780, 880, 1060, 1200, 1640, 1800, 1960, 2110]);
 export const KBIG = Object.freeze([430, 880, 1200, 1800, 1960]);
 
 // Rails and boxes: [start y (m), length (m), offset from the centreline (m), type], clear of every ramp.
 export const RAIL_DEF = Object.freeze([
  [345, 22, -20, 'rail'], [510, 18, 20, 'box'], [960, 24, -20, 'rail'], [1090, 18, 20, 'box'], [1380, 22, -20, 'rail'],
- [1700, 20, 20, 'rail'], [1880, 18, -20, 'box'], [2120, 24, 20, 'rail'],
+ [1700, 20, 20, 'rail'], [1880, 18, -20, 'box'], [2140, 24, 20, 'rail'],
 ].map((r) => Object.freeze(r)));
 
 const RAMP_BIG = Object.freeze({ heightM: 4.6, lengthM: 17 }); // m, a big kicker's rise and its run-up before the lip
@@ -52,6 +52,9 @@ const RAMP_DROP_M = 4;        // m past the lip over which the ramp falls away
 const RAMP_FLAT_HALF_M = 14;  // m either side of the centreline the ramp is full height
 const RAMP_FADE_M = 3;        // m over which its sides fall to the slope
 const LAUNCH_DEPTH_M = 5;     // m past the lip (along s) where the launch happens
+// Dimensionless gains on the launch speed (the test slope's are 1 and 1.35): the speed here is about 1.5 times as high,
+// and the gain takes the big kickers to about twice the test slope's airtime.
+const LAUNCH_GAIN = Object.freeze({ big: 2, small: 1.2 });
 
 /** m/m, how steeply the ground falls along the piste at y (m): the steep pitches, the rolls and the run-outs. */
 export function playGradient(y) {
@@ -105,7 +108,7 @@ function fillHeights(heights, mask) {
  */
 export const PLAY_LAYOUT = Object.freeze({
  id: 'play', W, H, FIN, startY: START_Y, pisteHalfWidth: PISTE_HALF_WIDTH,
- kickerHalfWidth: RAMP_FLAT_HALF_M, kickerDepth: LAUNCH_DEPTH_M,
+ kickerHalfWidth: RAMP_FLAT_HALF_M, kickerDepth: LAUNCH_DEPTH_M, launchGain: LAUNCH_GAIN,
  cx, KICK, KBIG, RAIL_DEF, RAILS: defineRails(cx, RAIL_DEF), bump,
  lift: Object.freeze({ x: 880, y0: 140, y1: 2290 }),
  treeline: TREELINE_M,

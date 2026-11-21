@@ -114,8 +114,11 @@ function sampleCentreline(cx, H0, startY) {
 function makeKickers(layout, frame, sOfY) {
  return layout.KICK.map((k) => {
   const p = frame.toWorld(layout.cx(k), k, { x: 0, y: 0 });
-  return { s: sOfY(k), d: 0, lipY: k, halfWidth: layout.kickerHalfWidth, depth: layout.kickerDepth,
-   big: layout.KBIG.includes(k), x: p.x, y: p.y };
+  const big = layout.KBIG.includes(k);
+  const kicker = { s: sOfY(k), d: 0, lipY: k, halfWidth: layout.kickerHalfWidth, depth: layout.kickerDepth, big,
+   x: p.x, y: p.y };
+  if (layout.launchGain) kicker.launchGain = big ? layout.launchGain.big : layout.launchGain.small;
+  return kicker;
  });
 }
 
@@ -144,7 +147,7 @@ function rampZone(frame, cx) {
 
 /**
  * The test slope's layout: the parameter set of its map (the numbers above), frozen. W, H: the grid (cells, m); FIN:
- * y of the finish (m); startY (m); pisteHalfWidth (m, where the groomed mask is half); kickerHalfWidth, kickerDepth (m);
+ * y of the finish (m); startY (m); pisteHalfWidth (m, where the groomed mask is half); kickerHalfWidth, kickerDepth (m); launchGain (optional {big, small}: dimensionless launch speed gains for the sim, sim/jump.js);
  * cx(y), KICK, KBIG, RAIL_DEF, RAILS, bump(u, v): as above; build.js adds the height fill and the trees' placement.
  */
 export const TEST_LAYOUT = Object.freeze({
