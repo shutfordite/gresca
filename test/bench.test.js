@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPath, createTimer, summarize, runPath, FRAME_DT } from '../tools/bench/core.mjs';
 import { runNode, TRACE_ORDER } from '../tools/bench/node-run.mjs';
+import { compareStages } from '../tools/bench/regress.mjs';
 import { loadTrace } from './traces.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -62,5 +63,29 @@ describe('bench run', () => {
     assert.ok(r.stages.raycast.mean > 0);
     assert.ok(r.stages.total.mean >= r.stages.raycast.mean);
     assert.equal(r.frames + r.skipped, 40);
+  });
+});
+
+describe('bench regression rule', () => {
+  const run = (o) => [o, o, o];
+  it('fails a stage more than 25% and 0.05 ms slower than the best base run', () => {
+    const [c] = compareStages(run({ raycast: 2 }), [{ raycast: 2.6 }, { raycast: 3 }, { raycast: 2.6 }]);
+    assert.equal(c.failed, true);
+    assert.equal(c.ratio, 1.3);
+  });
+
+  it('passes a stage within 25%, or one too small to measure', () => {
+    assert.equal(compareStages(run({ raycast: 2 }), run({ raycast: 2.4 }))[0].failed, false);
+    assert.equal(compareStages(run({ sky: 0.01 }), run({ sky: 0.04 }))[0].failed, false); // 4x, but 0.03 ms
+  });
+
+  it('takes the best run, so one disturbed run on a busy machine does not fail it', () => {
+    const base = [{ total: 3 }, { total: 3 }, { total: 3 }];
+    assert.equal(compareStages(base, [{ total: 9 }, { total: 3.1 }, { total: 8 }])[0].failed, false);
+  });
+
+  it('compares only the stages both sides have', () => {
+    const out = compareStages([{ total: 3 }], [{ total: 3, raycast: 2 }]);
+    assert.deepEqual(out.map((c) => c.stage), ['total']);
   });
 });

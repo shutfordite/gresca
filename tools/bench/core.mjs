@@ -85,11 +85,12 @@ export function summarize(samples) {
 export function runPath(opts) {
   const { G, now, traces, frames, warmup, flush, memory } = opts;
   const path = createPath(traces);
-  const names = Object.values(G.debug.stages);
+  const names = G.debug.stages ? Object.values(G.debug.stages) : []; // a checkout from before the timer has none
   const timer = createTimer(now, names);
   const known = new Set(Object.keys(G.state()));
   const total = frames + warmup;
   const cols = Object.fromEntries([...names, 'hud', 'flush', 'total'].map((n) => [n, new Float64Array(total)]));
+  if (names.length === 0) delete cols.hud; // the HUD is what the stages leave
   const counted = new Uint8Array(total);
   let grown = 0; // bytes of heap growth over the counted frames
   G.seed(1);
@@ -107,20 +108,20 @@ export function runPath(opts) {
       G.emitParticles(PARTICLES_PER_FRAME, p.fields.x, p.fields.y, 0.1, SPRAY_SPREAD, SPRAY_UP, 0, 0);
     }
     G.stepParticles(FRAME_DT);
-    G.debug.setTimer(timer);
+    if (G.debug.setTimer) G.debug.setTimer(timer);
     const heap0 = memory ? memory() : 0;
     timer.start();
     const t0 = timer.last;
     G.frame(FRAME_DT);
     const t1 = now();
     const heap1 = memory ? memory() : 0;
-    G.debug.setTimer(null);
+    if (G.debug.setTimer) G.debug.setTimer(null);
     let lapped = 0;
     for (const s of names) {
       cols[s][i] = timer.laps[s];
       lapped += timer.laps[s];
     }
-    cols.hud[i] = Math.max(0, t1 - t0 - lapped);
+    if (cols.hud) cols.hud[i] = Math.max(0, t1 - t0 - lapped);
     let t2 = t1;
     if (flush) {
       flush();
