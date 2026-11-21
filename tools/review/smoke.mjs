@@ -31,7 +31,7 @@ async function ride(browser, root, shotPrefix) {
  });
  const out = { problems };
  try {
-  await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'load' });
+  await page.goto(`http://127.0.0.1:${server.address().port}/?renderer=cpu`, { waitUntil: 'load' });
   await page.waitForFunction(() => !document.getElementById('go').hidden, null, { timeout: LOAD_TIMEOUT_MS });
   if (shotPrefix) await page.screenshot({ path: shotPrefix + 'menu.png' });
   const start = await page.evaluate(() => window.Gresca.state());

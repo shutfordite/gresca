@@ -1,5 +1,7 @@
 # Gresca
 
+**[▶ Play the current version](https://shutfordite.github.io/gresca/)** (the latest `main`, in any modern browser; tap to start on iPad)
+
 A freestyle ski and snowboard game for the browser. You ride a run of kickers, rails and boxes, spin in the air and
 land switch. It is a fan-made project inspired by mobile snow games, and is not affiliated with or endorsed by any
 game studio or ski resort. It is a static site with no build step: `index.html` loads the art modules from `art/` and
@@ -12,6 +14,9 @@ the game from `src/` as native ES modules (entry `src/main.js`), and its CSS fro
 The latest `main` is playable at https://shutfordite.github.io/gresca/. Every pull request also gets its own playable
 preview at `https://shutfordite.github.io/gresca/pr/<number>/`, linked in a comment on the pull request
 (`.github/workflows/preview.yml`).
+
+The terrain is drawn on the GPU with WebGL2 (three.js, ADR 0008). Add `?fps=1` to the address to see the frame rate, or
+`?renderer=cpu` to draw with the older CPU renderer; devices without WebGL2 use it automatically.
 
 To play a local copy, serve the folder with any static server and open the address it prints, for example:
 

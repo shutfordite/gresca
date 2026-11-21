@@ -8,6 +8,7 @@ import { serve } from './serve.mjs';
 import { TRACE_ORDER } from './node-run.mjs';
 
 const LOAD_TIMEOUT_MS = 60000; // ms to build the mountain
+const CPU = '?renderer=cpu'; // headless Chrome has no GPU: draw with the CPU raycaster unless opts.query asks
 
 /** The Chrome to launch: PLAYWRIGHT_CHROMIUM_EXECUTABLE, else Playwright's own download. */
 export const chromeExecutable = () => process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
@@ -37,7 +38,7 @@ export async function runChrome(root, sizes, opts, dpr = 1, repeat = 1) {
       page.on('pageerror', (e) => problems.push(e.message));
       // the page's own loop would draw between the bench's frames
       await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
-      await page.goto(`http://127.0.0.1:${server.address().port}/${opts.query || ''}`);
+      await page.goto(`http://127.0.0.1:${server.address().port}/${opts.query || CPU}`);
       await page.waitForFunction(() => window.Gresca && window.Gresca.state().phase === 'ready', null,
         { timeout: LOAD_TIMEOUT_MS, polling: 100 }); // not rAF polling: rAF is off
       // core.mjs is not under the checkout being measured (a main checkout has no tools/bench), so it is sent as text
