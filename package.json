@@ -14,7 +14,7 @@
     "test:sim": "node --test --test-reporter=dot test/sim.test.js test/physics.test.js test/park.test.js test/events.test.js test/timestep.test.js test/golden.test.js test/traces.test.js test/scenes.test.js",
     "test:view": "node --test --test-reporter=dot test/camera.test.js test/look.test.js test/features.test.js test/rider-anim.test.js test/hanga-v14.test.js",
     "test:input": "node --test --test-reporter=dot test/features.test.js test/sim.test.js test/contracts.test.js",
-    "test:world": "node --test --test-reporter=dot test/terrain.test.js test/build.test.js test/course.test.js test/frame.test.js test/rotated.test.js test/golden.test.js"
+    "test:world": "node --test --test-reporter=dot test/terrain.test.js test/build.test.js test/course.test.js test/polyline-course.test.js test/frame.test.js test/rotated.test.js test/golden.test.js"
   },
   "devDependencies": {
     "playwright-core": "1.65.1"

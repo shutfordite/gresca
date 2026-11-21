@@ -26,6 +26,9 @@ have to change. Brake, carve and fakie (F5 to F7) need the fall line under the r
 
 ## Consequences
 - C1 swaps the implementation without touching callers; the park and physics tests then run against the polyline.
+  Done in C1: the procedural course is a polyline course over cx(y) sampled every metre of y; s is arc length from the
+  top of that line (startS stays 60, at grid y 60), d the perpendicular distance, so s at a grid y is a little over y
+  (the golden hash and traces were re-recorded). `Course.fromRun(ways)` builds the course of a real run.
 - `RiderState.fallLine` and `downhillSide` come from the course's fall line after each step (unused until F5 to F7).
 - Left for later packages, because changing them changes numbers: the run start and `Gresca.place()` still point the
   rider at heading π/2 with speed in +vy; the camera's start heading is 1.57; the big kickers' ramp flags are placed

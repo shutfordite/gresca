@@ -105,7 +105,7 @@ describe('the procedural course (a polyline over cx(y): s is arc length, d perpe
    assert.deepEqual([grid(r.x0, r.y0), grid(r.x1, r.y1)], [{ u: R.x0, v: R.y0 }, { u: R.x1, v: R.y1 }]);
    assert.deepEqual(F.vecToGrid(r.dx, r.dy, {}), { u: R.dx, v: R.dy });
    assert.ok(r.s0 < r.s1 && Math.abs(r.s0 - sOfY(R.y0)) < 7 && Math.abs(r.s1 - sOfY(R.y1)) < 7, 'along the rail');
-   // 9 m off the centreline across the grid is 6 to 9 m across the piste (the piste leans up to 45 degrees), on the same side
+   // 9 m off the centreline across the grid is 6 to 9 m across the piste (it leans up to 45 degrees), same side
    assert.equal(Math.sign(r.d), R.x0 - cx(R.y0) > 0 ? 1 : -1);
    assert.ok(Math.abs(r.d) > 6 && Math.abs(r.d) <= 9, 'd ' + r.d);
   });
