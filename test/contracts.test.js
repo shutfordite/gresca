@@ -15,7 +15,7 @@ import { SIM_DT } from '../src/core/config.js';
 describe('core/contracts.js', () => {
  it('the field lists are frozen and complete', () => {
   assert.ok(Object.isFrozen(INPUT_FIELDS) && Object.isFrozen(RIDER_FIELDS) && Object.isFrozen(SIM_EVENT_TYPES));
-  for (const k of ['steer', 'brake', 'jumpHeld', 'jumpPressed', 'flip', 'spin']) {
+  for (const k of ['steer', 'brake', 'jumpHeld', 'jumpPressed', 'flip', 'spin', 'lookBack']) {
    assert.ok(INPUT_FIELDS.includes(k), k);
   }
   const rider = [...RIDER_FIELDS.number, ...RIDER_FIELDS.boolean, ...RIDER_FIELDS.object];
@@ -43,8 +43,11 @@ describe('core/contracts.js', () => {
   assert.equal(input.jumpHeld, false);
   resetInput(input);
   assert.deepEqual(checkInputState(input), []);
-  assert.deepEqual([input.steer, input.jump, input.jumpPressed, input.flip, input.spin], [0, 0, 0, 0, 0]);
-  for (const bad of [{ steer: 2 }, { brake: -0.1 }, { flip: NaN }, { jumpHeld: 1 }, { jump: 0.5 }]) {
+  const { steer, jump, jumpPressed, flip, spin, lookBack } = input;
+  assert.deepEqual([steer, jump, jumpPressed, flip, spin, lookBack], [0, 0, 0, 0, 0, 0]);
+  const bads = [{ steer: 2 }, { brake: -0.1 }, { flip: NaN }, { jumpHeld: 1 }, { jump: 0.5 },
+   { lookBack: 2 }, { lookBack: -1 }];
+  for (const bad of bads) {
    assert.ok(checkInputState({ ...createInput(), ...bad }).length > 0, JSON.stringify(bad));
   }
  });
