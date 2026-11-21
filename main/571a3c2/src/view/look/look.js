@@ -6,9 +6,11 @@
  * @property {string} version  which look and spec version built it, e.g. 'hanga-1.4.0'
  * @property {readonly string[]} roles  every colour role colour() knows
  * @property {(role: string) => string} colour  a role's CSS colour; throws on an unknown role
- * @property {(lit: number, groomed: number, stripeWave: number, rock: number, out: number[]) => number[]}
- *  terrainTone  the colour map's snow tone (until D2): lit 0..1 (sun), groomed 0..1 (piste), stripeWave -1..1 (the
- *  corduroy wave at this texel), rock 0..1 (how much bare rock); fills out [r, g, b] (0..255, unrounded) and returns it
+ * @property {(lit: number, groomed: number, stripeWave: number, rock: number, out: number[], cavity?: number,
+ *  grain?: number) => number[]} terrainTone  the colour map's snow tone (until D2): lit 0..1 (sun), groomed 0..1
+ *  (piste), stripeWave -1..1 (the corduroy wave at this texel), rock 0..1 (how much bare rock), cavity -1..1 (ridge
+ *  to hollow, default 0), grain -1..1 (the snow's texture at this texel, default 0); fills out [r, g, b] (0..255,
+ *  unrounded) and returns it
  * @property {{stops: ReadonlyArray<readonly [number, string]>, sun: LookSun}} sky  gradient stops from the top of the
  *  screen (0) to the horizon (1), CSS colours; and the sun disc
  * @property {{rgb: readonly number[], amount: (dM: number, farM: number) => number}} fog  fog colour (0..255) and how
