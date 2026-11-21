@@ -3,9 +3,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
  createTrail, clearTrail, recordTrail, swathHalfWidth, EQUIPMENT, TRAIL_CAPACITY, SAMPLE_FLOATS, SPACING_M,
- MAX_HALF_WIDTH_M, DEPTH_CARVE, DEPTH_DEEP, MAX_GAP_M,
+ MAX_HALF_WIDTH_M, BLEND_PER_SAMPLE, DEPTH_CARVE, DEPTH_DEEP, MAX_GAP_M,
 } from '../src/view/track-trail.js';
-import { ribbonLook, createTrackRibbon } from '../src/view/gl/track-ribbon.js';
+import { ribbonLook, createTrackRibbon, minWidth, MIN_WIDTH_PX, MAX_WIDEN } from '../src/view/gl/track-ribbon.js';
 
 // A rider on the snow heading east (boardHeading = travelHeading = 0) unless fields say otherwise.
 const rider = (o = {}) => ({
@@ -144,7 +144,45 @@ describe('track trail', () => {
  });
 });
 
+describe('track depth and smear', () => {
+ it('change by at most BLEND_PER_SAMPLE between samples: no hard step in a track', () => {
+  const t = createTrail();
+  const rider = { x: 0, y: 0, z: 0, boardHeading: 0, travelHeading: 0, crashTimer: 0, grind: false, isBraking: false,
+   skid: 0, edge: 0 };
+  recordTrail(t, rider, 'board');
+  rider.isBraking = true; // the cut goes from a carve to the deepest at once
+  for (let i = 1; i <= 8; i++) {
+   rider.x = i * SPACING_M * 1.01;
+   recordTrail(t, rider, 'board');
+  }
+  const depths = [];
+  for (let i = 0; i < 8; i++) depths.push(slot(t, i, DEPTH));
+  for (let i = 1; i < 8; i++) assert.ok(depths[i] - depths[i - 1] <= BLEND_PER_SAMPLE + 1e-6);
+  assert.equal(depths[0], Math.fround(DEPTH_CARVE + BLEND_PER_SAMPLE));
+  assert.ok(depths[7] > depths[0]);
+ });
+});
+
 describe('track ribbon (no GL)', () => {
+ it('a ribbon under the minimum width is widened to it and fades by the width it lost', () => {
+  assert.deepEqual(minWidth(MIN_WIDTH_PX * 2), { scale: 1, strength: 1 });
+  const thin = minWidth(MIN_WIDTH_PX / 4);
+  assert.equal(thin.scale, 4);
+  assert.equal(thin.strength, 0.25);
+  assert.equal(minWidth(0).scale, MAX_WIDEN, 'a sliver is widened only so far');
+  assert.ok(minWidth(0.01).strength < 0.01);
+ });
+
+ it('each pixel is darkened once: the quads count in the stencil and only the first draws', () => {
+  const { THREE, glScene, calls } = fakeThree();
+  createTrackRibbon(THREE, glScene, {}, createTrail(), { floor: [1, 1, 1] });
+  const m = calls.material;
+  assert.equal(m.stencilWrite, true);
+  assert.equal(m.stencilFunc, 'EqualStencilFunc');
+  assert.equal(m.stencilRef, 0);
+  assert.equal(m.stencilZPass, 'IncrementStencilOp');
+ });
+
  it('the groove floor is the Look\'s shade over its lit snow, at most 1', () => {
   const look = ribbonLook([0.5, 0.6, 0.8], [1, 0.9, 0.85]);
   assert.deepEqual(look.floor.map((v) => +v.toFixed(3)), [0.5, 0.667, 0.941]);
@@ -162,7 +200,7 @@ describe('track ribbon (no GL)', () => {
   }
   class Vec3 { constructor(x, y, z) { Object.assign(this, { x, y, z }); } }
   const THREE = new Proxy({
-   InstancedBufferGeometry: Any, BufferAttribute: Any, InterleavedBufferAttribute: Any, RawShaderMaterial: Any,
+   InstancedBufferGeometry: Any, BufferAttribute: Any, InterleavedBufferAttribute: Any, RawShaderMaterial: class extends Any { constructor(p) { super(); calls.material = p; } },
    Mesh: class extends Any { constructor(geometry) { super(); this.geometry = geometry; } },
    InstancedInterleavedBuffer: Buffer, Vector3: Vec3,
   }, { get: (target, key) => (key in target ? target[key] : key) });

@@ -6,22 +6,46 @@ import { PROJECT_GLSL } from './gl-projection.js';
 import { FOG_GLSL } from './snow-material.js';
 import { TRAIL_CAPACITY, SAMPLE_FLOATS } from '../track-trail.js';
 
+export const MIN_WIDTH_PX = 2.5; // canvas px, the narrowest the ribbon is drawn; narrower ones widen and fade instead
+export const MAX_WIDEN = 40;     // times, the most a far ribbon is widened (past it the ribbon just fades)
+export const DETAIL_FULL_PX = 14; // canvas px of ribbon width from which the groove's lip and scuffs show in full
+export const DETAIL_NONE_PX = 5;  // canvas px of ribbon width below which the groove is a plain soft dent
+
+/**
+ * How a ribbon of px canvas pixels wide is drawn: {scale, strength}. A ribbon under MIN_WIDTH_PX is widened to it (by
+ * scale, at most MAX_WIDEN) and its darkness is multiplied by strength (0..1, the share of the width it kept), so a
+ * far track is a soft faint line and never a broken dash. The vertex shader does the same sum. px: canvas px.
+ */
+export function minWidth(px) {
+ const scale = Math.min(MAX_WIDEN, Math.max(1, MIN_WIDTH_PX / Math.max(px, 1e-6)));
+ return { scale, strength: Math.min(1, px / MIN_WIDTH_PX) };
+}
+
 // Shader tunables (GLSL constants). Widths are in the ribbon's across coordinate -1..1 unless in m.
 const TUNE = `
+const float MIN_WIDTH_PX = ${MIN_WIDTH_PX.toFixed(1)};   // see minWidth() in this file
+const float MAX_WIDEN = ${MAX_WIDEN.toFixed(1)};
+const float DETAIL_FULL_PX = ${DETAIL_FULL_PX.toFixed(1)};
+const float DETAIL_NONE_PX = ${DETAIL_NONE_PX.toFixed(1)};
+const float JOIN_OVERLAP = 0.2;     // times the half-width, each segment's ends reach past its points (closes the
+                                    // gap on the outside of a turn; the stencil keeps the overlap from darkening twice)
+const float JOIN_OVERLAP_MAX_M = 0.12; // m, the most they reach
+const float EDGE_AA_PX = 1.5;       // px, the soft edge's least width
+
 const float LIFT_M = 0.04;          // m above the snow surface at the camera, against z-fighting
 const float LIFT_PER_M = 0.0015;    // m of extra lift per m from the camera (coarse mesh levels differ)
 const float GROOVE_M = 0.05;        // m, the depth of the deepest groove (shapes the lit and shaded walls)
-const float FLOOR_FROM = 0.35;      // across, the groove floor is flat inside this and rises to the lip by FLOOR_TO
-const float FLOOR_TO = 0.8;
-const float LIP_AT = 0.88;          // across, the centre of the lip of pushed snow
-const float LIP_WIDTH = 0.12;       // across, the lip's width
-const float LIP_HEIGHT = 0.3;       // times the groove's depth
-const float EDGE_CARVE = 0.9;       // across, a carved groove's edge is clean from here to the ribbon's edge (1)
+const float FLOOR_FROM = 0.1;       // across, a soft bowl: deepest inside this, back to the snow by FLOOR_TO
+const float FLOOR_TO = 0.95;
+const float LIP_AT = 0.8;           // across, the centre of the faint lip of pushed snow
+const float LIP_WIDTH = 0.25;       // across, the lip's width
+const float LIP_HEIGHT = 0.12;      // times the groove's depth
+const float EDGE_CARVE = 0.75;      // across, a carved groove's edge is clean from here to the ribbon's edge (1)
 const float EDGE_SMEAR = 0.55;      // across, a smeared swath fades out from here
-const float LIGHT_GAIN = 1.6;       // brightness change per unit of sun cosine the groove walls gain or lose
+const float LIGHT_GAIN = 1.2;       // brightness change per unit of sun cosine the groove walls gain or lose
 const float FLOOR_DARK = 0.7;       // 0..1 share of the Look's shade-to-lit ratio the floor takes (1 = fully shaded)
 const float STREAK_LANE_M = 0.06;   // m, the width of one scuff lane in a smeared swath
-const float STREAK_VARIATION = 0.6; // 0..1, how much lanes differ in depth
+const float STREAK_VARIATION = 0.45; // 0..1, how much lanes differ in depth
 const float FADE_NEAR_M = 110.0;    // m, the track at full strength nearer than this
 const float FADE_FAR_M = 220.0;     // m, and gone past this (the fog fades it before)
 `;
@@ -46,6 +70,8 @@ out float vDist;           // m, horizontal distance from the camera
 out vec2 vAcross;          // unit vector across the ribbon, on the grid
 out float vLaneM;          // m across the ribbon from its centre line
 out float vHalf;           // m, the ribbon's half-width here
+out float vStrength;       // 0..1, how much of its darkness a ribbon narrower than MIN_WIDTH_PX keeps
+out float vPx;             // canvas px, the ribbon's width on the screen here
 float heightAt(ivec2 p) {
  return texelFetch(uHeight, clamp(p, ivec2(0), ivec2(uMapSize) - 1), 0).r;
 }
@@ -59,8 +85,6 @@ float heightBilinear(vec2 uv) {
 }
 void main() {
  float here = corner.x;
- vec2 centre = mix(aA.zw, aA.xy, here);
- float hw = mix(aB.y, aB.x, here);
  vec2 along = aA.xy - aA.zw;
  if (aB.x <= 0.0 || dot(along, along) < 1e-8) { // an unwritten sample of the ring
   gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
@@ -68,7 +92,18 @@ void main() {
  }
  vec2 dir = normalize(along);
  vec2 across = vec2(-dir.y, dir.x);
- vec2 o = centre + across * corner.y * hw - uCam.xy;
+ float hw = mix(aB.y, aB.x, here);
+ vec2 centre = mix(aA.zw, aA.xy, here) + dir * (2.0 * here - 1.0) * min(JOIN_OVERLAP * hw, JOIN_OVERLAP_MAX_M);
+ vec2 oc = centre - uCam.xy;
+ vec2 dc = vec2(dot(oc, uGridU), dot(oc, uGridV));
+ // The ribbon's width on the screen, from both its edges at the centre's height.
+ float hc = heightBilinear(uCamGrid + dc);
+ vec4 cl = projectToClip(oc + across * hw, hc);
+ vec4 cr = projectToClip(oc - across * hw, hc);
+ float px = length((cl.xy / cl.w - cr.xy / cr.w) * 0.5 * uScreen.zw);
+ float widen = (cl.w > 0.0 && cr.w > 0.0) ? clamp(MIN_WIDTH_PX / max(px, 1e-6), 1.0, MAX_WIDEN) : 1.0;
+ float hwEff = hw * widen;
+ vec2 o = oc + across * corner.y * hwEff;
  vec2 d = vec2(dot(o, uGridU), dot(o, uGridV));
  float dist = length(d);
  float h = heightBilinear(uCamGrid + d) + LIFT_M + LIFT_PER_M * dist;
@@ -78,8 +113,10 @@ void main() {
  vSmear = aB.w;
  vDist = dist;
  vAcross = vec2(dot(across, uGridU), dot(across, uGridV));
- vLaneM = corner.y * hw;
- vHalf = hw;
+ vLaneM = corner.y * hwEff;
+ vHalf = hwEff;
+ vPx = px * widen;
+ vStrength = min(1.0, px / MIN_WIDTH_PX);
 }
 `;
 
@@ -93,6 +130,8 @@ in float vDist;
 in vec2 vAcross;
 in float vLaneM;
 in float vHalf;
+in float vStrength;
+in float vPx;
 uniform vec3 uSun;         // unit vector toward the sun: grid u, v, up
 uniform vec3 uFloor;       // the Look's snow shade over its lit snow, per channel (the groove floor's multiplier)
 ${FOG_GLSL}
@@ -109,20 +148,32 @@ float hash11(float p) {
  return fract(sin(p * 127.1 + 311.7) * 43758.5453);
 }
 
+// Smooth value noise along the lanes (no hard steps), 0..1.
+float laneNoise(float x) {
+ float i = floor(x);
+ float t = smoothstep(0.0, 1.0, x - i);
+ return mix(hash11(i), hash11(i + 1.0), t);
+}
+
 void main() {
  float a = abs(vSide);
- float lane = hash11(floor(vLaneM / STREAK_LANE_M));
- float depth = vDepth * mix(1.0, 1.0 - STREAK_VARIATION * lane, vSmear);
- float cover = 1.0 - smoothstep(mix(EDGE_CARVE, EDGE_SMEAR, vSmear), 1.0, a);
+ // How much fine detail the ribbon's size on the screen can carry (a far ribbon is a plain soft dent).
+ float detail = smoothstep(DETAIL_NONE_PX, DETAIL_FULL_PX, vPx);
+ float laneX = vLaneM / STREAK_LANE_M;
+ float laneFade = 1.0 - smoothstep(0.25, 0.6, fwidth(laneX));
+ float lane = laneNoise(laneX);
+ float depth = vDepth * mix(1.0, 1.0 - STREAK_VARIATION * lane * laneFade, vSmear);
+ float edgeFrom = clamp(min(mix(EDGE_CARVE, EDGE_SMEAR, vSmear), 1.0 - EDGE_AA_PX * fwidth(vSide)), 0.0, 0.95);
+ float cover = 1.0 - smoothstep(edgeFrom, 1.0, a);
  float bowl = (1.0 - smoothstep(FLOOR_FROM, FLOOR_TO, a)) * depth;
  float e = 0.05;
  float slope = GROOVE_M * depth * (profile(vSide + e) - profile(vSide - e)) / (2.0 * e) / vHalf;
  vec3 n = normalize(vec3(-slope * vAcross, 1.0));
- float walls = (dot(n, uSun) - uSun.z) * LIGHT_GAIN;
+ float walls = (dot(n, uSun) - uSun.z) * LIGHT_GAIN * detail;
  vec3 floorTint = mix(vec3(1.0), uFloor, FLOOR_DARK);
  vec3 f = mix(vec3(1.0), floorTint, bowl) + walls;
  f = mix(vec3(1.0), f, cover);
- float fade = (1.0 - fogAmount(vDist)) * (1.0 - smoothstep(FADE_NEAR_M, FADE_FAR_M, vDist));
+ float fade = (1.0 - fogAmount(vDist)) * (1.0 - smoothstep(FADE_NEAR_M, FADE_FAR_M, vDist)) * vStrength;
  f = mix(vec3(1.0), f, fade);
  outColour = vec4(clamp(f - 0.5, 0.0, 1.0), 0.5); // the blend multiplies the snow by rgb + alpha: 0.5 .. 1.5
 }
@@ -173,6 +224,14 @@ export function createTrackRibbon(THREE, glScene, shared, trail, look) {
   polygonOffsetFactor: -2,
   polygonOffsetUnits: -2,
   side: THREE.DoubleSide,
+  // Each pixel is darkened at most once a frame: the stencil (cleared every frame) counts the quads over a pixel and
+  // only the first draws, so the overlaps at the joints of a turn do not multiply twice.
+  stencilWrite: true,
+  stencilRef: 0,
+  stencilFunc: THREE.EqualStencilFunc,
+  stencilFail: THREE.KeepStencilOp,
+  stencilZFail: THREE.KeepStencilOp,
+  stencilZPass: THREE.IncrementStencilOp,
  });
  const mesh = new THREE.Mesh(geo, material);
  mesh.frustumCulled = false;

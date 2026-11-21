@@ -13,6 +13,7 @@ export const DEPTH_DEEP = 1;         // 0..1 groove depth when braking or skiddi
 export const EDGE_FULL_RAD = 1;      // rad of edge angle (RiderState.edge) that cuts the deepest, narrowest groove
 export const EDGE_DEPTH_GAIN = 0.4;  // extra depth (0..1 scale) at EDGE_FULL_RAD; the edge is 0 until package F6
 export const MAX_HALF_WIDTH_M = 1.2; // m, the widest swath half-width
+export const BLEND_PER_SAMPLE = 0.12; // 0..1 per sample: most that depth and smear change
 
 // Equipment on the snow, by rig (session.rig): contact lines and their size (the art spec's board and skis).
 export const EQUIPMENT = Object.freeze({
@@ -34,6 +35,8 @@ export function createTrail() {
   lastX: new Float64Array(2),
   lastY: new Float64Array(2),
   lastHalf: new Float64Array(2),
+  lastDepth: new Float64Array(2), // the depth and smear of each line's last sample, eased toward the rider's
+  lastSmear: new Float64Array(2),
  };
 }
 
@@ -92,6 +95,10 @@ function addPoint(trail, line, x, y, half, depth, smear) {
   } else if (dist < SPACING_M) {
    return;
   } else {
+   depth = easeToward(trail.lastDepth[line], depth);
+   smear = easeToward(trail.lastSmear[line], smear);
+   depth = easeToward(trail.lastDepth[line], depth);
+   smear = easeToward(trail.lastSmear[line], smear);
    const o = (trail.written % TRAIL_CAPACITY) * SAMPLE_FLOATS;
    const d = trail.data;
    d[o] = x;
@@ -109,4 +116,11 @@ function addPoint(trail, line, x, y, half, depth, smear) {
  trail.lastX[line] = x;
  trail.lastY[line] = y;
  trail.lastHalf[line] = half;
+ trail.lastDepth[line] = depth;
+ trail.lastSmear[line] = smear;
+}
+
+// from moved toward to by at most BLEND_PER_SAMPLE.
+function easeToward(from, to) {
+ return from + Math.max(-BLEND_PER_SAMPLE, Math.min(BLEND_PER_SAMPLE, to - from));
 }
