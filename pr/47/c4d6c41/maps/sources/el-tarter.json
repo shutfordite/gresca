@@ -1,0 +1,26 @@
+{
+ "id": "el-tarter",
+ "name": "El Tarter",
+ "notes": "Input for tools/map-compiler/cli.mjs (docs/adr/0006-map-terrain-format.md). The box is the old baker's (tools/bake-el-tarter.html). Verify the licences and URLs before shipping (docs/REAL-WORLD-DATA.md).",
+ "centre": { "lat": 42.5775, "lon": 1.655 },
+ "widthM": 7000,
+ "lengthM": 7000,
+ "cellM": 10,
+ "elevation": {
+  "source": "terrarium",
+  "name": "Terrain Tiles (Mapzen/Tilezen, AWS Open Data)",
+  "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+  "zoom": 13,
+  "tileSize": 256,
+  "licence": "open data, attribution required (Tilezen attribution list)",
+  "attribution": "Elevation: Terrain Tiles by Mapzen/Tilezen, from SRTM (NASA), EU-DEM (Copernicus) and other sources: github.com/tilezen/joerd/blob/master/docs/attribution.md"
+ },
+ "pistes": {
+  "source": "openskimap",
+  "name": "OpenSkiMap",
+  "runsUrl": "https://tiles.openskimap.org/geojson/runs.geojson",
+  "liftsUrl": "https://tiles.openskimap.org/geojson/lifts.geojson",
+  "licence": "ODbL-1.0",
+  "attribution": "Pistes and lifts: © OpenStreetMap contributors (ODbL), processed by OpenSkiMap.org"
+ }
+}
