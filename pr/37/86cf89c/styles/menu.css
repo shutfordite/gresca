@@ -1,0 +1,12 @@
+/* The menu and result screen: title, text, Drop in button, Snowboard / Skis picker. */
+#msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--veil);padding:20px;text-align:center}
+#msg div{max-width:340px}
+h1{margin:0 0 6px;font-size:34px;letter-spacing:.5px}
+p{margin:6px 0;line-height:1.4;font-size:15px}
+small{opacity:.7;font-size:12px}
+#go{margin-top:12px;padding:13px 28px;border:0;border-radius:12px;background:var(--acc);color:var(--on-acc);font:700 17px "Trebuchet MS",system-ui,sans-serif}
+.pick{display:flex;margin:14px auto 0;max-width:260px}
+.pick button{flex:1;padding:11px 0;border:2px solid var(--acc);background:transparent;color:var(--ink);font:700 15px "Trebuchet MS",system-ui,sans-serif}
+.pick button:first-child{border-radius:12px 0 0 12px}
+.pick button:last-child{border-radius:0 12px 12px 0;border-left:0}
+.pick button.on{background:var(--acc);color:var(--on-acc)}
