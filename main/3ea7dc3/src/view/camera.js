@@ -13,8 +13,7 @@ const SLOPE_MAX = 0.8;
 const MIN_CLEARANCE_M = 2.5; // m, the camera stays this far above the ground under it
 const JUMP_FOLLOW = 0.5;    // dimensionless, share of the rider's jump height the camera rises with
 const FOCAL_FRAC = 0.75;    // focal length as a fraction of the render height
-const SWITCH_SPEED = -1.5;  // m/s along the board, riding backwards faster than this counts as switch
-const AIR_TRACK_SPEED = 1.5; // m/s, in the air the camera follows the direction of travel above this speed
+const TRACK_SPEED = 1.5;    // m/s, faster than this the camera turns toward the direction of travel; slower, it holds
 const AIRBORNE_Z = 0.05;    // m above the snow, higher counts as in the air
 const R2D = 180 / Math.PI;
 
@@ -82,13 +81,11 @@ export function followRider(camera, terrain, framing, pose, rider, renderW, rend
  const x = pose.x;
  const y = pose.y;
  const jz = pose.z;
- const a = rider.heading;
  const camA = camera.heading;
- const back = rider.vx * Math.cos(a) + rider.vy * Math.sin(a) < SWITCH_SPEED;
- const airTarget = Math.hypot(rider.vx, rider.vy) > AIR_TRACK_SPEED ? Math.atan2(rider.vy, rider.vx) : camA;
- // riding switch: look the other way along the board (- PI, the world mirror of the grid's + PI: exact at the default
- // placement, docs/adr/0005-enu-frame.md)
- const tgt = jz > AIRBORNE_Z ? airTarget : (back ? a - Math.PI : a);
+ // The camera follows the direction of travel (the velocity's heading, as rider.travelHeading), never the equipment
+ // heading, on the snow and in the air: a brake that yaws the board across the slope, a skid or riding switch doesn't
+ // swing it (F5). Near a standstill the direction of travel is noise, so the camera holds its heading.
+ const tgt = Math.hypot(rider.vx, rider.vy) > TRACK_SPEED ? Math.atan2(rider.vy, rider.vx) : camA;
  const dT = Math.atan2(Math.sin(tgt - camA), Math.cos(tgt - camA));
  camera.heading = camA + dT * Math.min(1, dt * HEADING_RATE);
  // Ground heights from the terrain's smooth surface (it clamps to the map edge): under the rider, under the camera,
