@@ -51,7 +51,8 @@ function paintSnow(mx, H, M, tone) {
   const yDown = Math.min(H0 - 1, y + R) * W0;
   for (let x = 0; x < W0; x++) {
    const i = y * W0 + x;
-   const around = (H[y * W0 + Math.max(0, x - R)] + H[y * W0 + Math.min(W0 - 1, x + R)] + H[yUp + x] + H[yDown + x]) / 4;
+   const row = y * W0;
+   const around = (H[row + Math.max(0, x - R)] + H[row + Math.min(W0 - 1, x + R)] + H[yUp + x] + H[yDown + x]) / 4;
    const cavity = Math.max(-1, Math.min(1, (around - H[i]) / RELIEF_FULL_M));
    const grain = DRIFT_SHARE * driftAt(drift, x, y) + (1 - DRIFT_SHARE) * speckle(x, y);
    let gx = 0;

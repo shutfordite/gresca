@@ -66,7 +66,8 @@ describe('build()', () => {
       sum[kind][0] += c[0] + c[1] + c[2];
       sum[kind][1]++;
     }
-    assert.ok(sum.hollow[1] > 20 && sum.ridge[1] > 20, `enough cells: ${sum.hollow[1]} hollows, ${sum.ridge[1]} ridges`);
+    const counts = `${sum.hollow[1]} hollows, ${sum.ridge[1]} ridges`;
+    assert.ok(sum.hollow[1] > 20 && sum.ridge[1] > 20, `enough cells: ${counts}`);
     const mean = (k) => sum[k][0] / sum[k][1];
     assert.ok(mean('hollow') < mean('ridge') - 15, `hollows ${mean('hollow')} vs ridges ${mean('ridge')}`);
   });
