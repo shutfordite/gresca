@@ -15,6 +15,7 @@ import { worldFacade } from './world/fields.js';
 import { step } from './sim/step.js';
 import { emit, stepParticles } from './sim/particles.js';
 import { simTick, snapInterpolation } from './sim/timestep.js';
+import { applyScene, SCENES } from './scenes.js';
 import { simFields } from './sim/fields.js';
 import { resetInput } from './input/input.js';
 import { inputFields } from './input/fields.js';
@@ -73,7 +74,7 @@ function recorderFacade(g) {
 
 /**
  * The frozen façade for one game. g: the game's state objects and wiring from createGame (rider, session, input,
- * camera, view, world, rng, spray, timestep, sim, scene, hanga, hud, bus, inputLog, startRun, frame).
+ * camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun, frame).
  */
 export function createFacade(g) {
  const { rider, input, spray, timestep } = g;
@@ -101,7 +102,7 @@ export function createFacade(g) {
   }
   if (moved) snapInterpolation(timestep, rider);
  }
- return Object.freeze({
+ const facade = {
   state,
   set,
   // New run (start()), then put the rider at {x, y (world m) or s, d (course m), vx, vy (m/s), heading (rad), z, vz}:
@@ -169,5 +170,16 @@ export function createFacade(g) {
    maxStepsPerFrame: SIM_MAX }),
   world: worldFacade(g.world),
   debug: viewDebug(g),
- });
+  // Opens a named scene (src/scenes.js) and pauses the game there (phase 'ready'): a fixed rig, place, speed and pose
+  // for screenshots and for looking at one thing. Throws on an unknown name; returns the scene's note.
+  scenes: () => Object.keys(SCENES).map((name) => ({ name, note: SCENES[name].note })), // the scene names and notes
+  scene(name) {
+   const api = {
+    place: facade.place, set, input: facade.input, sim: facade.sim, state, frame: facade.frame,
+    course: g.world.course,
+   };
+   return applyScene(name, api);
+  },
+ };
+ return Object.freeze(facade);
 }

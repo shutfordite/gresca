@@ -6,6 +6,7 @@ import { fogAt, drawSky, drawSun } from './sky.js';
 import { project, drawFlags, drawRails } from './sprites.js';
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
+import { cssRgb, cssRgba } from './look/look.js';
 
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
@@ -15,7 +16,6 @@ const RAY_SPREAD = 0.012;     // dimensionless, each sample is 1 m plus this fra
 const BLEND_NEAR_M = 80;      // m, nearer samples blend the four colour-map cells around them (bilinear)
 const TREE_FAR_M = 300;       // m along the view, further trees are not drawn
 const TREE_HEIGHT_M = 9;      // m, drawn height of a tree
-const TREE_RGB = Object.freeze([31, 74, 58]); // the trees' colour before fog
 const SNAP_M = 8;             // m, a jump no step could make: show the current state as it is
 const SHADOW_ALPHA = 0.55;    // opacity of the rider's shadow
 const WIPEOUT_PIVOT = 0.9;    // rider-scale units above the feet the wipeout tumbles around
@@ -46,7 +46,7 @@ export function riderPose(view, rider, timestep, alpha) {
  * view.lo's size, view.groundM (m, the ground under the drawn rider) and the camera; reads the sim's state only.
  */
 export function updateCamera(view, scene, dt, alpha) {
- const { canvas, camera, rider, terrain, hanga } = scene;
+ const { canvas, camera, rider, terrain, look } = scene;
  riderPose(view, rider, scene.timestep, alpha);
  const W = view.W;
  const RW = Math.min(MAX_RENDER_W, Math.round(canvas.clientWidth / CSS_PX_PER_RENDER_PX));
@@ -55,32 +55,33 @@ export function updateCamera(view, scene, dt, alpha) {
   view.lo.width = RW;
   view.lo.height = RH;
  }
- view.groundM = followRider(camera, terrain, hanga, view.drawn, rider, RW, RH, W, dt);
+ view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt);
 }
 
 /**
  * Draws one frame from the camera and pose updateCamera() set. dt: s since the last drawn frame (animation).
  * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, course, frame (the MapFrame), treeArr,
- * particles, timestep, hanga, riderAnim}. Mutates view (render buffers, animation, counts); reads everything else.
+ * particles, timestep, look (the Look), riderAnim}. Mutates view (render buffers, animation, counts); reads the
+ * rest.
  */
 export function draw(view, scene, dt) {
- const { ctx, camera, terrain, hanga } = scene;
+ const { ctx, camera, terrain, look } = scene;
  const W = view.W;
  const Hh = view.Hh;
  const RW = view.lo.width;
  const RH = view.lo.height;
  const gR = view.groundM;
  const im = view.lx.createImageData(RW, RH);
- raycast(view, camera, terrain, hanga, im.data, RW, RH);
+ raycast(view, camera, terrain, look.fog, im.data, RW, RH);
  view.lx.putImageData(im, 0, 0);
- drawSky(ctx, hanga, camera, W, Hh); // behind the terrain: transparent render pixels show the sky,
- drawSun(ctx, hanga, camera, W, Hh, scene.frame); // and ridges cover the sun
+ drawSky(ctx, look.sky, camera, W, Hh); // behind the terrain: transparent render pixels show the sky,
+ drawSun(ctx, look.sky, camera, W, Hh, scene.frame); // and ridges cover the sun
  ctx.imageSmoothingEnabled = true;
  ctx.drawImage(view.lo, 0, 0, W, Hh);
- drawTrees(ctx, view, camera, terrain, hanga, scene.treeArr, RW);
- view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view);
- view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame);
- drawSpray(ctx, camera, terrain, scene.particles);
+ drawTrees(ctx, view, camera, terrain, look, scene.treeArr, RW);
+ view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
+ view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
+ drawSpray(ctx, camera, terrain, scene.particles, look.sprites.spray);
  drawRiderOnSnow(ctx, view, scene, gR, dt);
 }
 
@@ -90,8 +91,8 @@ export function draw(view, scene, dt) {
 // documented fast path (bilinear: on the groomed piste within about 3 cm of height for 99% of points and 12 cm at
 // worst, at a big kicker's lip; test/terrain.test.js). Colours come from the colour map col, a texture CW × CH cells
 // (one per m) placed in the world by view.mapFrame (the map's MapFrame): each ray also walks its texel position
-// (u, v), a straight line in texels, so the lookup costs no transform per sample.
-function raycast(view, camera, terrain, hanga, D, RW, RH) {
+// (u, v), a straight line in texels, so the lookup costs no transform per sample. fog: the Look's fog.
+function raycast(view, camera, terrain, fog, D, RW, RH) {
  const occ = view.occ;
  const col = view.col;
  const FOG = view.fog;
@@ -138,7 +139,7 @@ function raycast(view, camera, terrain, hanga, D, RW, RH) {
     const ys = Math.floor((camH - h) / (z * cs) * sc + hz - pt);
     if (ys < ym) {
      const o4 = mi * 4;
-     const f = fogAt(hanga, z);
+     const f = fogAt(fog, z);
      let c0 = col[o4];
      let c1 = col[o4 + 1];
      let c2 = col[o4 + 2];
@@ -170,9 +171,10 @@ function raycast(view, camera, terrain, hanga, D, RW, RH) {
  }
 }
 
-// Trees, far to near, hidden when a nearer ridge covers them (view.occ from the raycast).
-function drawTrees(ctx, view, camera, terrain, hanga, treeArr, RW) {
+// Trees, far to near, hidden when a nearer ridge covers them (view.occ from the raycast). look: the Look.
+function drawTrees(ctx, view, camera, terrain, look, treeArr, RW) {
  const FOG = view.fog;
+ const TREE = look.sprites.tree.rgb; // before fog
  const occ = view.occ;
  const kx = camera.pixelScale;
  const sc = camera.focalPx;
@@ -193,14 +195,14 @@ function drawTrees(ctx, view, camera, terrain, hanga, treeArr, RW) {
   const ysb = P.Y / kx;
   const hs = TREE_HEIGHT_M / P.f * sc;
   if (occ[ci * NS + k] < ysb - hs * 0.6) continue;
-  const fg = fogAt(hanga, P.z);
+  const fg = fogAt(look.fog, P.z);
   const X = P.X;
   const Y = P.Y;
   const hh = hs * kx;
-  const r = (TREE_RGB[0] + (FOG[0] - TREE_RGB[0]) * fg) | 0;
-  const gn = (TREE_RGB[1] + (FOG[1] - TREE_RGB[1]) * fg) | 0;
-  const b = (TREE_RGB[2] + (FOG[2] - TREE_RGB[2]) * fg) | 0;
-  ctx.fillStyle = `rgb(${r},${gn},${b})`;
+  const r = (TREE[0] + (FOG[0] - TREE[0]) * fg) | 0;
+  const gn = (TREE[1] + (FOG[1] - TREE[1]) * fg) | 0;
+  const b = (TREE[2] + (FOG[2] - TREE[2]) * fg) | 0;
+  ctx.fillStyle = cssRgb(r, gn, b);
   for (let j = 0; j < 3; j++) {
    const by = Y - hh * (0.12 + 0.27 * j);
    const w = hh * (0.34 - 0.07 * j);
@@ -213,13 +215,13 @@ function drawTrees(ctx, view, camera, terrain, hanga, treeArr, RW) {
  }
 }
 
-// Snow spray particles, fading and growing as they age.
-function drawSpray(ctx, camera, terrain, particles) {
+// Snow spray particles, fading and growing as they age. spray: the Look's sprites.spray.
+function drawSpray(ctx, camera, terrain, particles, spray) {
  for (const p of particles) {
   const P = project(camera, p.x, p.y, terrain.height(p.x, p.y) + p.z);
   if (!P) continue;
   const k = p.t / p.life;
-  ctx.fillStyle = 'rgba(246,248,255,' + (0.8 * (1 - k)).toFixed(2) + ')';
+  ctx.fillStyle = cssRgba(spray.rgb, spray.maxAlpha * (1 - k));
   ctx.beginPath();
   ctx.arc(P.X, P.Y, Math.max(1, P.s * (0.2 + 0.5 * k)), 0, 7);
   ctx.fill();
@@ -229,7 +231,7 @@ function drawSpray(ctx, camera, terrain, particles) {
 // The rider, small, in the lower third: its shadow on the snow, then the Hanga rider (tumbling in a wipeout).
 // gR: m, the ground under the rider.
 function drawRiderOnSnow(ctx, view, scene, gR, dt) {
- const { camera, rider, hanga } = scene;
+ const { camera, rider, look } = scene;
  const jz = view.drawn.z;
  const sc = camera.focalPx;
  const kx = camera.pixelScale;
@@ -241,7 +243,7 @@ function drawRiderOnSnow(ctx, view, scene, gR, dt) {
  ctx.save();
  ctx.translate(view.W / 2, ((camera.height - gR) / CAM_BACK * sc + camera.horizonPx - camera.pitchPx) * kx);
  ctx.globalAlpha = SHADOW_ALPHA;
- ctx.fillStyle = hanga.colour(shd.colour);
+ ctx.fillStyle = look.colour(shd.colour);
  ctx.beginPath();
  ctx.ellipse(shd.c[0] * m, -shd.c[1] * m, shd.rx * m * ss, shd.ry * m * ss, 0, 0, 7);
  ctx.fill();
@@ -252,6 +254,6 @@ function drawRiderOnSnow(ctx, view, scene, gR, dt) {
   ctx.rotate(rider.wipeoutSpin);
   ctx.translate(0, WIPEOUT_PIVOT * m);
  }
- drawRider(ctx, hanga, m, list);
+ drawRider(ctx, look, m, list);
  ctx.restore();
 }

@@ -9,11 +9,12 @@ import { createTimestep, snapInterpolation, advance } from './sim/timestep.js';
 import { createInput } from './input/input.js';
 import { bindInput } from './input/bind-input.js';
 import { createView, resizeScreen } from './view/view-state.js';
+import { createHangaLook } from './view/look/hanga.js';
 import { buildColourMap } from './view/colour-map.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
 import { updateCamera, draw } from './view/draw.js';
 import { markTrack, clearTracks } from './view/ski-tracks.js';
-import { getUi } from './ui/dom.js';
+import { getUi, applyUiTokens } from './ui/dom.js';
 import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
 import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
 import { createFacade } from './debug.js';
@@ -25,17 +26,19 @@ const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." 
 /**
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
  * requestAnimationFrame, setTimeout, HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
- * procedural map at that heading, for the rotated-map tests; default 0)}; localStorage and devicePixelRatio are read
+ * procedural map at that heading, for the rotated-map tests; default 0), scene (optional name: open that scene after
+ * the boot, src/scenes.js)}; localStorage and devicePixelRatio are read
  * at each use.
  * Every piece of state lives in the objects made here; the modules hold none (docs/adr/0002). Returns the frozen
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
  */
 export function createGame(env) {
- const hanga = env.HANGA;
+ const look = createHangaLook(env.HANGA, env.RiderAnim); // every colour, tone and style the view draws with
  const world = createWorld({ rotationRad: env.mapRotationRad || 0 });
  const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
- const view = createView(env.document, hanga);
+ const view = createView(env.document, look);
  const ui = getUi(env.document);
+ applyUiTokens(env.document, look.ui);
  const resize = () => resizeScreen(view, ui.canvas, env.devicePixelRatio);
  env.window.addEventListener('resize', resize);
  resize();
@@ -73,7 +76,7 @@ export function createGame(env) {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, course: world.course,
   frame: mapFrame,
   treeArr: world.treeArr,
-  particles: spray.particles, timestep, hanga, riderAnim: env.RiderAnim,
+  particles: spray.particles, timestep, look, riderAnim: env.RiderAnim,
  };
 
  // The rider on the course's centreline at its start (m).
@@ -133,7 +136,7 @@ export function createGame(env) {
  // Builds the mountain, then shows the menu over the top of the run.
  function boot() {
   buildWorld(world);
-  buildColourMap(view, world, ui.minimap);
+  buildColourMap(view, world, ui.minimap, look);
   session.phase = 'ready';
   placeAtStart();
   rider.vx = rider.vy = 0;
@@ -145,17 +148,19 @@ export function createGame(env) {
   menuCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
   ui.msgT.textContent = MENU_TEXT;
   ui.go.hidden = false;
+  if (env.scene) facade.scene(env.scene); // ?scene=<name> (src/scenes.js): open that scene, paused
  }
 
  bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right));
  ui.go.addEventListener('click', startRun);
  bindMenu(ui, session, env);
- loadStance(session, env, hanga);
+ loadStance(session, env, look.rider.stanceStorageKey);
  env.setTimeout(boot, BOOT_DELAY_MS);
  env.requestAnimationFrame(loop);
 
- return createFacade({
-  rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, hanga, hud, bus, inputLog, startRun,
+ const facade = createFacade({
+  rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun,
   frame,
  });
+ return facade;
 }
