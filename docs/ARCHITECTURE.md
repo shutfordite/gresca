@@ -109,7 +109,9 @@ src/
   world/         terrain.js   Terrain interface, layer stack, bicubic grid placed by a MapFrame (B3, C2)
                  map-frame.js createMapFrame(): a map's grid (u, v) in the ENU world; compassDeg() (C2, ADR 0005)
                  course.js    the procedural course: map size, centreline cx(), finish, kickers, rails, and
-                              createProceduralCourse(terrain), its Course (s = y, d = x - cx(y); C1: polyline)
+                              createProceduralCourse(terrain), a polyline course over cx(y) (C1)
+                 polyline-course.js  the polyline Course (arc-length s, perpendicular d) and Course.fromRun(ways) (C1)
+                 run-geometry.js     join ways, resample, curvature-limited smoothing (R4)
                  noise.js     value noise, fbm, row-wise fbm
                  build.js     createWorld({rotationRad}) (frame, grids, trees and their lookup, terrain, course)
                               and buildWorld() (fills them)
@@ -161,7 +163,7 @@ Rules the layers keep:
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians counter-clockwise from east internally and compass degrees only at the spec boundary. Each map is authored on its own grid and placed by a `MapFrame` (origin, rotation); the procedural map's default placement runs downhill to the south (ADR 0005). `npm run test:rotated` runs the whole suite with the procedural map turned 37°.
 - The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural map (`world/course.js`, `world/build.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
 
-Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline in C1); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade; the baked terrain file `gresca-map-1` (done: `docs/adr/0006-map-terrain-format.md`).
+Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline course and `Course.fromRun` in C1: `world/polyline-course.js`, `world/run-geometry.js`); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade; the baked terrain file `gresca-map-1` (done: `docs/adr/0006-map-terrain-format.md`).
 
 ## 5. Work packages for agents
 
@@ -212,7 +214,7 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 
 ### Phase C: data-driven maps (the core of the product)
 
-**C1. Course as polyline** *(after B2, B3)*. *Amended by R4: include `Course.fromRun(ways)` (join, resample, curvature-limited smoothing, width) and start/end `s` for checkpoints.*
+**C1. Course as polyline** *(after B2, B3; done: `world/polyline-course.js`, `world/run-geometry.js`)*. *Amended by R4: include `Course.fromRun(ways)` (join, resample, curvature-limited smoothing, width) and start/end `s` for checkpoints.*
 - `Course` from a centreline polyline: `project(x,y) → {s, d, tangent}`, `point(s, d)`, `widthAt(s)`, `length`, `finishS`.
 - Re-express the procedural map: sample `cx(y)` into a polyline; kickers, rails and the finish placed in (s, d). The kicker launch test, "m to go", the autopilot, the minimap and the *460–740 empty stretch* invariant all move to s.
 - Accept when: the existing park and physics tests pass against the polyline version, and a new test rides a course that runs **north-east then turns back west** (impossible with `cx(y)`).

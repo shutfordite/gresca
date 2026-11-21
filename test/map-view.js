@@ -9,6 +9,7 @@
 // m: how far a value read back through a rotated frame may be from the one the game set (a few ulps of the round
 // trip through cos and sin; ADR 0005). At the default placement the round trip is exact, so the tolerance is 0.
 export const ROTATED_TOL = 1e-9;
+const SAT_Y_STEPS = 80; // halvings that find the s at a grid y (to machine precision)
 
 /** The façade G (ENU) as a frozen façade on the map's grid: the same members, coordinates converted. */
 export function mapView(G) {
@@ -84,7 +85,7 @@ export function mapView(G) {
   delete o.x;
   delete o.y;
   if ('x' in p) Object.assign(o, F.toWorld(p.x, 'y' in p ? p.y : 500));
-  else if ('y' in p) Object.assign(o, { s: course.project(0, p.y).s, d: 0 });
+  else if ('y' in p) Object.assign(o, { s: sAtY(p.y), d: 0 });
   if ('vx' in p || 'vy' in p) {
    const v = F.vecToWorld(p.vx || 0, p.vy || 0);
    o.vx = v.x;
@@ -131,6 +132,18 @@ export function mapView(G) {
   get kickers() { return C.kickers.map(kickerToGrid); },
   get rails() { return C.rails.map(railToGrid); },
  });
+ // m, the s at which the centreline is level with grid y (s is arc length, so not y itself): bisection on the
+ // course's own point(), since the centreline runs down the grid
+ function sAtY(y) {
+  let lo = 0;
+  let hi = C.length;
+  for (let i = 0; i < SAT_Y_STEPS; i++) {
+   const mid = (lo + hi) / 2;
+   if (course.point(mid, 0).y < y) lo = mid;
+   else hi = mid;
+  }
+  return (lo + hi) / 2;
+ }
  const lipY = (k) => pos(k.x, k.y).y;
  const world = Object.freeze({
   frame: W.frame,
@@ -140,7 +153,7 @@ export function mapView(G) {
    const p = C.point(C.finishS, 0);
    return pos(p.x, p.y).y;
   })(),
-  centre: (y) => course.point(course.project(0, y).s, 0).x, // m, x of the centreline level with y
+  centre: (y) => course.point(sAtY(y), 0).x, // m, x of the centreline level with y
   height: at(W.height),
   cellHeight: at(W.cellHeight),
   gradient: at((x, y) => {
