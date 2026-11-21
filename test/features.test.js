@@ -192,10 +192,25 @@ describe('camera', () => {
     assert.ok(top / RH < 0.25, `sky covers the top ${(top / RH * 100).toFixed(0)}% of the screen`);
   });
 
+  // F5: the camera follows the direction of travel, so the rider here moves along 2.2 rad (and the board points there)
   it('swings round behind the rider as they turn', () => {
-    g.place({ vy: 10, heading: 2.2 });
+    g.place({ vx: 10 * Math.cos(2.2), vy: 10 * Math.sin(2.2), heading: 2.2 });
     frames(240);
     assert.ok(Math.abs(st().camera.heading - 2.2) < 0.05);
+  });
+
+  it('follows the direction of travel, not the board, when the board is turned across it (F5)', () => {
+    g.place({ vy: 10, heading: 0.2 });
+    frames(240);
+    assert.ok(Math.abs(st().camera.heading - Math.PI / 2) < 0.05, `camera at ${st().camera.heading} rad`);
+  });
+
+  it('holds its heading near a standstill, so a slow tail-first slide does not swing it', () => {
+    g.place({ vy: 10 });
+    frames(240);
+    g.place({ vx: -1, vy: 0, heading: 0 }); // the board points +x, sliding slowly tail-first
+    frames(120);
+    assert.ok(Math.abs(st().camera.heading - Math.PI / 2) < 0.05, `camera at ${st().camera.heading} rad`);
   });
 });
 
