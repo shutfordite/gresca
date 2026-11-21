@@ -9,7 +9,7 @@ import { TRAIL_CAPACITY, SAMPLE_FLOATS } from '../track-trail.js';
 // Shader tunables (GLSL constants). Widths are in the ribbon's across coordinate -1..1 unless in m.
 const TUNE = `
 const float LIFT_M = 0.04;          // m above the snow surface at the camera, against z-fighting
-const float LIFT_PER_M = 0.0015;    // m of extra lift per m from the camera (the coarse mesh levels sit lower or higher)
+const float LIFT_PER_M = 0.0015;    // m of extra lift per m from the camera (coarse mesh levels differ)
 const float GROOVE_M = 0.05;        // m, the depth of the deepest groove (shapes the lit and shaded walls)
 const float FLOOR_FROM = 0.35;      // across, the groove floor is flat inside this and rises to the lip by FLOOR_TO
 const float FLOOR_TO = 0.8;
@@ -53,7 +53,9 @@ float heightBilinear(vec2 uv) {
  vec2 f = floor(uv);
  vec2 t = uv - f;
  ivec2 p = ivec2(f);
- return mix(mix(heightAt(p), heightAt(p + ivec2(1, 0)), t.x), mix(heightAt(p + ivec2(0, 1)), heightAt(p + ivec2(1, 1)), t.x), t.y);
+ float low = mix(heightAt(p), heightAt(p + ivec2(1, 0)), t.x);
+ float high = mix(heightAt(p + ivec2(0, 1)), heightAt(p + ivec2(1, 1)), t.x);
+ return mix(low, high, t.y);
 }
 void main() {
  float here = corner.x;
