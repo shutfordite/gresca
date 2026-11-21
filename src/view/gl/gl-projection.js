@@ -1,7 +1,7 @@
 // The GL terrain's projection, the same as the 2D sprites' (sprites.js projectInto): uniforms, GLSL and a JS mirror.
 // The game's view is not a pinhole camera: screen columns are linear in the angle across the field of view (as the
-// raycaster's columns were), rows are a pinhole in the distance along the view, shifted by the slope-follow tilt. So the
-// terrain's vertex shader projects each vertex itself (PROJECT_GLSL) instead of using a three.js camera matrix.
+// raycaster's columns were), rows are a pinhole in the distance along the view, shifted by the slope-follow tilt. So
+// the terrain's vertex shader projects each vertex itself (PROJECT_GLSL) instead of using a three.js camera matrix.
 import { FOV } from '../../core/config.js';
 
 export const NEAR_M = 0.5;  // m along the view, nearer is clipped (the ground there is below the bottom of the screen)
@@ -12,7 +12,9 @@ export const FAR_M = 600;   // m along the view, the depth range's far end (past
  * height / distance), rowC (canvas px from the top: the tilted horizon), W, Hh (canvas px), fov (rad). Plain numbers:
  * gl-renderer.js copies them into its uniforms.
  */
-export const createProjection = () => ({ x: 0, y: 0, height: 0, dirX: 1, dirY: 0, focalC: 1, rowC: 0, W: 1, Hh: 1, fov: FOV });
+export const createProjection = () => ({
+ x: 0, y: 0, height: 0, dirX: 1, dirY: 0, focalC: 1, rowC: 0, W: 1, Hh: 1, fov: FOV,
+});
 
 /** Fills p from the camera (view/camera.js, set by updateCamera()) for a W × Hh canvas (px). Returns p. */
 export function setProjection(p, camera, W, Hh) {

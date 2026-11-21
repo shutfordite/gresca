@@ -15,8 +15,8 @@ export const chromeExecutable = () => process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
 /**
  * Runs the path at each size in headless Chrome against the checkout `root` (its index.html and src/, with this
  * folder's core.mjs served beside them). sizes: [{w, h}] CSS px. dpr: device pixels per CSS px (1 or 2). Returns
- * [{size, dpr, ...runPath result}, ...] and the browser's version. opts.query (optional, e.g. '?renderer=gl') is added to the
- * page's URL.
+ * [{size, dpr, ...runPath result}, ...] and the browser's version. opts.query (optional, e.g. '?renderer=gl') is
+ * added to the page's URL.
  */
 export async function runChrome(root, sizes, opts, dpr = 1, repeat = 1) {
   const { loadTrace } = await import(pathToFileURL(path.join(root, 'test', 'traces.js')).href);

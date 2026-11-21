@@ -78,12 +78,14 @@ async function main() {
   if (!gl) {
     const node = fold(await runNode(root, SIZES, opts, repeat));
     print('node', node);
-    report.node = node.map(({ size, stages, first, frames, skipped, runs, allocKB }) => ({ size, stages, first, frames, skipped, runs, allocKB }));
+    report.node = node.map(({ size, stages, first, frames, skipped, runs, allocKB }) =>
+      ({ size, stages, first, frames, skipped, runs, allocKB }));
   }
   if (process.argv.includes('--chrome') || gl) {
     const { runChrome } = await import('./chrome-run.mjs');
     const dpr = Number(arg('dpr', 1));
-    const { results, version } = await runChrome(root, SIZES, gl ? { ...opts, query: '?renderer=gl' } : opts, dpr, repeat);
+    const chromeOpts = gl ? { ...opts, query: '?renderer=gl' } : opts;
+    const { results, version } = await runChrome(root, SIZES, chromeOpts, dpr, repeat);
     const chrome = fold(results);
     print('chrome', chrome);
     report.machine.chrome = version;
