@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { goldenTrace } from '../tools/golden-trace.mjs';
 import { MAP_ROTATION_DEG } from './harness.js';
 
-const GOLDEN_HASH = 'e0c9cb983f989e91115092d0c501ca54607a9f58d16d4f2ad6cfb7eb439de2c9';
+const GOLDEN_HASH = '0b0cf88c259439d3c0982146a5e87caadd03b41a6040dbc5af4e0755d948e087';
 const ROTATED_DEG = MAP_ROTATION_DEG || 37; // deg, the placement the rotated rides use (npm run test:rotated sets it)
 const ROTATED_TOL = 1e-9; // m, m/s, rad, points, px: the most any number in the rotated trace may differ
 

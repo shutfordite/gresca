@@ -6,7 +6,7 @@ import {
  COURSE_FIELDS, ANIM_INPUT_FIELDS, RIDER_FIELDS, checkCourse, checkAnimInput, checkRiderState,
 } from '../src/core/contracts.js';
 import { SIM_DT } from '../src/core/config.js';
-import { FIN, KICK, KBIG, RAILS, cx, createProceduralCourse, DEFAULT_COURSE } from '../src/world/course.js';
+import { FIN, bump, KICK, KBIG, RAILS, cx, createProceduralCourse, DEFAULT_COURSE } from '../src/world/course.js';
 import { Terrain } from '../src/world/terrain.js';
 import { DEFAULT_FRAME } from '../src/world/map-frame.js';
 import { NO_TREES } from '../src/world/build.js';
@@ -112,14 +112,46 @@ describe('the procedural course (a polyline over cx(y): s is arc length, d perpe
   assert.ok(Object.isFrozen(course.rails) && Object.isFrozen(course.rails[0]));
  });
 
- it('kickerAt: the launch zone is within 9 m across and 5 m past the lip', () => {
+ it('kickerAt: the launch zone is the ramp\'s footprint, within 9 m across and 5 m past the lip, on the grid', () => {
   const k = course.kickers[3];
+  const lip = KICK[3];
+  // (across m, down m on the grid) -> the course coordinates of that point
+  const at = (across, y) => {
+   const w = world(cx(y) + across, y);
+   return course.project(w.x, w.y, {});
+  };
   assert.equal(course.kickerAt(k.s, 0), k);
-  assert.equal(course.kickerAt(k.s + 4.9, 8.9), k);
-  assert.equal(course.kickerAt(k.s + 5, 0), null);
-  assert.equal(course.kickerAt(k.s - 0.01, 0), null);
-  assert.equal(course.kickerAt(k.s, -9), null);
+  for (const side of [1, -1]) {
+   const edge = at(8.9 * side, lip + 4);
+   assert.equal(course.kickerAt(edge.s, edge.d), k, 'inside the width');
+   const out = at(9.1 * side, lip + 4);
+   assert.equal(course.kickerAt(out.s, out.d), null, 'outside the width');
+  }
+  const past = at(0, lip + 5);
+  assert.equal(course.kickerAt(past.s, past.d), null, 'past the depth');
+  const before = at(0, lip - 0.01);
+  assert.equal(course.kickerAt(before.s, before.d), null, 'before the lip');
   assert.equal(course.kickerAt(sOfY(600), 0), null, 'no kicker in the practice stretch');
+ });
+
+ it('a kicker launches over its ramp: kickerAt agrees with the ramp across its width, on turned stretches too', () => {
+  const SPAN = 12; // m either side of the centreline: past the ramp's own edge
+  for (const k of course.kickers) {
+   for (const along of [0.5, 2.5, 4.5]) { // m past the lip, along s
+    for (let d = -SPAN; d <= SPAN; d += 0.25) {
+     const w = course.point(k.s + along, d, {});
+     const g = grid(w.x, w.y);
+     const ramp = bump(g.u, g.v);
+     const launches = course.kickerAt(k.s + along, d) === k;
+     // launching needs a ramp under the rider; a ramp at full height under the rider (within 7 m of the centreline
+     // across the grid, before its drop) launches
+     if (launches) assert.ok(g.v > k.lipY - 1e-6 && g.v < k.lipY + k.depth, `launches off the ramp's rows: y ${g.v}`);
+     if (launches && g.v < k.lipY + 4) assert.ok(ramp > 0, `no ramp at s ${k.s}, along ${along}, d ${d}: launches on bare snow`);
+     const onFullRamp = Math.abs(g.u - cx(g.v)) < 7 && g.v >= k.lipY && g.v < k.lipY + 4;
+     if (onFullRamp) assert.ok(launches, `ramp at s ${k.s}, along ${along}, d ${d}: no launch`);
+    }
+   }
+  }
  });
 
  it('the practice stretch (grid y 460 to 740) has no kicker zone and no rail', () => {

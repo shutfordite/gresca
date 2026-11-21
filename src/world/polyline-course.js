@@ -148,11 +148,17 @@ function widthFn(width, seg) {
  };
 }
 
+// The default launch zone: within halfWidth (m) across and depth (m) past the lip along s, square to the piste.
+function inBand(k, s, d) {
+ return Math.abs(d - k.d) < k.halfWidth && s >= k.s && s < k.s + k.depth;
+}
+
 /**
  * A Course over the world polyline xy (flat [x0, y0, x1, y1, ...], world metres, at least two points) with arc-length
  * s and perpendicular d (left positive). opts: width (m, a number, or a Float64Array with one per point), terrain
  * (for fallLine; null: the tangent), startS and finishS (m of s, default the start and the end), kickers and rails
- * (finished Course entries, copied and frozen). Frozen and stateless; centreline() returns copies
+ * (finished Course entries, copied and frozen), launchZone (kicker, s, d, point -> boolean: where a kicker
+ * launches, default the band square to the piste; a map whose ramps are stamped another way matches them). Frozen and stateless; centreline() returns copies
  * of its points and their arc lengths.
  */
 export function polylineCourseFromWorld(xy, opts = {}) {
@@ -218,10 +224,9 @@ export function polylineCourseFromWorld(xy, opts = {}) {
   return out;
  }
  const kickerList = freezeAll(kickers);
+ const isInZone = opts.launchZone || inBand;
  function kickerAt(s, d) {
-  for (const k of kickerList) {
-   if (Math.abs(d - k.d) < k.halfWidth && s >= k.s && s < k.s + k.depth) return k;
-  }
+  for (const k of kickerList) if (isInZone(k, s, d, point)) return k;
   return null;
  }
 // A copy of the centreline: {xy: world [x0, y0, ...] m, s: arc length m at each point}.

@@ -12,6 +12,7 @@ const START_Y = 60;      // m, y where a run starts
 const PISTE_HALF_WIDTH = 26; // m either side of the centreline where the groomed mask is half (world/build.js)
 const KICKER_HALF_WIDTH = 9; // m either side of the centreline a kicker launches the rider
 const KICKER_LIP_DEPTH = 5;  // m past the lip (along s) where the launch happens
+const LIP_EPS_M = 1e-6;       // m, rounding allowed at the lip edge (the lip's own centre rounds to either side)
 const BISECT_STEPS = 100;    // halvings that place the centreline's first vertex (to machine precision)
 
 // Terrain park. Kickers launch fast riders; KBIG ones have taller ramps and give more air. Values are y of the lip, m.
@@ -101,12 +102,12 @@ function sampleCentreline() {
  return { xy, first };
 }
 
-// The kickers in course coordinates: lip at s (m) on the centreline (d 0), launching within halfWidth (m across) and
+// The kickers in course coordinates: lip at s (m) on the centreline (d 0), lipY (m) its grid y, launching within halfWidth (m across) and
 // depth (m along) past the lip; x, y (m) is the lip's centre in the world. sOfY(y): the s of the vertex at grid y.
 function makeKickers(frame, sOfY) {
  return KICK.map((k) => {
   const p = frame.toWorld(cx(k), k, { x: 0, y: 0 });
-  return { s: sOfY(k), d: 0, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k),
+  return { s: sOfY(k), d: 0, lipY: k, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k),
    x: p.x, y: p.y };
  });
 }
@@ -122,10 +123,23 @@ function placeRail(r, frame, base) {
  return { ...r, x0: a.x, y0: a.y, x1: b.x, y1: b.y, dx: dir.x, dy: dir.y, s0: pa.s, s1: pb.s, d: (pa.d + pb.d) / 2 };
 }
 
+// The launch zone of a kicker is its ramp's footprint: build.js stamps the ramps in grid rows, so (s, d) is turned
+// into the grid and tested there: y from the lip to depth past it, within halfWidth of the centreline across.
+function rampZone(frame) {
+ const at = { u: 0, v: 0 };
+ const world = { x: 0, y: 0 };
+ return (k, s, d, point) => {
+  point(s, d, world);
+  frame.toGrid(world.x, world.y, at);
+  return at.v >= k.lipY - LIP_EPS_M && at.v < k.lipY + k.depth && Math.abs(at.u - cx(at.v)) < k.halfWidth;
+ };
+}
+
 /**
  * The procedural map's Course (core/contracts.js), in world metres: a polyline course (world/polyline-course.js) over
  * the centreline cx(y) sampled at every metre of y, so s is arc length and d the perpendicular distance, with the
- * park (kickers, rails) and the finish placed where they always were on the map. terrain: the world's Terrain, for
+ * park (kickers, rails) and the finish placed where they always were on the map; a kicker launches over its ramp
+ * footprint on the grid, as on main. terrain: the world's Terrain, for
  * fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the grid in the
  * world (default: the piste runs south). Frozen and stateless: every query writes into the caller's out.
  */
@@ -136,7 +150,7 @@ export function createProceduralCourse(terrain, frame = DEFAULT_FRAME) {
  const baseS = base.centreline().s;
  const sOfY = (y) => baseS[y - first]; // m, arc length at the vertex on whole grid y
  return createPolylineCourse(xy, {
-  frame, width, terrain, startS: START_Y, finishS: sOfY(FIN),
+  frame, width, terrain, startS: START_Y, finishS: sOfY(FIN), launchZone: rampZone(frame),
   kickers: makeKickers(frame, sOfY),
   rails: RAILS.map((r) => placeRail(r, frame, base)),
  });

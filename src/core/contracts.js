@@ -99,7 +99,7 @@ const EVENT_FIELDS = Object.freeze({
  * course, never cx(), the finish y or "+y is downhill". Callers may assume only that s is metres increasing down the
  * piste and d is metres across it, positive on the side of heading + PI/2 from the tangent (counter-clockwise: the
  * rider's left facing down the piste; grid +x on the procedural map). Positions and directions are world metres. The
- * procedural course uses s = y and d = x - cx(y) on its grid; C1 swaps in arc length and perpendicular distance.
+ * procedural course is a polyline over cx(y) (C1): s is arc length and d perpendicular distance.
  * Every query writes into the caller's out (no allocation) and returns it.
  * @typedef {object} Course
  * @property {function(number, number, object): {s: number, d: number, tx: number, ty: number}} project
