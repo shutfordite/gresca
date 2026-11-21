@@ -165,7 +165,9 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const largest = Math.max(view.map.width, view.map.height);
  if (gl.getParameter(gl.MAX_TEXTURE_SIZE) < largest) throw new Error('GL terrain: textures of ' + largest + ' px');
  const bytes = checkTextureBudget(view.map.width, view.map.height);
- const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: false, alpha: false, depth: true });
+ const renderer = new THREE.WebGLRenderer({
+  canvas, context: gl, antialias: false, alpha: false, depth: true, stencil: true,
+ });
  renderer.setPixelRatio(1);
  renderer.sortObjects = false;
  const tex = makeTextures(THREE, renderer, view, scene);
