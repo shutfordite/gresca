@@ -1,0 +1,64 @@
+name: PR check
+
+# The mechanical half of a PR review (tools/review/, .claude/skills/gresca-architect "Reviewing a PR"): asserts
+# removed, skipped or changed; the golden trace and fixtures; stream ownership; the PR template; docs and style on
+# new lines; and a headless Chrome smoke test (drop in, ride, page errors, failed requests). Keeps one comment on the
+# PR, so a reviewing agent reads a short report instead of diffing tests and taking screenshots itself.
+# Advisory: the job fails only if the checks themselves cannot run.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write # the report comment
+
+concurrency:
+  group: pr-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Check out the base branch beside this one
+        run: git worktree add ../base "origin/${{ github.base_ref }}"
+      - run: npx playwright-core install --with-deps chromium
+      - name: Smoke test
+        continue-on-error: true # a broken page is a finding in the report, not a failed check
+        run: node tools/review/smoke.mjs --base ../base --out smoke.json --shots shots
+      - name: Report
+        run: node tools/review/run.mjs --base "origin/${{ github.base_ref }}" --smoke smoke.json --out report.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr-check
+          path: |
+            report.md
+            smoke.json
+            shots/
+          if-no-files-found: ignore
+      - name: Comment with the report
+        # Pull requests from forks get a read-only token; they still get the report in the job summary.
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- gresca-pr-check -->';
+            const sha = context.payload.pull_request.head.sha.slice(0, 7);
+            const body = fs.readFileSync('report.md', 'utf8') + `\n<sub>For ${sha}.</sub>\n`;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments,
+              { ...context.repo, issue_number, per_page: 100 });
+            const mine = comments.find(c => c.user.type === 'Bot' && c.body.startsWith(marker));
+            if (mine) await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ ...context.repo, issue_number, body });

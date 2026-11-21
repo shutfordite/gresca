@@ -86,6 +86,7 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Recorded RiderState traces (`node tools/record-trace.mjs` rewrites them) | `tools/record-trace.mjs`, `test/fixtures/traces/`, loader `test/traces.js` | `traces` |
 | Screenshots of every scene, board and skis, 820x1180 (`npm run shot` -> `shots/`; Playwright is dev-only, ADR 0003) | `tools/shot.mjs`, `.github/workflows/test.yml` | none (CI `shots` job on `src/view/`, `art/`, `styles/` PRs) |
 | Frame time by stage (`npm run bench`, `-- --chrome` for headless Chrome), the recorded baseline, the CI regression check, pixel digests of every scene | `tools/bench/` (`core.mjs` path and stats, `baseline.json`, `compare.mjs`, `digest.mjs`); the stage timer is `view.timer` (`src/view/draw.js`) | `bench`, `timer` (CI `bench` job on PRs) |
+| The mechanical PR check (asserts, golden hash, ownership, template, docs and style on new lines, smoke test; `npm run review`, `npm run smoke`); the ownership list mirrors "Who owns what" below | `tools/review/` (`checks.mjs` pure, `run.mjs`, `smoke.mjs`), `.github/workflows/pr-check.yml` | `review` (CI `PR check` job comments on every PR) |
 | The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `tools/map-compiler/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the file | `tools/map-compiler/core.js` (pure) | `map-compiler` |
 | DEM and piste sources (Terrarium PNG tiles; OpenSkiMap, Overpass) | `tools/map-compiler/sources/` | `map-compiler` |
@@ -144,6 +145,9 @@ Every agent session pays for what it reads and prints, so keep context small:
 - Prefer `grep -n` and `sed -n` ranges to whole-file reads for any file over about 300 lines, including
   `docs/ARCHITECTURE.md`. Read only the doc sections your package names.
 - Keep reports short: what changed, the proof, open questions. Don't paste diffs or test logs back.
+- Before opening a PR, run `npm run review -- --title "<title>" --body-file <body.md>` and fix what it flags; the
+  same report is posted on the PR by CI, and reviewers read it instead of re-checking by hand. If you change who
+  owns a folder, change the table below and `OWNERS` in `tools/review/checks.mjs` together.
 
 ## Tests
 - New behaviour comes with a test that fails without it. A bug fix comes with a test that reproduces the bug.

@@ -26,6 +26,7 @@ Updated 21 Nov 2026, main after PR #30.
 | C3a map compiler, terrain half: `tools/map-compiler/`, `gresca-map-1` terrain file (ADR 0006), validator | #29 |
 | P5 scenes (`Gresca.scene()`, `?scene=`), `RiderState` traces, `npm run shot` with Playwright (ADR 0003), per-area test scripts | #28 |
 | P4 Look interface (`src/view/look/`, ADR 0007), the Hanga look as the only `HANGA` reader, look lint, `lab.html` | #30 |
+| P6 mechanical PR check (`tools/review/`, `PR check` workflow posting one report comment per PR) | this PR |
 
 ## In progress (phase 3, the five streams, started 21 Nov; parallel, each in its own folders)
 | Stream | Package | Branch |
