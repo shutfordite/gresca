@@ -40,6 +40,7 @@ The freeze is about four PRs (B2a, B2b, B2c and C2), plus the P1 docs PR between
 |---|---|---|
 | **P4** Look interface (F2) | S4 | `view/look/`: `Look` with roles, tones, sky, fog, sprite styles, camera framing, `rider.project`; `look/hanga.js` is the only file reading `HANGA`; hard-coded hex and CSS variables come from the look's tokens; contract tests; a lint test bans hex literals and `HANGA.` outside `view/look/`; `lab.html` look lab. Send the **art spec v1.4 request** (body twist, head yaw with the face vector, brake, switch-ski and flip-tuck poses) at the same time. |
 | **P5** scenes, fixtures, screenshots | shared | `Gresca.scene(name)` and `?scene=`; recorded `RiderState` traces in `test/fixtures/`; `npm run shot` with Playwright (dev-only, **ADR 0003**; 0002 is ES modules) at iPad size; CI attaches shots to PRs touching `view/`, `art/` or `styles/`; per-area test scripts. |
+| **P6** mechanical PR check | shared | `tools/review/`: the scriptable half of a review (asserts, golden hash, ownership, template, docs and style on new lines, a headless Chrome smoke test against main) run by the `PR check` workflow, which keeps one report comment per PR; the coordinator skill reads it instead of redoing those steps. Added 21 Nov to save review tokens. |
 | **C3a** map compiler, terrain half | S5 | `tools/` only: the pure JS compiler core, DEM and piste adapters, `<id>.terrain.json` plus validator. It touches no `src/`, so it can start as soon as B2c fixes the course schema. |
 
 ## Phase 3: streams (parallel; each owns its folders)

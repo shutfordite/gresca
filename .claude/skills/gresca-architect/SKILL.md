@@ -22,9 +22,9 @@ merges PRs, and makes product decisions.
   Mark it ready with `gh api -X POST repos/shutfordite/gresca/pulls/<n>/ccr/ready_for_review`.
 - **Never force-push.** To bring a PR up to date, use `gh api -X PUT repos/shutfordite/gresca/pulls/<n>/update-branch`,
   or merge `origin/main` into the branch.
-- GitHub Pages (`shutfordite.github.io`) and the Pages settings API are blocked from the sandbox. To check a
-  preview, serve the branch locally (`git archive origin/<branch> index.html art src styles | tar -x -C /tmp/site`,
-  then `python3 -m http.server`; ES modules need HTTP) and run `smoke.cjs` from this folder. Read the screenshots.
+- GitHub Pages (`shutfordite.github.io`) and the Pages settings API are blocked from the sandbox. The `PR check`
+  workflow smoke-tests every PR in headless Chrome and reports in its comment. To check by hand, in a worktree of
+  the branch run `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/usr/bin/google-chrome npm run smoke` (it serves the checkout).
 - Previews publish to `https://shutfordite.github.io/gresca/pr/<n>/<sha7>/`, and the bot comment links them.
 - Each agent works in its own `git worktree` under `/home/claude/gresca-<id>`, never in the main checkout. Remove
   the worktree after review.
@@ -49,16 +49,25 @@ Launch it in the background, and include:
 - Running packages in parallel only when they touch different files. During the freeze (B2b, B2c, C2), run one at a time.
 
 ## Reviewing a PR (post the review as a COMMENT; you can't approve)
-1. CI and preview: `gh api repos/shutfordite/gresca/commits/<branch>/check-runs --jq '.check_runs[]|"\(.name) \(.conclusion)"'`.
-2. **Assertions:** compare `assert.*` lines per test file between `origin/main` and the branch. Any change must be
-   one the brief allowed and the PR explains. Numbers and tolerances must not loosen.
+1. CI and the **PR check** report: `gh api repos/shutfordite/gresca/commits/<branch>/check-runs --jq
+   '.check_runs[]|"\(.name) \(.conclusion)"'`, then read only the report comment:
+   `gh api "repos/shutfordite/gresca/issues/<n>/comments" --jq '.[]|select(.body|startswith("<!-- gresca-pr-check"))|.body'`.
+   It has already done the mechanical steps: assert counts per test file, removed asserts, added skips and assert
+   lines whose numbers changed; the golden hash and fixtures; stream ownership and contracts mixed with code; the
+   template; new files missing from the code map; tunables without units; long new lines; and the smoke test
+   (drop in, ride, page errors and failed requests, compared with main). Don't redo them: follow up only on what it
+   flags (❌ must be explained in the PR; ⚠️ look). If the report is missing or stale (its `For <sha7>` line), run
+   `node tools/review/run.mjs --base origin/main` in a worktree of the branch.
+2. **Assertions:** for each flagged assert change, check the brief allowed it and the PR explains it. Numbers and
+   tolerances must not loosen.
 3. **Claims:** reproduce the key one yourself (for a code move, join and diff; for performance, rerun; for
    behaviour, a deterministic trace through the façade at a fixed `dt`, not wall-clock browser timing).
-4. **Architecture checklist:** layering; no DOM in `world/` or `sim/`; the camera is not advanced in draw; no new
-   "+y is downhill"; units on tunables; no per-frame allocations; colours from palette roles; contracts changed only
-   in their own PR; an ADR for anything costly to undo; docs updated.
-5. **Browser smoke test** with `smoke.cjs`. If something looks wrong, run the same check on `main` before blaming
-   the PR (existing bugs are common).
+4. **Architecture checklist** (what no script checks; `npm test` already lints DOM in `world/`/`sim/`, browser
+   globals, module state, "+y is downhill", colours and the frame): the camera is not advanced in draw; no
+   per-frame allocations; the design fits the package; an ADR for anything costly to undo; docs say the right thing.
+5. **Look at it** only when the report flags the smoke test or the change is visible: open at most the two smoke
+   screenshots from the `pr-check` artifact, or the `shots` artifact for look changes. A problem marked "also on
+   main" is an existing bug, not the PR's.
 6. Post the review: what you checked, a verdict, decisions on the agent's open questions, non-blocking notes for
    later packages, and what to try on the iPad.
 7. Tell the owner in a few lines: the verdict, the preview link, and what to try. Ask one question at most.
@@ -74,7 +83,7 @@ Launch it in the background, and include:
   - Use the quiet `npm test`; rerun one file verbosely only to debug it.
   - Pick the cheapest agent that can do the job: Sonnet for implementation packages, Haiku or the read-only
     Explore agent for searches, Opus for the coordinator, reviews and contract or frame decisions.
-  - Screenshots cost about 1.5k tokens each: at most two per check (`smoke.cjs` takes them at scale 1), none for
+  - Screenshots cost about 1.5k tokens each: at most two per check (the smoke test takes them at scale 1), none for
     no-behaviour-change refactors whose proof is a trace or a digest.
   - Short reports from agents (set a word limit in the brief) and no repeating long docs back to the owner.
   - One thread per package: when a package is merged, update `docs/STATUS.md` and start the next one in a new
