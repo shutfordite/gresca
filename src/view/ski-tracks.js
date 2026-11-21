@@ -9,7 +9,7 @@ const DEPTH_DEEP = 0.8;  // the same braking or skidding
 /**
  * Marks the track under the rider (RiderState) after a sim step, if it is on the snow. The track is a fixed depth
  * below the snow as built (col0), never compounded per step: a slow rider stays over one cell for many steps, which
- * turned it black. Reads the rider, writes only view.col.
+ * turned it black. Reads the rider, writes only view.col and the changed rows, view.trackRows.
  */
 export function markTrack(view, rider) {
  if (rider.grind || rider.crashTimer > 0 || rider.z > AIRBORNE_Z) return;
@@ -24,6 +24,9 @@ export function markTrack(view, rider) {
  darken(col, col0, o + 4, dk);
  darken(col, col0, o + row, dk);
  darken(col, col0, o + row + 4, dk);
+ const rows = view.trackRows; // for the GPU terrain, which uploads only the rows that changed
+ rows.v0 = rows.v1 < rows.v0 ? at.v | 0 : Math.min(rows.v0, at.v | 0);
+ rows.v1 = Math.max(rows.v1, (at.v | 0) + 1);
 }
 
 // One cell at byte offset i, at least dk (red; green and blue a little lighter) of its built colour.
@@ -36,4 +39,6 @@ function darken(col, col0, i, dk) {
 /** Wipes every track (a new run). */
 export function clearTracks(view) {
  view.col.set(view.col0);
+ view.trackRows.v0 = 0;
+ view.trackRows.v1 = view.map.height - 1;
 }
