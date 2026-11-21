@@ -3,6 +3,7 @@
 //   --repeat K runs each size K times (default 5) and reports the median of each statistic
 //   --chrome   also run in headless Chrome (set PLAYWRIGHT_CHROMIUM_EXECUTABLE); without it, Node only
 //   --root DIR measure the game checked out in DIR (default: this repository)
+//   --notes T  free text kept in the JSON (what else was running, which commit)
 //   --json F   write the numbers to F (the baseline format)
 import fs from 'node:fs';
 import os from 'node:os';
@@ -64,6 +65,7 @@ async function main() {
     note: 'ms per frame by stage along tools/bench/core.mjs createPath() (the four recorded traces at 60 fps, repeated)',
     machine: { cpu: os.cpus()[0].model, cores: os.cpus().length, node: process.version, platform: `${os.platform()} ${os.arch()}` },
     frames: opts.frames, warmup: opts.warmup,
+    ...(arg('notes') ? { notes: arg('notes') } : {}),
   };
   const repeat = Number(arg('repeat', REPEAT));
   const node = fold(await runNode(root, SIZES, opts, repeat));
