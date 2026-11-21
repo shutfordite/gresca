@@ -8,7 +8,7 @@ import { serve } from './serve.mjs';
 import { TRACE_ORDER } from './node-run.mjs';
 
 const LOAD_TIMEOUT_MS = 60000; // ms to build the mountain
-const CPU = '?renderer=cpu'; // headless Chrome has no GPU: draw with the CPU raycaster unless opts.query asks
+const CPU = '?map=test&renderer=cpu'; // headless Chrome has no GPU: draw with the CPU raycaster unless opts.query asks
 
 /** The Chrome to launch: PLAYWRIGHT_CHROMIUM_EXECUTABLE, else Playwright's own download. */
 export const chromeExecutable = () => process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;

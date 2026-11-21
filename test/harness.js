@@ -124,6 +124,7 @@ export async function load(opts = {}) {
     requestAnimationFrame(fn) { raf.push(fn); },
     HANGA: art.HANGA,
     RiderAnim: art.RiderAnim,
+    map: opts.map || 'test', // ?map=test in the browser; every test runs on the test slope unless it asks for 'play'
     scene: opts.scene, // ?scene=<name> in the browser: open that scene after the boot (src/scenes.js)
     mapRotationRad: (opts.rotationDeg ?? MAP_ROTATION_DEG) * Math.PI / 180,
     renderer: opts.renderer, // ?renderer=gl in the browser; Node has no WebGL, so the game falls back to the CPU

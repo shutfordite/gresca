@@ -42,6 +42,7 @@ Updated 21 Nov 2026, main after PR #43.
 | Stream | Package | Branch |
 |---|---|---|
 | Shared | Ray constants (`RAY_START_M`, `RAY_SPREAD`) into `core/config.js`; this file after #43 | `view/e1-ray-constants` |
+| S5 maps (+ small shared seam) | **M1** a steep play mountain with big kickers, the map the game opens on; the current procedural slope stays as the test track (`?map=test`) | `maps/m1-play-slope` |
 | S4 look, camera, render | **E1b** GPU renderer hardening: lost-context handling, texture memory budget, softer corduroy | `view/e1b-gl-hardening` |
 
 ## Next, in order

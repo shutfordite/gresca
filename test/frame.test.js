@@ -9,7 +9,7 @@ import path from 'node:path';
 const SRC = path.join(import.meta.dirname, '..', 'src');
 
 // The procedural map: these files may use its internals freely.
-const PROCEDURAL = ['world/course.js', 'world/build.js', 'view/colour-map.js'];
+const PROCEDURAL = ['world/course.js', 'world/build.js', 'world/play-slope.js', 'view/colour-map.js'];
 // What only the procedural map may import from world/course.js.
 const BANNED = ['cx', 'KICK', 'KBIG', 'FIN', 'RAILS', 'RAIL_DEF', 'bump', 'W0', 'H0'];
 // Files outside the procedural map that may still import one of BANNED, and why.
