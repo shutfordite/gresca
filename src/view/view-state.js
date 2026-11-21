@@ -6,6 +6,7 @@ import { createProjection } from './sprites.js';
 import { cssRgb } from './look/look.js';
 
 const MAX_RENDER_COLUMNS = 400; // the occlusion buffer has room for this many render columns (draw.js uses <= 360)
+export const TREE_SLICES = 48;  // depth slices the trees are counted into before they are sorted exactly (draw.js)
 const TREE_STYLES_MAX = 4096;   // fill styles kept for trees, then the cache starts again (a few hundred are ever used)
 const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs fill rate for nothing visible)
 
@@ -31,7 +32,7 @@ export const STAGE = Object.freeze({
  * fog (the Look's fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), groundM (m, the
  * ground under it, from updateCamera()), the rider animation (anim, animPrev, riderList, riderYaw deg) and counts of
  * what the last frame drew, the buffers a frame reuses (loImage, the low-res render's pixels; rayZ and rayFog, the
- * terrain samples' distances and fog; trees, the visible trees; treeStyles; projA, projB, projG and sun, scratch)
+ * terrain samples' distances and fog; trees, the visible trees; treePos, all trees' x and y; treeStyles; projA, projB, projG and sun, scratch)
  * and timer (null, or {lap(stage)} from a profiler: draw.js calls timer.lap(STAGE.x) as
  * each stage finishes; one branch when it is null). look: the Look (view/look/look.js).
  */
@@ -72,6 +73,7 @@ export function createView(doc, look) {
   rayFog: new Float64Array(RAY_SAMPLES), // 0..1, the fog at each of them
   rayFogFor: null, // the Look's fog rayFog was made for
   trees: createTreeBuffer(),
+  treePos: { src: null, n: 0, x: null, y: null }, // the world's trees as x, y arrays (draw.js)
   treeStyles: new Map(), // fill style strings by r, g, b, so a tree's colour is not built again each frame
   projA: createProjection(), projB: createProjection(), projG: createProjection(), // scratch (sprites.js)
   sun: { X: 0, Y: 0, r: 0, on: false }, // scratch: the sun disc (sky.js)
@@ -99,7 +101,7 @@ export function treeStyle(view, r, g, b) {
  */
 function createTreeBuffer() {
  const buf = {
-  n: 0, cap: 0, X: null, Y: null, f: null, z: null, order: null,
+  n: 0, cap: 0, X: null, Y: null, f: null, z: null, order: null, counts: new Int32Array(TREE_SLICES + 1),
   grow() {
    if (buf.n < buf.cap) return;
    const cap = Math.max(64, buf.cap * 2);

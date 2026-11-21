@@ -7,7 +7,7 @@ import { projectInto, drawFlags, drawRails } from './sprites.js';
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
 import { cssRgba } from './look/look.js';
-import { STAGE, treeStyle } from './view-state.js';
+import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
 
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
@@ -205,9 +205,24 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
  }
 }
 
+// The trees' x and y (m) as two arrays, which the cull below reads faster than 15 000 objects: made on the first frame
+// after the world is built (and again if the list changes), in view.treePos.
+function treePositions(view, treeArr) {
+ const pos = view.treePos;
+ if (pos.src === treeArr && pos.n === treeArr.length) return pos;
+ pos.x = new Float64Array(treeArr.length);
+ pos.y = new Float64Array(treeArr.length);
+ for (let i = 0; i < treeArr.length; i++) {
+  pos.x[i] = treeArr[i].x;
+  pos.y[i] = treeArr[i].y;
+ }
+ pos.src = treeArr;
+ pos.n = treeArr.length;
+ return pos;
+}
+
 // Trees, far to near, hidden when a nearer ridge covers them (view.occ from the raycast). look: the Look. The visible
-// trees go in view.trees (typed arrays, no objects), sorted far to near by insertion: the list is nearly in order
-// from one frame to the next, and trees at equal distance keep the order of treeArr.
+// trees go in view.trees (typed arrays, no objects), sorted far to near (sortTrees()).
 function drawTrees(ctx, view, camera, terrain, look, treeArr, RW) {
  const FOG = view.fog;
  const TREE = look.sprites.tree.rgb; // before fog
@@ -216,26 +231,23 @@ function drawTrees(ctx, view, camera, terrain, look, treeArr, RW) {
  const sc = camera.focalPx;
  const buf = view.trees;
  const P = view.projA;
+ const pos = treePositions(view, treeArr);
+ const xs = pos.x;
+ const ys = pos.y;
  buf.n = 0;
- for (let i = 0; i < treeArr.length; i++) {
-  const T = treeArr[i];
+ for (let i = 0; i < pos.n; i++) {
   // projectInto() would drop it anyway: skip the height lookup
-  const f = (T.x - camera.x) * camera.dirX + (T.y - camera.y) * camera.dirY;
+  const f = (xs[i] - camera.x) * camera.dirX + (ys[i] - camera.y) * camera.dirY;
   if (f < TREE_NEAR_M || f > TREE_FAR_M) continue;
-  if (!projectInto(camera, T.x, T.y, terrain.height(T.x, T.y), P) || P.f > TREE_FAR_M) continue;
+  if (!projectInto(camera, xs[i], ys[i], terrain.height(xs[i], ys[i]), P) || P.f > TREE_FAR_M) continue;
   buf.grow();
   const n = buf.n++;
   buf.X[n] = P.X;
   buf.Y[n] = P.Y;
   buf.f[n] = P.f;
   buf.z[n] = P.z;
-  let j = n; // insertion sort of the order, far (large f) first
-  while (j > 0 && buf.f[buf.order[j - 1]] < P.f) {
-   buf.order[j] = buf.order[j - 1];
-   j--;
-  }
-  buf.order[j] = n;
  }
+ sortTrees(buf);
  for (let i = 0; i < buf.n; i++) {
   const t = buf.order[i];
   const X = buf.X[t];
@@ -262,6 +274,31 @@ function drawTrees(ctx, view, camera, terrain, look, treeArr, RW) {
    ctx.lineTo(X, by - hh * 0.42);
    ctx.fill();
   }
+ }
+}
+
+// Which of the TREE_SLICES depth slices a tree f m along the view is in: 0 is the farthest.
+const depthSlice = (f) => Math.min(TREE_SLICES - 1, ((TREE_FAR_M - f) * TREE_SLICES / (TREE_FAR_M - TREE_NEAR_M)) | 0);
+
+// Puts buf.order[0..n) in far-to-near order (f descending), trees at equal f in the order they were found: a counting
+// sort into TREE_SLICES depth slices, then an insertion sort that only has to settle trees within a slice.
+function sortTrees(buf) {
+ const n = buf.n;
+ const counts = buf.counts;
+ const f = buf.f;
+ const order = buf.order;
+ counts.fill(0);
+ for (let t = 0; t < n; t++) counts[depthSlice(f[t]) + 1]++;
+ for (let b = 0; b < TREE_SLICES; b++) counts[b + 1] += counts[b];
+ for (let t = 0; t < n; t++) order[counts[depthSlice(f[t])]++] = t;
+ for (let i = 1; i < n; i++) {
+  const t = order[i];
+  let j = i;
+  while (j > 0 && f[order[j - 1]] < f[t]) {
+   order[j] = order[j - 1];
+   j--;
+  }
+  order[j] = t;
  }
 }
 
