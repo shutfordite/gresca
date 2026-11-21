@@ -37,13 +37,18 @@ Updated 21 Nov 2026, main after PR #39.
 ## In progress (phase 3, the five streams; parallel, each in its own folders)
 | Stream | Package | Branch |
 |---|---|---|
-| S4 look, camera, render | Quick win: smoother, more natural snow (raycast spans shaded as gradients; relief and grain in the colour map) | `look/snow-relief` |
+| S4 look, camera, render | Quick win: smoother, more natural snow (raycast spans shaded as gradients; relief and grain in the colour map) | `look/snow-relief` (#40) |
+| S4 look, camera, render | **E0** GPU terrain renderer (three.js, ADR 0008), behind `?renderer=gl`. Accepted by the owner on the iPad (50 to 60 fps) | `view/e0-gl-terrain` (#42) |
+| Docs | GPU renderer pulled forward; the owner's E0 verdict and the S4 order | `docs/gpu-renderer-decision` (#41) |
 
 ## Next, in order
 - S1: F4b pause button and in-game controls → F3 flip input and air hints → stance picker.
 - S2: F6 edge and carve model (removes the heading clamp; flip yaw/turn rate to counter-clockwise) → F3 flip physics.
 - S3: F5 brake counter-rotation → F6 edge-driven lean → F7 fakie look → F3 flip tuck.
-- S4: F1 sizing → D2 (per-pixel shading; builds on the snow quick win: relief, grain, smooth spans) → D3.
+- S4: **E1** GPU renderer by default (`?renderer=cpu` fallback), lost-context handling, texture memory budget,
+  softer corduroy (the owner: "still a way to go"), ray constants into `core/config.js` (review notes on #42) → E2
+  soft shadows → E3 GPU trees and park objects → E4 tilt-shift and haze (`docs/ROADMAP.md`).
+- Later, its own workstream: **ski tracks** on the GPU (the owner: the line left in the snow needs a lot of work).
 - S5: C3b course file → C4 map loading (needs D0).
 
 ## Known issues (not yet fixed)
