@@ -2,10 +2,11 @@
 // the clipmap meshes and the sky on their own canvas under the screen canvas, drawn each frame from the game camera.
 import { NEAR_M, FAR_M, createProjection, setProjection } from './gl-projection.js';
 import { CLIPMAP, levelGrid, levelOrigin, levelSpacing } from './terrain-mesh.js';
-import { bakeHeights, bakeSlopes, bakeRelief, bakeAux, bakePaint, trackRows, bakePiste, halfArray, PISTE_STEP_M,
+import { bakeHeights, bakeSlopes, bakeRelief, bakeAux, bakePaint, bakePiste, halfArray, PISTE_STEP_M,
  RELIEF_M_PER_BYTE } from './terrain-bake.js';
 import { makeDetailTexture, DETAIL_SIZE } from './detail-texture.js';
 import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook } from './snow-material.js';
+import { createTrackRibbon, ribbonLook } from './track-ribbon.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
 import { checkTextureBudget } from './gl-budget.js';
@@ -27,7 +28,7 @@ function dataTexture(THREE, data, w, h, format, type, internalFormat, linear) {
  return t;
 }
 
-// The terrain's textures from the built world (terrain-bake.js); aux is also kept on the CPU for the ski tracks.
+// The terrain's textures from the built world (terrain-bake.js).
 function makeTextures(THREE, renderer, view, scene) {
  const nx = view.map.width;
  const ny = view.map.height;
@@ -35,7 +36,6 @@ function makeTextures(THREE, renderer, view, scene) {
  if (!view.colSnow) throw new Error('GL terrain: the colour map was built without its plain snow (keepSnow)');
  const heights = bakeHeights(scene.terrain, frame, nx, ny);
  const aux = bakeAux(bakeRelief(heights, nx, ny), scene.terrain, frame, nx, ny);
- trackRows(aux, view.col, view.col0, nx, 0, ny - 1);
  const piste = bakePiste(scene.course, scene.terrain, frame, nx, ny);
  const detail = new THREE.DataTexture(makeDetailTexture(), DETAIL_SIZE, DETAIL_SIZE, THREE.RGBAFormat);
  detail.wrapS = THREE.RepeatWrapping;
@@ -154,31 +154,6 @@ function addSky(THREE, glScene, look) {
  return material;
 }
 
-// Uploads the colour map rows the ski tracks changed (view.trackRows) into the aux texture's track channel, straight
-// through WebGL (three.js has no partial upload for one-byte rows), then tells three.js its GL state is stale.
-function uploadTracks(renderer, gl, tex, view) {
- const rows = view.trackRows;
- if (rows.v1 < rows.v0) return;
- const nx = view.map.width;
- const ny = view.map.height;
- const v0 = Math.max(0, Math.min(ny - 1, rows.v0));
- const v1 = Math.max(0, Math.min(ny - 1, rows.v1));
- rows.v0 = 0;
- rows.v1 = -1;
- trackRows(tex.aux, view.col, view.col0, nx, v0, v1);
- const handle = renderer.properties.get(tex.auxTex).__webglTexture;
- if (handle === undefined) return; // not on the GPU yet: the first render uploads the whole texture
- gl.bindTexture(gl.TEXTURE_2D, handle);
- gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
- gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
- gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
- gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
- gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
- gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
- gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, v0, nx, v1 - v0 + 1, gl.RGBA, gl.UNSIGNED_BYTE, tex.aux, v0 * nx * 4);
- renderer.resetState();
-}
-
 /**
  * The GPU terrain on canvas (with its WebGL2 context gl) for the built world: bakes the textures (about 40 MB on the
  * GPU for the procedural map, terrain-bake.js) and builds the meshes once. Returns {render(view, scene), bytes
@@ -197,6 +172,8 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const shared = sharedUniforms(THREE, tex, view, scene.look);
  const glScene = new THREE.Scene();
  const levels = addLevels(THREE, glScene, shared);
+ const s = snowLook(scene.look, view.mapFrame);
+ const ribbon = createTrackRibbon(THREE, glScene, shared, view.trail, ribbonLook(s.shade, s.lit));
  const sky = addSky(THREE, glScene, scene.look);
  const unused = new THREE.Camera(); // three.js wants one; the shaders project for themselves
  const proj = createProjection();
@@ -217,7 +194,7 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   const sun = sunDisc(sc.look.sky, sc.camera, v.W, v.Hh, sc.frame, v.sun);
   sky.uniforms.uRows.value.set(Math.max(1, p.rowC), p.Hh);
   sky.uniforms.uSun.value.set(sun.X, sun.Y, sun.r, sun.on ? 1 : 0);
-  uploadTracks(renderer, gl, tex, v);
+  ribbon.update(v.trail);
   renderer.render(glScene, unused);
  }
  return { render, bytes };
