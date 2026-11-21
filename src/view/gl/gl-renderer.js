@@ -8,6 +8,7 @@ import { makeDetailTexture, DETAIL_SIZE } from './detail-texture.js';
 import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook } from './snow-material.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
+import { checkTextureBudget } from './gl-budget.js';
 import { FOV } from '../../core/config.js';
 
 const MAX_ANISOTROPY = 8; // the detail texture's anisotropic filtering, at most (grazing views of the ripples)
@@ -180,13 +181,15 @@ function uploadTracks(renderer, gl, tex, view) {
 
 /**
  * The GPU terrain on canvas (with its WebGL2 context gl) for the built world: bakes the textures (about 40 MB on the
- * GPU for the procedural map, terrain-bake.js) and builds the meshes once. Returns {render(view, scene)}, which draws
- * the terrain and sky for the camera updateCamera() set, at the screen canvas's size (view.W × view.Hh px). Throws if
- * the GPU cannot hold the map. THREE: the three.js module (env.THREE).
+ * GPU for the procedural map, terrain-bake.js) and builds the meshes once. Returns {render(view, scene), bytes
+ * (terrainTextureBytes)}; render draws the terrain and sky for the camera updateCamera() set, at the screen canvas's
+ * size (view.W × view.Hh px). Throws if the GPU cannot hold the map or the textures are over GL_TEXTURE_BUDGET_MB.
+ * THREE: the three.js module (env.THREE).
  */
 export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const largest = Math.max(view.map.width, view.map.height);
  if (gl.getParameter(gl.MAX_TEXTURE_SIZE) < largest) throw new Error('GL terrain: textures of ' + largest + ' px');
+ const bytes = checkTextureBudget(view.map.width, view.map.height);
  const renderer = new THREE.WebGLRenderer({ canvas, context: gl, antialias: false, alpha: false, depth: true });
  renderer.setPixelRatio(1);
  renderer.sortObjects = false;
@@ -217,5 +220,5 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   uploadTracks(renderer, gl, tex, v);
   renderer.render(glScene, unused);
  }
- return { render };
+ return { render, bytes };
 }

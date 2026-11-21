@@ -145,7 +145,8 @@ src/
                  gl/            the GPU terrain (three.js, vendored in vendor/three/): gl-renderer.js (textures,
                                 clipmap meshes, sky, per-frame uniforms), gl-projection.js (the sprites' projection
                                 in GLSL), terrain-mesh.js, terrain-bake.js, detail-texture.js, snow-material.js,
-                                sky-material.js, horizon.js (view.occ for the trees, without the raycast)
+                                sky-material.js, horizon.js (view.occ for the trees, without the raycast), gl-budget.js (texture
+                                memory and its budget), context-loss.js (lost-context state, drawer switch)
                  look/          look.js  the Look (P4, ADR 0007): colours, terrain tone, sky, fog, sprite colours,
                                          camera framing, UI tokens, rider.project; validateLook()
                                 hanga.js createHangaLook(HANGA, RiderAnim): the only file reading HANGA's fields
