@@ -112,8 +112,9 @@ const EVENT_FIELDS = Object.freeze({
  * @property {number} length m of s the course covers (from 0)
  * @property {number} startS m, s where a run starts
  * @property {number} finishS m, s of the finish line (riding past it finishes the run)
- * @property {ReadonlyArray<{s: number, d: number, halfWidth: number, depth: number, big: boolean}>} kickers frozen, in
- *  s order: lip at s, centred at d, launching within halfWidth across and depth past the lip (m)
+ * @property {ReadonlyArray<{s: number, d: number, halfWidth: number, depth: number, big: boolean, launchGain?: number}>}
+ *  kickers frozen, in s order: lip at s, centred at d, launching within halfWidth across and depth past the lip (m);
+ *  launchGain (optional, dimensionless) multiplies the launch speed up, replacing the big-kicker gain (sim/jump.js)
  * @property {ReadonlyArray<{s0: number, s1: number, d: number, x0: number, y0: number, x1: number, y1: number,
  *  dx: number, dy: number, len: number, h: number, t: string}>} rails frozen rails and boxes: s0..s1 at d (m), and
  *  their world geometry (m, unit direction, length m, top height m, 'rail' | 'box')
