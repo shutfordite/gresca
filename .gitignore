@@ -3,3 +3,4 @@ node_modules/
 *.log
 # baked terrain data is large and is added deliberately
 *.local.json
+shots/
