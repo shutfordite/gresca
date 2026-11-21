@@ -20,6 +20,22 @@ jobs:
       # the whole suite with the procedural map rotated 37 and 300 degrees (docs/adr/0005-enu-frame.md)
       - run: npm run test:rotated
 
+  # Frame time against the base branch, measured on this runner in the same job (tools/bench/compare.mjs): fails if a
+  # stage's median frame time is more than 25% above main's. Node only, no browser, no install.
+  bench:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check out the base branch beside this one
+        run: git worktree add ../base "origin/${{ github.base_ref }}"
+      - run: node tools/bench/compare.mjs --base ../base
+
   # Screenshots of every scene for pull requests that change how the game looks (docs/adr/0003-playwright-dev-only.md).
   # Separate from the test job, so `npm test` never needs a browser. The shots are an artifact of the run.
   shots:

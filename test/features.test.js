@@ -541,8 +541,8 @@ describe('full run (integration)', () => {
 
   it('boots to a start screen, then Drop in starts the run and closes the menu', () => {
     assert.equal(g.el('go').hidden, false);
-    assert.match(g.el('t').textContent, /left or right side/);
-    assert.match(g.el('t').textContent, /both sides/);
+    // the how-to-play words moved to the Controls screen (test/controls.test.js); the start text points to it
+    assert.match(g.el('t').textContent, /Controls/);
     g.set({ phase: 'ready' });
     g.el('msg').hidden = false;
     g.el('go').fire('click');
