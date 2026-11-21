@@ -14,16 +14,20 @@ export const sunAzimuthDeg = (sky, frame) => sky.sun.azimuthDeg - frame.rotation
 
 /**
  * Sun disc on screen, {X, Y, r, on} in canvas px: at the map's sun azimuth (sky: the Look's sky; frame: the
- * MapFrame), just above the horizon.
+ * MapFrame), just above the horizon. Written into `out` if given (a scratch object, no allocation), else a new object.
  */
-export function sunDisc(sky, camera, W, Hh, frame) {
+export function sunDisc(sky, camera, W, Hh, frame, out = {}) {
  const S = sky.sun;
  const az = sunAzimuthDeg(sky, frame);
  const rel = ((az - camCompass(camera) + 540) % 360 - 180) * Math.PI / 180;
  const r = W * S.radiusFracOfWidth;
  const X = (rel / FOV + 0.5) * W;
  const Y = (camera.horizonPx - camera.pitchPx) * camera.pixelScale - S.aboveHorizonFrac * Hh;
- return { X, Y, r, on: Math.abs(rel) < Math.PI / 2 && X > -r && X < W + r && Y > -r };
+ out.X = X;
+ out.Y = Y;
+ out.r = r;
+ out.on = Math.abs(rel) < Math.PI / 2 && X > -r && X < W + r && Y > -r;
+ return out;
 }
 
 /** Fills the W × Hh screen with the sky gradient (sky: the Look's sky) down to the horizon line. */
@@ -35,9 +39,9 @@ export function drawSky(ctx, sky, camera, W, Hh) {
  ctx.fillRect(0, 0, W, Hh);
 }
 
-/** Draws the sun disc if it is on screen (sky: the Look's sky; frame: the MapFrame). */
-export function drawSun(ctx, sky, camera, W, Hh, frame) {
- const s = sunDisc(sky, camera, W, Hh, frame);
+/** Draws the sun disc if it is on screen (sky: the Look's sky; frame: the MapFrame; scratch: see sunDisc()). */
+export function drawSun(ctx, sky, camera, W, Hh, frame, scratch = {}) {
+ const s = sunDisc(sky, camera, W, Hh, frame, scratch);
  if (!s.on) return;
  ctx.fillStyle = sky.sun.colour;
  ctx.beginPath();
