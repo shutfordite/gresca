@@ -40,6 +40,8 @@ var RA = {
   armOut: 0.12,        // m, outside hand rises and reaches out in a full lean
   armLag: 0.004,       // m per degree the lean is still behind its target (follow-through)
   breathe: 0.008, breatheHz: 0.3,  // m, Hz, when standing still
+  twistMax: 45,        // deg, most the lower body and equipment turn away from the upper body (body twist)
+  twistSmooth: 0.12,   // s, time constant of the twist easing in and out
   maxStep: 1 / 60      // s, springs are sub-stepped so a slow frame cannot blow them up
  },
  groups: {
@@ -60,6 +62,7 @@ var RA = {
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function smooth(t) { return t * t * (3 - 2 * t); }
+function wrapRad(a) { return Math.atan2(Math.sin(a), Math.cos(a)); }
 function copyJ(J) { var o = {}, k; for (k in J) o[k] = [J[k][0], J[k][1], J[k][2]]; return o; }
 
 /* Absolute joints of a named spec pose, regular stance. */
@@ -67,7 +70,7 @@ RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regul
 
 RA.create = function (rig) {
  return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
-          turn: 0, roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
+          turn: 0, twist: 0, roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
           landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
 };
 
@@ -87,6 +90,8 @@ function spring(x, v, rest, hz, zeta, force, dt) {
  *   speed       m/s along the snow
  *   pathTurn    rad/s the direction of travel is turning, + = to the right of travel
  *   riderSide   +1 if the rider's +x (right hand, or toe edge) is on the right of travel, else -1
+ *   facing, travelDir   rad, optional: the equipment heading and the direction of travel (any angle convention, but
+ *               the same for both). Without them there is no body twist
  *   feetAccelUp m/s², vertical acceleration of the ground under the feet (0 in the air)
  *   slopeDeg, meanSlopeDeg   local slope and the map's mean gradient
  * }
@@ -109,6 +114,17 @@ RA.update = function (s, inp, dt) {
  var tgt = RA.poseTarget(rig, name), w = s.dur > 0 ? smooth(Math.min(1, s.t / s.dur)) : 1;
  if (!s.from || w >= 1) { s.poseJ = tgt; s.from = null; }
  else { s.poseJ = {}; for (k in tgt) s.poseJ[k] = [0, 1, 2].map(function (i) { return s.from[k][i] + (tgt[k][i] - s.from[k][i]) * w; }); }
+
+ // ---- 1b. body twist: the upper body leads toward travel, the lower body and equipment keep the heading ----
+ // twist (deg, + clockwise seen from above, the spec's sign) = equipment heading - upper-body heading. The upper body
+ // looks the way the rider would face when travelling (travelDir, or its reverse when riding backwards), the short way
+ // round (at most 90 deg from the equipment), clamped to twistMax and eased with twistSmooth.
+ var twistT = 0;
+ if (onSnow && inp.facing != null && inp.travelDir != null) {
+  var ahead = inp.travelDir + ((inp.riderSide || 1) < 0 ? Math.PI : 0);
+  twistT = clamp(wrapRad(ahead - inp.facing) * R2D, -T.twistMax, T.twistMax);
+ }
+ s.twist += (twistT - s.twist) * Math.min(1, dt / T.twistSmooth);
 
  // ---- 2. body dynamics ----
  // Lean: the angle a rider tilts to balance the turn, atan(v·ω/g), scaled for an arcade turn rate.
@@ -175,10 +191,20 @@ RA.livePose = function (s) {
 /*
  * Draw list for the current pose, straight from HANGA.projectRider (lift is left to the game's jump height).
  * options (optional): passed through to projectRider as they are (spec v1.4: cameraPitchDeg, twistDeg, headYawDeg,
- * bodyPitchDeg, all degrees). The live pose has no twist or head yaw of its own, so they come only from options.
+ * bodyPitchDeg, all degrees). The live pose has no twist or head yaw of its own. Body twist (s.twist) is added as
+ * options.twistDeg unless options has one; yawDeg is then the upper body's heading (view: facing yaw - s.twist). The
+ * spec mirrors a goofy board's twist with its joints, so it is negated here and s.twist stays the real turn.
  */
 RA.project = function (s, yawDeg, pitchDeg, stance, options) {
  HANGA.rider.poses[s.rig][LIVE] = RA.livePose(s);
+ if (s.twist !== 0 && !(options && options.twistDeg != null)) {
+  var o = s.opts || (s.opts = {});
+  o.cameraPitchDeg = options ? options.cameraPitchDeg : undefined;
+  o.headYawDeg = options ? options.headYawDeg : undefined;
+  o.bodyPitchDeg = options ? options.bodyPitchDeg : undefined;
+  o.twistDeg = s.rig === 'board' && stance === 'goofy' ? -s.twist : s.twist;
+  options = o;
+ }
  return HANGA.projectRider(s.rig, LIVE, yawDeg, pitchDeg, 0, stance, options);
 };
 
