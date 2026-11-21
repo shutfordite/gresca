@@ -27,14 +27,25 @@ iPad's 3.9 million pixels a frame.
   iPadOS 26 or later; it can come later behind the same seam. Only WebGL2 core features are used: R32F read with
   `texelFetch` in the vertex shader (no float filtering), RG16F / R16F and RGBA8 with linear filtering (core in
   WebGL2), no float render targets.
-- **Falls back**: no three.js, no WebGL2 context or textures smaller than the map: a console warning and the CPU
-  renderer (`Gresca.debug.renderer()` says which and why).
+- **Falls back**: no three.js, no WebGL2 context, textures smaller than the map, or a map whose textures are over the
+  budget (below): a console warning and the CPU renderer (`Gresca.debug.renderer()` says which and why).
+- **A lost context is survived** (E1b, `gl/context-loss.js`): the GL canvas's `webglcontextlost` is cancelled, so the
+  browser may restore it (iPad Safari drops the context when the page is backgrounded). While it is lost the GL draws
+  stop and the CPU raycaster draws the terrain (`Gresca.debug.renderer()` is `{name: 'cpu', fallback: 'context lost',
+  lost: true}`). On `webglcontextrestored` three.js re-creates its GL state and uploads the textures again from the
+  CPU copies its `DataTexture`s keep (including the ski tracks the CPU kept up to date meanwhile), and the GL draws
+  again. The switching is a pure state machine, tested in Node with a fake canvas and fake renderers.
 - **The Look stays the only colour source** (ADR 0007): the shaders get the Look's terrain tones, sky, sun and fog as
   uniforms. One optional Look field is added: `sky.sun.elevationDeg`.
 
 ## Consequences
-- About 40 MB of textures on the GPU for the procedural map (heights, slopes, relief/groomed/tracks, painted features,
-  the piste's across coordinate), and a CPU copy of each made at boot.
+- About 40 MB (38 MiB) of textures on the GPU for the procedural map (heights, slopes, relief/groomed/tracks, painted
+  features, the piste's across coordinate, the detail texture), and a CPU copy of each made at boot.
+  `Gresca.debug.renderer()` reports `gpuBytes` and `cpuBytes`, computed from grid size and formats
+  (`gl/gl-budget.js`, no GL query). **Budget: 64 MiB of GPU textures** (`GL_TEXTURE_BUDGET_MB`): a map over it
+  (about 4 million texels at 16 B each, so a grid larger than about 2000 × 2000 m) falls back to the CPU renderer with
+  the reason. A real map that outgrows it needs smaller formats (an open question for the maps stream) or a bigger
+  budget, in a new decision.
 - Two canvases are composited each frame; the GL one has no alpha and no MSAA (2x device pixels instead).
 - Trees still need the terrain's horizon (`view.occ`): a CPU pass computes it as the raycaster did, without pixels
   (`gl/horizon.js`). It follows the raycaster's heights, so a far ridge drawn by a coarse mesh level can differ from it

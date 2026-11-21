@@ -33,7 +33,12 @@ const float RIDGE_LIFT = 0.03;      // brightness added on a full ridge
 const float ROCK_FROM = 0.5;        // m/m, steeper than this starts to show rock (as the colour map)
 const float ROCK_TO = 0.75;         // m/m, fully rock
 const float CORDUROY_PERIOD_M = 0.3;  // m across the piste between corduroy ridges
-const float CORDUROY_GAIN = 1.0;    // times the Look's corduroy depth (the colour map's stripes are 3 m wide)
+const float CORDUROY_GAIN = 0.4;    // times the Look's corduroy depth (the colour map's stripes are 3 m wide)
+const float CORDUROY_FADE_NEAR_M = 8.0;   // m, corduroy at full strength nearer than this
+const float CORDUROY_FADE_FAR_M = 45.0;   // m, and gone past this (the groomed tone stays: only the ribs fade)
+const float CORDUROY_WOBBLE_RAD = 1.4;    // rad, how far the crust bends a ridge's phase (ridges are not straight)
+const float CORDUROY_BREAK_FROM = 0.3;    // 0..1 of the crust and ripple noise below which a ridge is gone
+const float CORDUROY_BREAK_TO = 0.62;     // and above which it is whole: the ribs come and go along the piste
 const float SPARKLE_CELL_M = 0.03;  // m, the size of one glint
 const float SPARKLE_DENSITY = 0.02;  // share of cells that can glint
 const float SPARKLE_FLICKER = 9.0;  // how fast glints change as the view direction turns
@@ -161,9 +166,12 @@ void main() {
  c *= 1.0 + ridge * RIDGE_LIFT + (crust.b - 0.5) * 2.0 * GRAIN * near;
 
  float across = texture(uPiste, (vGrid / uPisteStep + 0.5) / uPisteSize).r;
+ float wobble = (crust.g - 0.5) * 2.0 * CORDUROY_WOBBLE_RAD;
  float phase = across * 6.2831853 / CORDUROY_PERIOD_M;
  float resolved = 1.0 - smoothstep(0.25, 0.7, fwidth(phase) / 6.2831853); // fades stripes thinner than a pixel
- c *= 1.0 + uCorduroy * CORDUROY_GAIN * groomed * sin(phase) * resolved * (0.5 + 0.5 * lit);
+ float broken = smoothstep(CORDUROY_BREAK_FROM, CORDUROY_BREAK_TO, ripple.r * 0.6 + crust.b * 0.4);
+ float ribs = 1.0 - smoothstep(CORDUROY_FADE_NEAR_M, CORDUROY_FADE_FAR_M, vDist);
+ c *= 1.0 + uCorduroy * CORDUROY_GAIN * groomed * sin(phase + wobble) * resolved * broken * ribs * (0.5 + 0.5 * lit);
 
  float rock = smoothstep(ROCK_FROM, ROCK_TO, steep) * (1.0 - groomed);
  c = mix(c, uRock * (0.8 + 0.35 * lit), rock);

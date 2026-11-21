@@ -2,6 +2,7 @@
 import { draw, drawSprites } from './draw.js';
 import { GL_STAGE } from './view-state.js';
 import { createGlTerrain } from './gl/gl-renderer.js';
+import { guardContext } from './gl/context-loss.js';
 import { fillHorizon, horizonSamples } from './gl/horizon.js';
 
 // The GL canvas's context: no alpha (the 2D canvas over it carries the sprites), no MSAA (2x device pixels instead).
@@ -35,7 +36,9 @@ function drawWithGl(gpu, rayZ, view, scene, dt) {
  * The frame drawer, (view, scene, dt) -> nothing, for opts.want ('gl' or anything else: the CPU raycaster). opts:
  * {want, THREE (the three.js module or null), document, screen (the screen canvas), warn (message) -> nothing}. A GPU
  * terrain that cannot start (no three.js, no WebGL2, too small a GPU) warns and falls back to the CPU. Records which
- * one in view.renderer {name: 'cpu' | 'gl', fallback: null or why}. Call after the world and colour map are built.
+ * one in view.renderer {name: 'cpu' | 'gl', fallback: null or why; with the GPU also lost, losses, restores, gpuBytes,
+ * cpuBytes (gl/context-loss.js)}. A lost WebGL context draws the terrain with the CPU raycaster until it is
+ * restored. Call after the world and colour map are built.
  */
 export function chooseRenderer(opts, view, scene) {
  view.renderer = { name: 'cpu', fallback: null };
@@ -50,8 +53,7 @@ export function chooseRenderer(opts, view, scene) {
   const gpu = createGlTerrain(opts.THREE, gl, canvas, view, scene);
   placeUnder(canvas, opts.screen);
   const rayZ = horizonSamples();
-  view.renderer = { name: 'gl', fallback: null };
-  return (v, s, dt) => drawWithGl(gpu, rayZ, v, s, dt);
+  return guardContext(canvas, view, gpu.bytes, (v, s, dt) => drawWithGl(gpu, rayZ, v, s, dt), draw);
  } catch (e) {
   view.renderer = { name: 'cpu', fallback: e.message };
   opts.warn('Gresca: the GPU terrain could not start (' + e.message + '); drawing on the CPU');

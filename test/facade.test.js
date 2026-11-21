@@ -13,13 +13,14 @@ import { load } from './harness.js';
 // 2. A test file imports nothing from src/ except the pure layers (core/, world/, sim/, and input/input.js, the input
 //    state without its DOM binding, and the Look and its Hanga factory, view/look/look.js and hanga.js, which read no
 //    game state), which get direct unit tests; and the GPU terrain's pure parts (view/gl/: projection, mesh layout,
-//    baking, detail texture, the Look's uniform values and shader text; no GL, no DOM, no game state) and the fps
-//    readout's arithmetic (view/fps-meter.js). lab.test.js alone imports the look lab's root (view/look/lab.js: the
-//    lab page, no game in it).
+//    baking, detail texture, the Look's uniform values and shader text, texture budget, lost-context state; no GL, no
+//    DOM, no game state) and the fps readout's arithmetic (view/fps-meter.js). lab.test.js alone imports the look
+//    lab's root (view/look/lab.js: the lab page, no game in it).
 //    Only the harness imports the game's wiring (src/app.js); nothing imports main.js, view/, ui/, input/ or debug.js.
 const RUN_ROOTS = new Set(['HANGA', 'RiderAnim', 'localStorage', 'Math', 'globalThis']);
 const PURE = new RegExp('^src/(core|world|sim)/|^src/input/input\\.js$|^src/view/look/(look|hanga)\\.js$' +
   '|^src/view/gl/(gl-projection|terrain-mesh|terrain-bake|detail-texture|snow-material|sky-material)\\.js$' +
+  '|^src/view/gl/(gl-budget|context-loss)\\.js$' +
   '|^src/view/fps-meter\\.js$');
 const ONLY_FOR = { 'src/view/look/lab.js': 'lab.test.js' };
 const HARNESS_ONLY = new Set(['src/app.js']);
