@@ -1,6 +1,6 @@
-// The play mountain: a steep procedural map with big kickers, the layout the game opens on (docs/adr/0009-play-slope.md).
+// The play mountain: a steep procedural map with big kickers, the layout the game opens on (ADR 0009).
 // Same 1000 x 2450 m grid as the test slope (world/course.js), so the same texture budget; a different centreline,
-// height profile, park and piste width. Pure and stateless: functions and frozen constants; world/build.js fills the grids.
+// height profile, park and piste width. Pure and stateless: functions and frozen constants; build.js fills the grids.
 import { defineRails } from './course.js';
 import { fbmRows } from './noise.js';
 
@@ -104,7 +104,7 @@ function fillHeights(heights, mask) {
 /**
  * The play mountain's layout, the same fields as the test slope's (world/build.js MAPS): the grid W, H (m), the finish
  * FIN and start (m of y), the centreline cx, the park (KICK, KBIG, RAILS, bump), where the kickers launch and how
- * the ramps are stamped, the lift line, the trees' limits and fill(heights, mask), which fills the height and mask grids.
+ * the ramps are stamped, the lift line, the trees' limits and fill(heights, mask), which fills the grids.
  */
 export const PLAY_LAYOUT = Object.freeze({
  id: 'play', W, H, FIN, startY: START_Y, pisteHalfWidth: PISTE_HALF_WIDTH,

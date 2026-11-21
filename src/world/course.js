@@ -1,6 +1,6 @@
 // The procedural test slope: map size, the piste centreline cx(), the finish, the kickers, rails and boxes, and the
-// Course (core/contracts.js) over any procedural layout (createGridCourse(layout); createProceduralCourse() is the test
-// slope's). A layout (TEST_LAYOUT here, PLAY_LAYOUT in play-slope.js) is the frozen parameter set of one procedural map.
+// Course (core/contracts.js) over any procedural layout (createGridCourse(layout); createProceduralCourse() is the
+// test slope's). A layout (TEST_LAYOUT here, PLAY_LAYOUT in play-slope.js) is the frozen parameter set of one map.
 // Everything here is authored on the map's grid (x across, y down the piste: grid u and v); the Course answers in
 // world metres (east, north), through the map frame (world/map-frame.js, docs/adr/0005-enu-frame.md).
 import { DEFAULT_FRAME } from './map-frame.js';
@@ -147,8 +147,9 @@ function rampZone(frame, cx) {
 
 /**
  * The test slope's layout: the parameter set of its map (the numbers above), frozen. W, H: the grid (cells, m); FIN:
- * y of the finish (m); startY (m); pisteHalfWidth (m, where the groomed mask is half); kickerHalfWidth, kickerDepth (m); launchGain (optional {big, small}: dimensionless launch speed gains for the sim, sim/jump.js);
- * cx(y), KICK, KBIG, RAIL_DEF, RAILS, bump(u, v): as above; build.js adds the height fill and the trees' placement.
+ * y of the finish (m); startY (m); pisteHalfWidth (m, where the groomed mask is half); kickerHalfWidth, kickerDepth
+ * (m); launchGain (optional {big, small}: dimensionless launch speed gains, sim/jump.js); cx(y), KICK, KBIG,
+ * RAIL_DEF, RAILS, bump(u, v): as above; build.js adds the height fill and the trees' placement.
  */
 export const TEST_LAYOUT = Object.freeze({
  id: 'test', W: W0, H: H0, FIN, startY: START_Y, pisteHalfWidth: PISTE_HALF_WIDTH,
@@ -156,8 +157,9 @@ export const TEST_LAYOUT = Object.freeze({
 });
 
 /**
- * The Course (core/contracts.js) of a procedural layout (TEST_LAYOUT, PLAY_LAYOUT), in world metres: a polyline course (world/polyline-course.js) over
- * the centreline cx(y) sampled at every metre of y, so s is arc length and d the perpendicular distance, with the
+ * The Course (core/contracts.js) of a procedural layout (TEST_LAYOUT, PLAY_LAYOUT), in world metres: a polyline
+ * course (world/polyline-course.js) over the centreline cx(y) sampled at every metre of y, so s is arc length and d
+ * the perpendicular distance, with the
  * park (kickers, rails) and the finish placed where they always were on the map; a kicker launches over its ramp
  * footprint on the grid, as on main. terrain: the world's Terrain, for
  * fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the grid in the
