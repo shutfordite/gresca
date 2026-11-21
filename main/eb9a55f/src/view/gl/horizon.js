@@ -1,10 +1,7 @@
 // The terrain horizon the trees are hidden behind when the GPU draws the terrain: view.occ, as the raycaster fills it.
 // The same columns, samples and heights as draw.js raycast(), with no pixels: for each render column and terrain
 // sample, the screen row (render px) the nearer terrain has already reached.
-import { FOV, RAY_SAMPLES, RAY_EXACT_M } from '../../core/config.js';
-
-const RAY_START_M = 3;    // m, the first sample (as draw.js)
-const RAY_SPREAD = 0.012; // each sample is 1 m plus this fraction further than the last (as draw.js)
+import { FOV, RAY_SAMPLES, RAY_EXACT_M, RAY_START_M, RAY_SPREAD } from '../../core/config.js';
 
 /** The samples' distances (m) along a column: a Float64Array RAY_SAMPLES long (made once, kept by the renderer). */
 export function horizonSamples() {

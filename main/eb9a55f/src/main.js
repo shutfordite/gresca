@@ -6,11 +6,12 @@ import { createGame } from './app.js';
 // ?rot=<degrees> places the procedural map at that heading (counter-clockwise), to look at the rotated-map check
 // (docs/adr/0005-enu-frame.md) in a browser. Anything that is not a finite number is ignored.
 // ?scene=<name> opens a named scene, paused (src/scenes.js); without it the game is the normal game.
-// ?renderer=gl draws the terrain on the GPU (src/view/renderer.js, docs/adr/0008-three-js-gpu-renderer.md): only then
-// is three.js loaded; if it fails to load, the game warns and draws on the CPU. ?fps=1 shows frame rate and frame time.
+// The terrain is drawn on the GPU (src/view/renderer.js, docs/adr/0008-three-js-gpu-renderer.md); ?renderer=cpu draws
+// it with the old CPU raycaster and skips loading three.js. If three.js fails to load or WebGL2 is missing, the game
+// warns and draws on the CPU. ?fps=1 shows frame rate and frame time.
 const query = (name) => new URLSearchParams(window.location.search).get(name);
 const rotDeg = Number(query('rot'));
-const renderer = query('renderer') === 'gl' ? 'gl' : 'cpu';
+const renderer = query('renderer') === 'cpu' ? 'cpu' : 'gl';
 const THREE = renderer === 'gl'
  ? await import('../vendor/three/three.module.js').catch((e) => {
   console.warn('Gresca: three.js did not load (' + e.message + ')');

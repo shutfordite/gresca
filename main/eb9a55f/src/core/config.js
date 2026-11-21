@@ -39,9 +39,11 @@ export const RIDER_SCALE = 0.55; // dimensionless, rider draw scale
 export const MAP_ID = 'procedural'; // picks the map's sun and sky in HANGA.maps
 // m, the raycaster samples the exact terrain surface this close to the camera, the fast path beyond
 export const RAY_EXACT_M = 40;
-// m, distance of the last terrain sample (the samples start 3 m out and spread by 1 m + 1.2 % each)
+export const RAY_START_M = 3; // m, the first terrain sample along each screen column
+export const RAY_SPREAD = 0.012; // dimensionless, each sample is 1 m plus this fraction further than the last
+// m, distance of the last terrain sample
 export const RAY_FAR = (() => {
- let z = 3;
- for (let k = 0; k < RAY_SAMPLES - 1; k++) z += 1 + z * 0.012;
+ let z = RAY_START_M;
+ for (let k = 0; k < RAY_SAMPLES - 1; k++) z += 1 + z * RAY_SPREAD;
  return z;
 })();

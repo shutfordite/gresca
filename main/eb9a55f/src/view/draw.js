@@ -1,6 +1,6 @@
 // draw(): one frame of the behind-the-rider view: terrain raycast, sky and sun, trees, rails, flags, spray and the
 // rider; updateCamera() moves the camera before it, in the loop. Reads the simulation's state and never writes it.
-import { FOV, RAY_SAMPLES, RAY_EXACT_M, CAM_BACK, RIDER_SCALE } from '../core/config.js';
+import { FOV, RAY_SAMPLES, RAY_EXACT_M, RAY_START_M, RAY_SPREAD, CAM_BACK, RIDER_SCALE } from '../core/config.js';
 import { followRider } from './camera.js';
 import { fogAt, drawSky, drawSun } from './sky.js';
 import { projectInto, drawFlags, drawRails } from './sprites.js';
@@ -12,8 +12,6 @@ import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
 const CSS_PX_PER_RENDER_PX = 1.6; // CSS px of screen per render column
-const RAY_START_M = 3;        // m, the first terrain sample along each column
-const RAY_SPREAD = 0.012;     // dimensionless, each sample is 1 m plus this fraction further than the last
 const BLEND_NEAR_M = 80;      // m, nearer samples blend the four colour-map cells around them (bilinear)
 const BLEND_MAX_STEP = 140;   // 0..765, summed RGB step between two samples: smaller steps are shaded smooth, more so
                               // the smaller; from this step up the span stays flat (a painted edge)
