@@ -43,8 +43,10 @@ export async function runChrome(root, sizes, opts, dpr = 1, repeat = 1) {
         const { runPath } = await import(url);
         const screen = document.getElementById('c').getContext('2d');
         return runPath({
-          G: window.Gresca, now: () => performance.now(), traces, ...opts,
-          flush: () => screen.getImageData(0, 0, 1, 1), // forces the canvas to finish its queued drawing
+          G: window.Gresca, now: () => performance.now(), traces, memory: () => performance.memory.usedJSHeapSize, ...opts,
+          // forces the canvas to finish its queued drawing; without it (a tight loop of frames, as a test page or
+          // Gresca.frame() in a console would run) Chrome rasterises in bursts, when its queue fills
+          flush: opts.flush === false ? undefined : () => screen.getImageData(0, 0, 1, 1),
         });
       }, { source: core, traces, opts });
       if (problems.length) throw new Error('page errors: ' + problems.join('; '));

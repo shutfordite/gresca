@@ -1,5 +1,6 @@
 // npm run bench: frame time by stage along a fixed rider path (the recorded traces), at 390x844 and 820x1180.
 // Usage: node tools/bench/run.mjs [--chrome] [--dpr 2] [--repeat K] [--frames N] [--warmup N] [--root DIR] [--json FILE]
+//   --no-flush Chrome: do not force the canvas to finish drawing after each frame (shows its bursty rasterising)
 //   --repeat K runs each size K times (default 5) and reports the median of each statistic
 //   --chrome   also run in headless Chrome (set PLAYWRIGHT_CHROMIUM_EXECUTABLE); without it, Node only
 //   --root DIR measure the game checked out in DIR (default: this repository)
@@ -40,7 +41,8 @@ function fold(runs) {
       stages[name] = Object.fromEntries(['mean', 'median', 'p95', 'max'].map((k) => [k, median(group.map((r) => r.stages[name][k]))]));
     }
     const { size, dpr, frames, skipped } = group[0];
-    return { size, dpr, frames, skipped, runs: group.length, first: median(group.map((r) => r.first)), stages,
+    const alloc = group.map((r) => r.allocKB).filter((v) => v !== null);
+    return { size, dpr, frames, skipped, runs: group.length, allocKB: alloc.length ? median(alloc) : null, first: median(group.map((r) => r.first)), stages,
       slow: group.flatMap((r) => r.slow) };
   });
 }
@@ -49,7 +51,8 @@ function fold(runs) {
 function print(title, results) {
   for (const r of results) {
     console.log(`\n${title} ${r.size.w}x${r.size.h}${r.dpr ? ` @${r.dpr}x` : ''}: ${r.frames} frames ` +
-      `(${r.skipped} skipped after seams), first frame ${r.first.toFixed(2)} ms`);
+      `(${r.skipped} skipped after seams), first frame ${r.first.toFixed(2)} ms, ` +
+      `allocation ${r.allocKB === null ? 'n/a' : r.allocKB.toFixed(0) + ' KB'} per frame`);
     console.log('stage      mean  median     p95     max');
     for (const [name, s] of Object.entries(r.stages)) {
       console.log(`${name.padEnd(8)} ${[s.mean, s.median, s.p95, s.max].map((v) => v.toFixed(3).padStart(7)).join(' ')}`);
@@ -61,6 +64,7 @@ function print(title, results) {
 async function main() {
   const root = path.resolve(arg('root', path.join(import.meta.dirname, '..', '..')));
   const opts = { frames: Number(arg('frames', FRAMES)), warmup: Number(arg('warmup', WARMUP)) };
+  if (process.argv.includes('--no-flush')) opts.flush = false;
   const report = {
     note: 'ms per frame by stage along tools/bench/core.mjs createPath() (the four recorded traces at 60 fps, repeated)',
     machine: { cpu: os.cpus()[0].model, cores: os.cpus().length, node: process.version, platform: `${os.platform()} ${os.arch()}` },
@@ -70,7 +74,7 @@ async function main() {
   const repeat = Number(arg('repeat', REPEAT));
   const node = fold(await runNode(root, SIZES, opts, repeat));
   print('node', node);
-  report.node = node.map(({ size, stages, first, frames, skipped, runs }) => ({ size, stages, first, frames, skipped, runs }));
+  report.node = node.map(({ size, stages, first, frames, skipped, runs, allocKB }) => ({ size, stages, first, frames, skipped, runs, allocKB }));
   if (process.argv.includes('--chrome')) {
     const { runChrome } = await import('./chrome-run.mjs');
     const dpr = Number(arg('dpr', 1));
@@ -78,7 +82,7 @@ async function main() {
     const chrome = fold(results);
     print('chrome', chrome);
     report.machine.chrome = version;
-    report.chrome = chrome.map(({ size, dpr: d, stages, first, frames, skipped, runs }) => ({ size, dpr: d, stages, first, frames, skipped, runs }));
+    report.chrome = chrome.map(({ size, dpr: d, stages, first, frames, skipped, runs, allocKB }) => ({ size, dpr: d, stages, first, frames, skipped, runs, allocKB }));
   }
   const json = arg('json');
   if (json) fs.writeFileSync(json, JSON.stringify(report, null, 1) + '\n');

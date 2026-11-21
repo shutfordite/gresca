@@ -20,7 +20,7 @@ export async function runNode(root, sizes, opts, repeat = 1) {
       c.clientWidth = size.w;
       c.clientHeight = size.h;
       g.fire('resize');
-      out.push({ size, ...runPath({ G: g.raw, now: () => performance.now(), traces, ...opts }) });
+      out.push({ size, ...runPath({ G: g.raw, now: () => performance.now(), traces, memory: () => process.memoryUsage().heapUsed, ...opts }) });
     }
   }
   return out;

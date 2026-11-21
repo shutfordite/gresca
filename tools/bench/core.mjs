@@ -75,12 +75,15 @@ export function summarize(samples) {
 /**
  * Runs the path through a game and times it. opts: {G (the façade, world metres), now () -> ms, traces, frames (counted
  * in the statistics), warmup (frames before, not counted), flush () (optional: forces the canvas to finish drawing,
- * timed as its own stage), keepFrames (also return every frame's total)}. Returns {frames, skipped, first (the very
+ * timed as its own stage), memory () -> bytes (optional: JS heap in use; the growth between frames, summed where it
+ * grows, is reported as allocKB, a lower bound as a collection hides some), after (i) (optional: called after each
+ * frame's timing, not timed: tools/bench/digest.mjs hashes the picture with it), keepFrames (also return every
+ * frame's total)}. Returns {frames, skipped, first (the very
  * first frame, ms), stages: {name: {mean, median, p95, max}} in ms, with 'hud' (what is left of the frame after
- * the stages: the HUD), 'flush' when given and 'total'; slow: [{frame, total}] for frames over 4x the median}.
+ * the stages: the HUD), 'flush' when given and 'total'; allocKB (KB allocated per frame, or null), slow: [{frame, total}] for frames over 4x the median}.
  */
 export function runPath(opts) {
-  const { G, now, traces, frames, warmup, flush } = opts;
+  const { G, now, traces, frames, warmup, flush, memory } = opts;
   const path = createPath(traces);
   const names = Object.values(G.debug.stages);
   const timer = createTimer(now, names);
@@ -88,6 +91,7 @@ export function runPath(opts) {
   const total = frames + warmup;
   const cols = Object.fromEntries([...names, 'hud', 'flush', 'total'].map((n) => [n, new Float64Array(total)]));
   const counted = new Uint8Array(total);
+  let grown = 0; // bytes of heap growth over the counted frames
   G.seed(1);
   let sinceSeam = SEAM_SKIP;
   for (let i = 0; i < total; i++) {
@@ -104,10 +108,12 @@ export function runPath(opts) {
     }
     G.stepParticles(FRAME_DT);
     G.debug.setTimer(timer);
+    const heap0 = memory ? memory() : 0;
     timer.start();
     const t0 = timer.last;
     G.frame(FRAME_DT);
     const t1 = now();
+    const heap1 = memory ? memory() : 0;
     G.debug.setTimer(null);
     let lapped = 0;
     for (const s of names) {
@@ -123,6 +129,8 @@ export function runPath(opts) {
     }
     cols.total[i] = t2 - t0;
     counted[i] = i >= warmup && sinceSeam >= SEAM_SKIP ? 1 : 0;
+    if (opts.after) opts.after(i);
+    if (counted[i] && heap1 > heap0) grown += heap1 - heap0;
     sinceSeam++;
   }
   const keep = (col) => Array.from(col).filter((_, i) => counted[i]);
@@ -133,7 +141,7 @@ export function runPath(opts) {
   const slow = [];
   for (let i = 0; i < total; i++) if (counted[i] && cols.total[i] > 4 * med) slow.push({ frame: i, total: cols.total[i] });
   return {
-    frames: totals.length, skipped: total - warmup - totals.length, first: cols.total[0], stages, slow,
+    allocKB: memory ? grown / 1024 / totals.length : null, frames: totals.length, skipped: total - warmup - totals.length, first: cols.total[0], stages, slow,
     ...(opts.keepFrames ? { totals: Array.from(cols.total) } : {}),
   };
 }
