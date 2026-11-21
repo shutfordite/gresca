@@ -1,5 +1,6 @@
-// The procedural course: map size, the piste centreline cx(), the finish, the kickers, rails and boxes, and the
-// Course (core/contracts.js) over them that everything outside the procedural map uses (createProceduralCourse()).
+// The procedural test slope: map size, the piste centreline cx(), the finish, the kickers, rails and boxes, and the
+// Course (core/contracts.js) over any procedural layout (createGridCourse(layout); createProceduralCourse() is the test
+// slope's). A layout (TEST_LAYOUT here, PLAY_LAYOUT in play-slope.js) is the frozen parameter set of one procedural map.
 // Everything here is authored on the map's grid (x across, y down the piste: grid u and v); the Course answers in
 // world metres (east, north), through the map frame (world/map-frame.js, docs/adr/0005-enu-frame.md).
 import { DEFAULT_FRAME } from './map-frame.js';
@@ -36,7 +37,7 @@ export const cx = (y) => 500 + 170 * Math.sin(y / 350) + 70 * Math.sin(y / 130 +
  * A rail is a straight chord that follows the piste: x0,y0 to its end, unit direction dx,dy, length len (m), on the
  * grid; in course coordinates it runs from s0 to s1 (m) at d (m across, its offset from the centreline).
  */
-function makeRail([ya, n, off, t]) {
+function makeRail(cx, [ya, n, off, t]) {
  const yb = ya + n;
  const x0 = cx(ya) + off;
  const x1 = cx(yb) + off;
@@ -47,8 +48,14 @@ function makeRail([ya, n, off, t]) {
  });
 }
 
-/** The rails and boxes on the grid, {y0,y1,x0,x1,len,s0,s1,d,dx,dy,h,t}, in RAIL_DEF order (frozen). */
-export const RAILS = Object.freeze(RAIL_DEF.map(makeRail));
+/**
+ * The rails and boxes on the grid, {y0,y1,x0,x1,len,s0,s1,d,dx,dy,h,t}, for defs [start y, length, offset, type] along
+ * the centreline cx(y) (frozen).
+ */
+export const defineRails = (cx, defs) => Object.freeze(defs.map((r) => makeRail(cx, r)));
+
+/** The test slope's rails and boxes on the grid, in RAIL_DEF order (frozen). */
+export const RAILS = defineRails(cx, RAIL_DEF);
 
 /** m, the kicker ramp height added at (px,py): a curved rise up to the lip, then a short drop. */
 export function bump(px, py) {
@@ -66,11 +73,11 @@ export function bump(px, py) {
 }
 
 // m, the chord length of the sampled centreline from y yFirst (m) to the run start, one vertex per whole metre of y.
-function arcToStart(yFirst) {
+function arcToStart(cx, yFirst, startY) {
  let len = 0;
  let px = cx(yFirst);
  let py = yFirst;
- for (let y = Math.floor(yFirst) + 1; y <= START_Y; y++) {
+ for (let y = Math.floor(yFirst) + 1; y <= startY; y++) {
   len += Math.hypot(cx(y) - px, y - py);
   px = cx(y);
   py = y;
@@ -82,12 +89,12 @@ function arcToStart(yFirst) {
 // one placed so that the arc length from it to the run start is exactly START_Y. That keeps startS = 60 and every
 // vertex on a kicker's or rail's y, so they sit where they always did. Returns {xy, first}: first is the whole y of
 // the second vertex, minus one (vertex i >= 1 is at y = first + i).
-function sampleCentreline() {
+function sampleCentreline(cx, H0, startY) {
  let lo = 0;
- let hi = START_Y;
+ let hi = startY;
  for (let i = 0; i < BISECT_STEPS; i++) {
   const mid = (lo + hi) / 2;
-  if (arcToStart(mid) > START_Y) lo = mid;
+  if (arcToStart(cx, mid, startY) > startY) lo = mid;
   else hi = mid;
  }
  const yFirst = (lo + hi) / 2;
@@ -104,11 +111,11 @@ function sampleCentreline() {
 
 // The kickers in course coordinates: lip at s (m) on the centreline (d 0), lipY (m) its grid y, launching within halfWidth (m across) and
 // depth (m along) past the lip; x, y (m) is the lip's centre in the world. sOfY(y): the s of the vertex at grid y.
-function makeKickers(frame, sOfY) {
- return KICK.map((k) => {
-  const p = frame.toWorld(cx(k), k, { x: 0, y: 0 });
-  return { s: sOfY(k), d: 0, lipY: k, halfWidth: KICKER_HALF_WIDTH, depth: KICKER_LIP_DEPTH, big: KBIG.includes(k),
-   x: p.x, y: p.y };
+function makeKickers(layout, frame, sOfY) {
+ return layout.KICK.map((k) => {
+  const p = frame.toWorld(layout.cx(k), k, { x: 0, y: 0 });
+  return { s: sOfY(k), d: 0, lipY: k, halfWidth: layout.kickerHalfWidth, depth: layout.kickerDepth,
+   big: layout.KBIG.includes(k), x: p.x, y: p.y };
  });
 }
 
@@ -125,7 +132,7 @@ function placeRail(r, frame, base) {
 
 // The launch zone of a kicker is its ramp's footprint: build.js stamps the ramps in grid rows, so (s, d) is turned
 // into the grid and tested there: y from the lip to depth past it, within halfWidth of the centreline across.
-function rampZone(frame) {
+function rampZone(frame, cx) {
  const at = { u: 0, v: 0 };
  const world = { x: 0, y: 0 };
  return (k, s, d, point) => {
@@ -136,25 +143,39 @@ function rampZone(frame) {
 }
 
 /**
- * The procedural map's Course (core/contracts.js), in world metres: a polyline course (world/polyline-course.js) over
+ * The test slope's layout: the parameter set of its map (the numbers above), frozen. W, H: the grid (cells, m); FIN:
+ * y of the finish (m); startY (m); pisteHalfWidth (m, where the groomed mask is half); kickerHalfWidth, kickerDepth (m);
+ * cx(y), KICK, KBIG, RAIL_DEF, RAILS, bump(u, v): as above; build.js adds the height fill and the trees' placement.
+ */
+export const TEST_LAYOUT = Object.freeze({
+ id: 'test', W: W0, H: H0, FIN, startY: START_Y, pisteHalfWidth: PISTE_HALF_WIDTH,
+ kickerHalfWidth: KICKER_HALF_WIDTH, kickerDepth: KICKER_LIP_DEPTH, cx, KICK, KBIG, RAIL_DEF, RAILS, bump,
+});
+
+/**
+ * The Course (core/contracts.js) of a procedural layout (TEST_LAYOUT, PLAY_LAYOUT), in world metres: a polyline course (world/polyline-course.js) over
  * the centreline cx(y) sampled at every metre of y, so s is arc length and d the perpendicular distance, with the
  * park (kickers, rails) and the finish placed where they always were on the map; a kicker launches over its ramp
  * footprint on the grid, as on main. terrain: the world's Terrain, for
  * fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the grid in the
  * world (default: the piste runs south). Frozen and stateless: every query writes into the caller's out.
  */
-export function createProceduralCourse(terrain, frame = DEFAULT_FRAME) {
- const { xy, first } = sampleCentreline();
- const width = 2 * PISTE_HALF_WIDTH;
+export function createGridCourse(layout, terrain, frame = DEFAULT_FRAME) {
+ const { cx, H: H0, FIN, startY } = layout;
+ const { xy, first } = sampleCentreline(cx, H0, startY);
+ const width = 2 * layout.pisteHalfWidth;
  const base = createPolylineCourse(xy, { frame, width, terrain });
  const baseS = base.centreline().s;
  const sOfY = (y) => baseS[y - first]; // m, arc length at the vertex on whole grid y
  return createPolylineCourse(xy, {
-  frame, width, terrain, startS: START_Y, finishS: sOfY(FIN), launchZone: rampZone(frame),
-  kickers: makeKickers(frame, sOfY),
-  rails: RAILS.map((r) => placeRail(r, frame, base)),
+  frame, width, terrain, startS: startY, finishS: sOfY(FIN), launchZone: rampZone(frame, cx),
+  kickers: makeKickers(layout, frame, sOfY),
+  rails: layout.RAILS.map((r) => placeRail(r, frame, base)),
  });
 }
+
+/** The test slope's Course: createGridCourse(TEST_LAYOUT, terrain, frame). */
+export const createProceduralCourse = (terrain, frame = DEFAULT_FRAME) => createGridCourse(TEST_LAYOUT, terrain, frame);
 
 /**
  * The procedural course with no terrain (fall line = tangent) at the default placement, for sim functions called

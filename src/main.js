@@ -9,6 +9,7 @@ import { createGame } from './app.js';
 // The terrain is drawn on the GPU (src/view/renderer.js, docs/adr/0008-three-js-gpu-renderer.md); ?renderer=cpu draws
 // it with the old CPU raycaster and skips loading three.js. If three.js fails to load or WebGL2 is missing, the game
 // warns and draws on the CPU. ?fps=1 shows frame rate and frame time.
+// ?map=test builds the test slope (the physics tests' map); without it the game opens on the steep play mountain.
 const query = (name) => new URLSearchParams(window.location.search).get(name);
 const rotDeg = Number(query('rot'));
 const renderer = query('renderer') === 'cpu' ? 'cpu' : 'gl';
@@ -23,6 +24,7 @@ const env = Object.freeze({
  scene: query('scene'),
  renderer,
  THREE,
+ map: query('map') === 'test' ? 'test' : 'play',
  showFps: query('fps') === '1',
  now: () => performance.now(),
  warn: (message) => console.warn(message),
