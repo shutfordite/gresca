@@ -95,7 +95,7 @@ function loadArt() {
 
 // A new, independent game: the game's modules hold no state of their own (docs/adr/0002-es-modules-and-create-game.md),
 // so every load() in one process gets its own world, rider and page stubs. opts.rotationDeg (deg, counter-clockwise;
-// default MAP_ROTATION_DEG) places the map. g.game is the façade seen on the map's grid (map-view.js), g.raw the
+// default MAP_ROTATION_DEG) places the map; opts.scene opens a named scene at the boot. g.game is the façade seen on the map's grid (map-view.js), g.raw the
 // façade itself, in world metres.
 export async function load(opts = {}) {
   const { createGame } = await import(APP);
@@ -121,6 +121,7 @@ export async function load(opts = {}) {
     requestAnimationFrame(fn) { raf.push(fn); },
     HANGA: art.HANGA,
     RiderAnim: art.RiderAnim,
+    scene: opts.scene, // ?scene=<name> in the browser: open that scene after the boot (src/scenes.js)
     mapRotationRad: (opts.rotationDeg ?? MAP_ROTATION_DEG) * Math.PI / 180,
   };
   const raw = createGame(env);
