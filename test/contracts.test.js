@@ -43,8 +43,11 @@ describe('core/contracts.js', () => {
   assert.equal(input.jumpHeld, false);
   resetInput(input);
   assert.deepEqual(checkInputState(input), []);
-  assert.deepEqual([input.steer, input.jump, input.jumpPressed, input.flip, input.spin, input.lookBack], [0, 0, 0, 0, 0, 0]);
-  for (const bad of [{ steer: 2 }, { brake: -0.1 }, { flip: NaN }, { jumpHeld: 1 }, { jump: 0.5 }, { lookBack: 2 }, { lookBack: -1 }]) {
+  const { steer, jump, jumpPressed, flip, spin, lookBack } = input;
+  assert.deepEqual([steer, jump, jumpPressed, flip, spin, lookBack], [0, 0, 0, 0, 0, 0]);
+  const bads = [{ steer: 2 }, { brake: -0.1 }, { flip: NaN }, { jumpHeld: 1 }, { jump: 0.5 },
+   { lookBack: 2 }, { lookBack: -1 }];
+  for (const bad of bads) {
    assert.ok(checkInputState({ ...createInput(), ...bad }).length > 0, JSON.stringify(bad));
   }
  });
