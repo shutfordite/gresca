@@ -35,8 +35,9 @@ const float ROCK_TO = 0.75;         // m/m, fully rock
 const float CORDUROY_PERIOD_M = 0.3;  // m across the piste between corduroy ridges
 const float CORDUROY_GAIN = 1.0;    // times the Look's corduroy depth (the colour map's stripes are 3 m wide)
 const float SPARKLE_CELL_M = 0.03;  // m, the size of one glint
-const float SPARKLE_DENSITY = 0.006; // share of cells that can glint
+const float SPARKLE_DENSITY = 0.02;  // share of cells that can glint
 const float SPARKLE_FLICKER = 9.0;  // how fast glints change as the view direction turns
+const float SPARKLE_DOT_PX = 1.5;   // canvas px across one glint
 const float SPARKLE_NEAR_M = 2.0;   // m, glints at full strength from here
 const float SPARKLE_FAR_M = 24.0;   // m, and none past here
 const float FEATURE_FROM = 0.2;     // feature weight where painted features start to show
@@ -167,10 +168,14 @@ void main() {
  float rock = smoothstep(ROCK_FROM, ROCK_TO, steep) * (1.0 - groomed);
  c = mix(c, uRock * (0.8 + 0.35 * lit), rock);
 
- vec2 cell = floor(vGrid / SPARKLE_CELL_M);
+ vec2 cells = vGrid / SPARKLE_CELL_M;
+ vec2 cell = floor(cells);
  vec3 toCam = normalize(vToCam);
  float glint = step(1.0 - SPARKLE_DENSITY, hash12(cell)) * step(0.5, hash12(cell + floor(toCam.xy * SPARKLE_FLICKER)));
- float sparkle = glint * lit * (1.0 - rock) * (1.0 - smoothstep(SPARKLE_NEAR_M, SPARKLE_FAR_M, vDist));
+ // a dot of about SPARKLE_DOT_PX at the cell's centre, however the cell is foreshortened
+ vec2 offPx = (fract(cells) - 0.5) / max(fwidth(cells), vec2(1e-4));
+ glint *= 1.0 - smoothstep(SPARKLE_DOT_PX * 0.5, SPARKLE_DOT_PX * 0.5 + 1.0, length(offPx));
+ float sparkle = glint * lit * lit * (1.0 - rock) * (1.0 - smoothstep(SPARKLE_NEAR_M, SPARKLE_FAR_M, vDist));
  c = mix(c, litC * 1.06, sparkle);
 
  vec4 paint = texture(uPaint, crispUv(vGrid));
