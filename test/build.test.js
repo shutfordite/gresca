@@ -10,10 +10,12 @@ import { load, MAP_ROTATION_DEG } from './harness.js';
 // GAME_FILE: to compare against an older version now, run that version's own tests.)
 // The digest code below reads only the façade, so it runs unchanged against that version. Checked with both the
 // old (contextified) harness and the A2 one: same digests.
+// The colour digest changed once on purpose since: the snow's relief shading and grain (PR "S4: smoother, more
+// natural snow"); heights, groomed mask and trees are untouched.
 const WANT = {
   height: 'a7a0676864ff94b3b409a019a072205c18e9b3b6711296d60ffa0fa68043a919',
   groomed: 'cc7d95ec273eda34727a800f3334f82d4600d1f8c1c2b0afe592490496cf83ad',
-  colour: '5b169b8e2b1c95c8bcbe1eef325b67bb00b7c73935b411169259ca4f97b55094',
+  colour: 'df231ba85501c69732d56abec734fb9db3d1d7919179be821b2d8b2b1ebfd882',
   trees: '342e6a4470bdd839a927d085bd5e0d8953115495fc8e24f57a8846c0861618f1',
 };
 
@@ -48,6 +50,25 @@ describe('build()', () => {
     const c = new Uint8Array(NX * NY * 4);
     for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) c.set(D.baseColourAt(x + C, y + C), (y * NX + x) * 4);
     assert.equal(sha(c), WANT.colour);
+  });
+
+  it('paints hollows darker than ridges in the powder (relief shading)', () => {
+    const R = 4; // m, the colour map's relief radius
+    const sum = { hollow: [0, 0], ridge: [0, 0] };
+    for (let y = R + 20; y < NY - R - 20; y += 7) for (let x = R + 20; x < NX - R - 20; x += 7) {
+      if (W.groomed(x + C, y + C) > 0) continue;
+      const h = (dx, dy) => cellHeight(x + dx + C, y + dy + C);
+      if (Math.abs(h(1, 0) - h(-1, 0)) + Math.abs(h(0, 1) - h(0, -1)) > 0.6) continue; // steep: rock or sun decides
+      const relief = (h(-R, 0) + h(R, 0) + h(0, -R) + h(0, R)) / 4 - h(0, 0);
+      const kind = relief > 0.5 ? 'hollow' : relief < -0.5 ? 'ridge' : null;
+      if (!kind) continue;
+      const c = D.baseColourAt(x + C, y + C);
+      sum[kind][0] += c[0] + c[1] + c[2];
+      sum[kind][1]++;
+    }
+    assert.ok(sum.hollow[1] > 20 && sum.ridge[1] > 20, `enough cells: ${sum.hollow[1]} hollows, ${sum.ridge[1]} ridges`);
+    const mean = (k) => sum[k][0] / sum[k][1];
+    assert.ok(mean('hollow') < mean('ridge') - 15, `hollows ${mean('hollow')} vs ridges ${mean('ridge')}`);
   });
 
   it('plants the same trees as before', () => {
