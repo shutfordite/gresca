@@ -1,5 +1,5 @@
-// The GPU terrain's hardening (E1b): the lost-context state machine, driven with a fake renderer and a fake canvas (Node
-// has no WebGL), the texture memory budget, and the softer corduroy's constants.
+// The GPU terrain's hardening (E1b): the lost-context state machine, driven with fake drawers and a fake canvas (Node has
+// no WebGL), the texture memory budget, and the softer corduroy's constants.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './harness.js';
