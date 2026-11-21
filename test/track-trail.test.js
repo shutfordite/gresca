@@ -200,7 +200,8 @@ describe('track ribbon (no GL)', () => {
   }
   class Vec3 { constructor(x, y, z) { Object.assign(this, { x, y, z }); } }
   const THREE = new Proxy({
-   InstancedBufferGeometry: Any, BufferAttribute: Any, InterleavedBufferAttribute: Any, RawShaderMaterial: class extends Any { constructor(p) { super(); calls.material = p; } },
+   InstancedBufferGeometry: Any, BufferAttribute: Any, InterleavedBufferAttribute: Any,
+   RawShaderMaterial: class extends Any { constructor(p) { super(); calls.material = p; } },
    Mesh: class extends Any { constructor(geometry) { super(); this.geometry = geometry; } },
    InstancedInterleavedBuffer: Buffer, Vector3: Vec3,
   }, { get: (target, key) => (key in target ? target[key] : key) });
