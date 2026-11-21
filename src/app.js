@@ -13,6 +13,8 @@ import { createHangaLook } from './view/look/hanga.js';
 import { buildColourMap } from './view/colour-map.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
 import { updateCamera, draw } from './view/draw.js';
+import { chooseRenderer } from './view/renderer.js';
+import { createFpsMeter, tickFps, drawFps } from './view/fps-meter.js';
 import { markTrack, clearTracks } from './view/ski-tracks.js';
 import { getUi, applyUiTokens } from './ui/dom.js';
 import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
@@ -27,8 +29,9 @@ const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." 
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
  * requestAnimationFrame, setTimeout, HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
  * procedural map at that heading, for the rotated-map tests; default 0), scene (optional name: open that scene after
- * the boot, src/scenes.js)}; localStorage and devicePixelRatio are read
- * at each use.
+ * the boot, src/scenes.js), renderer (optional: 'gl' draws the terrain on the GPU, view/renderer.js), THREE (the
+ * three.js module, with renderer 'gl'), showFps (optional: the fps readout), now () -> ms (with showFps), warn
+ * (optional: message -> nothing)}; localStorage and devicePixelRatio are read at each use.
  * Every piece of state lives in the objects made here; the modules hold none (docs/adr/0002). Returns the frozen
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
  */
@@ -50,7 +53,9 @@ export function createGame(env) {
  const rng = createRng(1);
  const spray = { particles: [], rng };
  const timestep = createTimestep();
- const clock = { lastMs: 0 }; // ms, the last frame's timestamp
+ const clock = { lastMs: 0, dt: 0 }; // ms, the last frame's timestamp; s, the last frame's real duration
+ const render = { draw }; // the frame drawer: the CPU raycaster until the boot picks (view/renderer.js)
+ const fps = env.showFps ? createFpsMeter() : null; // ?fps=1
  const bus = createEventBus(); // SimEvents out of the sim, to ui/, view/ and the façade (core/events.js)
  const hud = createHud();
  const startVelocity = { x: 0, y: 0 }; // m/s, scratch for startRun()
@@ -119,14 +124,20 @@ export function createGame(env) {
 
  // Moves the camera, then draws a frame and the HUD. dt: s since the last frame; alpha: see view/draw.js riderPose().
  function frame(dt, alpha) {
+  const t0 = fps ? env.now() : 0;
   updateCamera(view, scene, dt, alpha);
-  draw(view, scene, dt);
+  render.draw(view, scene, dt);
   updateHud(ui, hud, view.drawn, rider, session, world.terrain.bounds, world.course);
+  if (fps) {
+   tickFps(fps, clock.dt, env.now() - t0, view.renderer.name);
+   drawFps(ui.ctx, fps, look, view.Hh);
+  }
  }
 
  function loop(ts) {
   const dt = Math.max(0, (ts - clock.lastMs) / 1000 || 0);
   clock.lastMs = ts;
+  clock.dt = dt;
   const alpha = advance(sim, timestep, dt);
   // the camera and animation get the real frame time, capped like the simulation
   if (session.phase !== 'load') frame(Math.min(dt, SIM_MAX * SIM_DT), alpha);
@@ -136,7 +147,11 @@ export function createGame(env) {
  // Builds the mountain, then shows the menu over the top of the run.
  function boot() {
   buildWorld(world);
-  buildColourMap(view, world, ui.minimap, look);
+  buildColourMap(view, world, ui.minimap, look, env.renderer === 'gl');
+  render.draw = chooseRenderer({
+   want: env.renderer, THREE: env.THREE || null, document: env.document, screen: ui.canvas,
+   warn: env.warn || (() => {}),
+  }, view, scene);
   session.phase = 'ready';
   placeAtStart();
   rider.vx = rider.vy = 0;

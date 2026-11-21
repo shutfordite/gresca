@@ -27,15 +27,16 @@ definitions: `docs/ARCHITECTURE.md`. Work packages have IDs like A1, B2 and C3. 
   look lab `lab.html` loads (a dev page: its own small inline style and module entry; `test/lab.test.js`).
 - `src/` is laid out by layer: `core/` (tunables, RNG, contracts, event bus), `world/` (terrain, course, build),
   `sim/` (rider state, step, jump, grind, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites,
-  rider, sky, ski tracks), `ui/` (HUD, menu), `app.js` (`createGame(env)`: state objects, wiring, loop), `debug.js`
-  (the façade; each area adds its fields in its own `fields.js`), `main.js` (entry).
+  rider, sky, ski tracks; `view/gl/` the GPU terrain), `ui/` (HUD, menu), `app.js` (`createGame(env)`: state
+  objects, wiring, loop), `debug.js` (the façade; each area adds its fields in its own `fields.js`), `main.js` (entry).
   The full list is in `docs/ARCHITECTURE.md` section 4.
 - **No module-level mutable state** (ADR 0002). Modules export functions and frozen constants only. All state lives
   in objects that `createGame(env)` makes; put new state there and pass it in.
 - Only `src/main.js` reads browser globals (`window`, `document`, `localStorage`, `requestAnimationFrame`, …) or
   `HANGA`/`RiderAnim`. Everything else gets them from `env`.
 - Each `src/` file starts with a one-line comment saying what it holds.
-- No build step and no runtime npm packages. Changing that needs a decision record in `docs/adr/`.
+- No build step and no runtime npm packages. Changing that needs a decision record in `docs/adr/`. Third-party code
+  the page loads is vendored unmodified and pinned in `vendor/` (three.js, ADR 0008).
 - Any new folder the game loads at runtime must be added to `SITE` in `.github/workflows/preview.yml`, or previews break.
 - Changes must work in Safari on iPad (the main test device): check the preview there for anything visible or touch-related.
 
@@ -69,6 +70,8 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | The Controls screen (generated from the table; gesture diagrams) | `src/ui/controls.js`, `styles/menu.css`, `index.html` | `controls` |
 | Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
+| Which renderer draws the terrain (CPU raycaster, or the GPU with `?renderer=gl`) and the fallback; the `?fps=1` readout | `src/view/renderer.js`, `src/view/fps-meter.js` (ADR 0008) | `gl-terrain`, `timer` |
+| The GPU terrain (E0, three.js in `vendor/three/`): projection matching the sprites, clipmap mesh, baked textures, snow and sky shaders and their Look uniforms, the trees' horizon | `src/view/gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`) | `gl-terrain` (CI cannot run WebGL: check the preview) |
 | Ski tracks | `src/view/ski-tracks.js` | `features`, `games` |
 | Every colour, terrain tone, sky and fog value, sprite colour, camera framing value, CSS token, rider projection (the Look) | `src/view/look/look.js` (interface), `src/view/look/hanga.js` (from the spec; the only reader of `HANGA`'s fields) | `look-contract`, `look-lint`, `look` |
 | The look lab (every pose, yaw, pitch, tone, sprite and role) | `lab.html`, `src/view/look/lab.js` | `lab` |
@@ -108,7 +111,7 @@ else (a contract in `src/core/`, `app.js`, `debug.js`, `index.html`) is its own 
 | S1 controls and UI | `src/input/`, `src/ui/`, `styles/` |
 | S2 sim feel | `src/sim/` |
 | S3 rider animation | `art/gresca-rider-anim.js`, the rider files in `src/view/` |
-| S4 look, camera, render | `src/view/` (with `src/view/look/`) except the rider files, `art/gresca-hanga-spec.js` versions |
+| S4 look, camera, render | `src/view/` (with `src/view/look/`) except the rider files, `art/gresca-hanga-spec.js` versions, `vendor/` |
 | S5 maps | `src/world/`, `tools/`, `maps/` |
 | Shared (coordinator) | `src/core/`, `src/app.js`, `src/debug.js`, `src/main.js`, `index.html`, `docs/`, `test/harness.js` |
 
