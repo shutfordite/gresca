@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 21 Nov 2026, main after PR #26.
+Updated 21 Nov 2026, main after PR #30.
 
 ## Done
 | Package | PR |
@@ -23,20 +23,28 @@ Updated 21 Nov 2026, main after PR #26.
 | B2b state contracts (InputState, RiderState, SimEvent), `step() -> events` on a bus, input recording, façade per area | #24 |
 | B2c world seams: the `Course` interface (ADR 0004), `RiderState.fallLine`/`downhillSide`, `AnimInput`, the course seam lint, the golden trace | #25 |
 | C2 one world frame (ENU, ADR 0005): `MapFrame`, headings counter-clockwise from east, `npm run test:rotated` in CI, `test/map-view.js`. Ends the freeze | #26 |
+| C3a map compiler, terrain half: `tools/map-compiler/`, `gresca-map-1` terrain file (ADR 0006), validator | #29 |
+| P5 scenes (`Gresca.scene()`, `?scene=`), `RiderState` traces, `npm run shot` with Playwright (ADR 0003), per-area test scripts | #28 |
+| P4 Look interface (`src/view/look/`, ADR 0007), the Hanga look as the only `HANGA` reader, look lint, `lab.html` | #30 |
 
-## In progress (phase 2, started 21 Nov; parallel, different files)
-- **P4 Look interface** (`design/p4-look`): `src/view/look/`, the Hanga look as the only reader of `HANGA`, a lint
-  against hex and `HANGA.` outside it, `lab.html` look lab. No pixel change.
-- **P5 scenes, traces, screenshots** (`tooling/p5-scenes`): `Gresca.scene()` and `?scene=`, `RiderState` traces in
-  `test/fixtures/traces/`, `npm run shot` with Playwright (ADR 0003), per-area test scripts.
-- **C3a map compiler, terrain half** (`maps/c3a-compiler`): `tools/map-compiler/`, the `gresca-map-1` terrain file
-  (ADR 0006), its validator. No `src/` changes.
-P4 and P5 may both touch `src/app.js` and `src/main.js` lightly: the second to merge merges `origin/main`.
-These PRs don't edit this file; the coordinator updates it as each one merges.
+## In progress (phase 3, the five streams, started 21 Nov; parallel, each in its own folders)
+| Stream | Package | Branch |
+|---|---|---|
+| S1 controls and UI | **F4a** bindings table (`src/input/bindings.js`) and a Controls screen generated from it, reachable from the menu | `ui/f4a-controls` |
+| S2 sim feel | **F5** brake as a skid across the fall line, analog strength, no fixed deceleration | `sim/f5-brake` |
+| S3 rider animation | **S3a** body twist: lower body and equipment follow `boardHeading`, upper body `travelHeading`/fall line (spec `twistDeg`) | `anim/s3a-twist` |
+| S4 look, camera, render | **D1** frame-time harness by stage, baseline, `ImageData` reuse, the slow-frame spikes | `perf/d1-harness` |
+| S5 maps | **C1** polyline `Course` and `Course.fromRun` (R4); the procedural map as one polyline source | `maps/c1-polyline` |
+These PRs don't edit this file. F5 and C1 may both re-record the golden trace: the second to merge merges
+`origin/main` and re-records, explaining the diff. The D1 bench lives in `tools/bench/` (agreed exception to S5
+owning `tools/`).
 
 ## Next, in order
-1. Phase 3, the five streams, once P4 and P5 are merged (S5 can start C1 as soon as C3a is in). All are in
-   `docs/ROADMAP.md`.
+- S1: F4b pause button and in-game controls → F3 flip input and air hints → stance picker.
+- S2: F6 edge and carve model (removes the heading clamp; flip yaw/turn rate to counter-clockwise) → F3 flip physics.
+- S3: F5 brake counter-rotation → F6 edge-driven lean → F7 fakie look → F3 flip tuck.
+- S4: **F5-cam** camera follows `travelHeading` (small; fixes the low-speed flip) → F1 sizing → D2 → D3.
+- S5: C3b course file → C4 map loading (needs D0).
 
 ## Known issues (not yet fixed)
 - **Camera flips at low speed** when the board is across the slope and slides tail-first: the camera follows the
