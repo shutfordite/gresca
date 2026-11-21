@@ -24,7 +24,8 @@ const R2D = 180 / Math.PI;
  * height (m altitude), x, y (m, CAM_BACK behind the rider), dirX, dirY (unit view direction), renderW, renderH
  * (low-res render px), pixelScale (screen px per render px), focalPx, horizonPx (render px), slope (m/m ahead,
  * full-tilt tan), pitchPx (render px), tilt (tan, after partial follow and the clamp), look (0..1, how far the swing
- * to look back uphill has got), lookOffset (rad the view is turned from the follow heading, 0..PI). frame: the map's MapFrame.
+ * to look back uphill has got), lookOffset (rad the view is turned from the follow heading, 0..PI). frame: the map's
+ * MapFrame.
  */
 export function createCamera(frame) {
  const dir = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the map until the first frame sets it
