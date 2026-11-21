@@ -26,7 +26,8 @@ const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." 
 /**
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
  * requestAnimationFrame, setTimeout, HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
- * procedural map at that heading, for the rotated-map tests; default 0)}; localStorage and devicePixelRatio are read
+ * procedural map at that heading, for the rotated-map tests; default 0), scene (optional name: open that scene after
+ * the boot, src/scenes.js)}; localStorage and devicePixelRatio are read
  * at each use.
  * Every piece of state lives in the objects made here; the modules hold none (docs/adr/0002). Returns the frozen
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
@@ -147,6 +148,7 @@ export function createGame(env) {
   menuCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
   ui.msgT.textContent = MENU_TEXT;
   ui.go.hidden = false;
+  if (env.scene) facade.scene(env.scene); // ?scene=<name> (src/scenes.js): open that scene, paused
  }
 
  bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right));
@@ -156,8 +158,9 @@ export function createGame(env) {
  env.setTimeout(boot, BOOT_DELAY_MS);
  env.requestAnimationFrame(loop);
 
- return createFacade({
+ const facade = createFacade({
   rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun,
   frame,
  });
+ return facade;
 }

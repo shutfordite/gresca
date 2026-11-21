@@ -146,8 +146,8 @@ src/
                  menu.js (rig picker, stance, menu text; the finish screen subscribes to finish), fields.js (popup)
 art/             unchanged (HANGA, RiderAnim), UMD classic scripts
 styles/          base.css, hud.css, menu.css (index.html links them; no inline CSS)
-maps/            later: el-tarter.json (gresca-map-1)
-tools/           map compiler (pure JS core + Node CLI + bake page), validate-map.js
+maps/            sources/<id>.json (compiler configs); later <id>.terrain.json (gresca-map-1, ADR 0006), <id>.course.json
+tools/           map-compiler/ (C3a: pure core.js, sources/terrarium.js and openskimap.js, validate.js, cli.mjs), bake page
 docs/adr/        one short decision record per choice below
 ```
 
@@ -161,7 +161,7 @@ Rules the layers keep:
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians counter-clockwise from east internally and compass degrees only at the spec boundary. Each map is authored on its own grid and placed by a `MapFrame` (origin, rotation); the procedural map's default placement runs downhill to the south (ADR 0005). `npm run test:rotated` runs the whole suite with the procedural map turned 37°.
 - The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural map (`world/course.js`, `world/build.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
 
-Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline in C1); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
+Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline in C1); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade; the baked terrain file `gresca-map-1` (done: `docs/adr/0006-map-terrain-format.md`).
 
 ## 5. Work packages for agents
 
@@ -223,9 +223,8 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - Done as: a `MapFrame` places the procedural grid in the world (default: piste runs south, exact, golden hash unchanged); the run start, camera start, carve limit, ramp flags and `keepOnMap` come from the frame; the procedural sun turns with the frame; `npm run test:rotated` (in CI) runs the whole suite at 37°, and `test/rotated.test.js` compares a seeded ride at 0° and 37° step by step.
 
 **C3. Map format `gresca-map-1`, validator and baker v2** ∥ with C1. *Amended by R2 and R3: split baked `<id>.terrain.json` from authored `<id>.course.json`; pluggable DEM sources (Terrarium tiles from Mapterhorn or AWS, local GeoTIFF) and pistes from OpenSkiMap GeoJSON with Overpass as fallback; raw-download cache; provenance and per-source attribution in the file; maps are ODbL.*
-- Schema: origin (lat/lon), `cellM`, heights (int16 decimetres, base64, or a PNG Terrarium blob), the chosen piste polyline in local ENU metres, `meanSlopeDeg`, sun (az, el), `horizon` profile (spec `mountains.real`), `treeSet`, park layout in (s, d), credits and attribution.
-- `tools/validate-map.js` plus a test that every file in `maps/` validates.
-- Baker v2 as a Node 22 script (`tools/bake-map.mjs`, built-in `fetch`), keeping the browser page as a fallback. It chooses the piste by OSM id or name, converts Mercator pixels to local ENU metres (not one mid-latitude scale for the whole box), computes `meanSlopeDeg` and the horizon profile, and writes `maps/<id>.json`. Note: the agents' sandbox may block the tile and Overpass hosts; if so, the owner runs the bake and commits the JSON.
+- **C3a (terrain half, ADR 0006):** `maps/<id>.terrain.json`: origin (lat/lon), the ENU frame, `cellM`, heights (Uint16 decimetres above a base, base64, with a checksum), the raw piste and lift polylines in local ENU metres with OSM ids, per-source attribution and licence. `tools/map-compiler/validate.js` plus a test that every file in `maps/` validates. The compiler is a Node 22 CLI (`tools/map-compiler/cli.mjs`, built-in `fetch` only with `--fetch`, a raw-download cache) over a pure core, keeping the browser page as a fallback. It projects lat/lon onto the tangent plane at the origin (not one mid-latitude scale for the whole box). Note: the agents' sandbox blocks the tile and OpenSkiMap hosts, so the owner runs the bake and commits the JSON.
+- **C3b (course half):** `maps/<id>.course.json`: the chosen run(s) by OSM id or name, widths, park layout in (s, d), start and finish; `meanSlopeDeg` of the run, sun (az, el), `horizon` profile (spec `mountains.real`) and `treeSet`; the validator checks a course against its terrain.
 
 **C4. Map loading and corridor-only detail** *(after C1–C3)*. *Amended by R1 and R5: the corridor cache holds the composed layers; slope limits and DEM defect checks become gameplay rules and validator checks.*
 - Load one map with `fetch` from `maps/` (or from a file the player picks). Build in chunks with progress, or in a Worker, so the menu never freezes (M2).

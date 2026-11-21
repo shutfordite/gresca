@@ -80,7 +80,11 @@ rails, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites, ri
 npm test
 ```
 
-Needs Node 22.8 or newer (`"engines"` in `package.json`), and no packages. The tests are ES modules
+Per area: `npm run test:sim`, `test:view`, `test:input`, `test:world`. To see the game: `npm run shot` writes a PNG of
+every named scene (`src/scenes.js`) for board and skis to `shots/` (needs `npm ci`; dev-only Playwright, ADR 0003; set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an installed Chrome). `?scene=kicker-air` opens a scene, paused, in the browser.
+
+Needs Node 22.8 or newer (`"engines"` in `package.json`), and no packages to run the game or the tests. The tests are ES modules
 (`test/package.json`). `test/harness.js` imports `src/app.js` straight into Node and calls `createGame(env)` with
 stubbed browser APIs and a fresh copy of the art modules, so each `await load()` is an independent game running exactly
 the files the browser loads. Tests read and drive whole games only through `window.Gresca`, a small façade in
@@ -116,7 +120,12 @@ There is no build tool: the browser loads the files as they are in the repo.
 one part of a 6,000-line file.
 
 `tools/bake-el-tarter.html` runs in your own browser, downloads elevation tiles and OpenStreetMap pistes and lifts for
-El Tarter, and saves a compact terrain file for the game. Wiring that data into the game is the next milestone.
+El Tarter, and saves a compact terrain file (the old `gresca-terrain-1` format).
+
+The map compiler replaces it: `node tools/map-compiler/cli.mjs --config maps/sources/el-tarter.json --fetch`
+downloads elevation tiles and OpenSkiMap pistes and lifts once into `.map-cache/`, then writes and validates
+`maps/el-tarter.terrain.json` (format `gresca-map-1`, `docs/adr/0006-map-terrain-format.md`). Re-runs without
+`--fetch` work offline from the cache and give the same file. Wiring that data into the game is the next milestone.
 
 ## Known limits
 
