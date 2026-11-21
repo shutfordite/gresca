@@ -116,7 +116,12 @@ There is no build tool: the browser loads the files as they are in the repo.
 one part of a 6,000-line file.
 
 `tools/bake-el-tarter.html` runs in your own browser, downloads elevation tiles and OpenStreetMap pistes and lifts for
-El Tarter, and saves a compact terrain file for the game. Wiring that data into the game is the next milestone.
+El Tarter, and saves a compact terrain file (the old `gresca-terrain-1` format).
+
+The map compiler replaces it: `node tools/map-compiler/cli.mjs --config maps/sources/el-tarter.json --fetch`
+downloads elevation tiles and OpenSkiMap pistes and lifts once into `.map-cache/`, then writes and validates
+`maps/el-tarter.terrain.json` (format `gresca-map-1`, `docs/adr/0006-map-terrain-format.md`). Re-runs without
+`--fetch` work offline from the cache and give the same file. Wiring that data into the game is the next milestone.
 
 ## Known limits
 
