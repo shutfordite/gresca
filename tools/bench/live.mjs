@@ -44,7 +44,7 @@ try {
       },
     };
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/?renderer=cpu`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/?map=test&renderer=cpu`);
   await page.waitForFunction(() => window.Gresca && window.Gresca.state().phase === 'ready', null, { polling: 100 });
   await page.evaluate(() => {
     window.Gresca.debug.setTimer(window.__live.timer);

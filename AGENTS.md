@@ -51,7 +51,8 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Contracts: InputState, RiderState, SimEvent, Course, AnimInput | `src/core/contracts.js` (its own PR in phase 3) | `contracts`, `events` |
 | Event bus, input recording | `src/core/events.js`, `src/core/input-log.js` | `contracts`, `events` |
 | Terrain heights, layers, sampling | `src/world/terrain.js`, `noise.js` | `terrain`, `build` |
-| Course: centreline, finish, kickers, rails of the procedural map; the `Course` (s, d) the game asks | `src/world/course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
+| Course: centreline, finish, kickers, rails of the procedural test slope; `createGridCourse(layout, …)`, the `Course` (s, d) the game asks | `src/world/course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
+| The play mountain (steep, big kickers; the map the game opens on) and which map loads (`?map=test`, `createGame(env).map`, `MAPS` in `build.js`; ADR 0009) | `src/world/play-slope.js`, `src/world/build.js`, `src/main.js` | `play-slope`, `frame`, `terrain` |
 | The polyline course (arc-length s, `project`, `point`, widths) and `Course.fromRun(ways)`: join, resample, curvature limit | `src/world/polyline-course.js`, `src/world/run-geometry.js` (ADR 0004, R4) | `polyline-course`, `course` |
 | What the rider animation reads from the sim (`AnimInput`) | `src/sim/anim-input.js` | `course`, `rider-anim` |
 | The world frame: a map's grid placed in ENU (origin, rotation), compass degrees | `src/world/map-frame.js` (ADR 0005) | `course`, `golden`, `rotated`, all with `npm run test:rotated` |
@@ -166,6 +167,7 @@ Every agent session pays for what it reads and prints, so keep context small:
 
 ## Do not break
 - Tap-to-start, the Snowboard / Skis picker, and the `gresca-rig` / `gresca-stance` storage keys.
-- The empty stretch of piste between grid y 460 and 740 on the procedural map, s about 470 to 760 now that s is arc
-  length (the physics tests use it; `test/course.test.js` guards it).
+- The empty stretch of piste between grid y 460 and 740 on the procedural **test slope**, s about 470 to 760 now that s
+  is arc length (the physics tests use it; `test/course.test.js` guards it). The test slope itself (`map: 'test'`, the
+  harness's and every tool's map) stays as it is: the physics tests, the golden trace and the digests ride it.
 - Credits and ODbL attribution for any real map data.
