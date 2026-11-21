@@ -28,10 +28,10 @@ export function viewFields(c) {
 
 /**
  * Gresca.debug: render internals, for tests of the look. Not game state: expect these to change with the renderer.
- * g: {view, camera, hanga, world, rider, timestep, scene} from createGame.
+ * g: {view, camera, look, world, rider, timestep, scene} from createGame.
  */
 export function viewDebug(g) {
- const { view, camera, hanga, world } = g;
+ const { view, camera, look, world } = g;
  const colourOf = (cols, px, py) => { // the colour map texel under world point (px, py)
   const at = world.frame.toGrid(px, py, { u: 0, v: 0 });
   const o = ((at.v | 0) * view.map.width + (at.u | 0)) * 4;
@@ -43,15 +43,15 @@ export function viewDebug(g) {
    const P = project(camera, wx, wy, h);
    return P && { ...P };
   },
-  cameraTilt: (s, rel, drop) => cameraTilt(hanga, s, rel, drop),
+  cameraTilt: (s, rel, drop) => cameraTilt(look.camera, s, rel, drop),
   camCompass: () => camCompass(camera), // camera heading, compass degrees
-  sunDisc: () => ({ ...sunDisc(hanga, camera, view.W, view.Hh, world.frame) }), // {X,Y,r,on}, canvas pixels
-  sunAzimuthDeg: () => sunAzimuthDeg(hanga, world.frame), // compass deg, the sun in the world (turned with the map)
+  sunDisc: () => ({ ...sunDisc(look.sky, camera, view.W, view.Hh, world.frame) }), // {X,Y,r,on}, canvas pixels
+  sunAzimuthDeg: () => sunAzimuthDeg(look.sky, world.frame), // compass deg, the sun in the world (turned with the map)
   screen: () => ({ width: view.W, height: view.Hh }), // canvas pixels
   mapId: MAP_ID,
   // fog colour, distance of the last terrain sample (m), samples per column
   fog: () => ({ rgb: view.fog.slice(), far: RAY_FAR, samples: RAY_SAMPLES }),
-  fogAt: (z) => fogAt(hanga, z),
+  fogAt: (z) => fogAt(look.fog, z),
   heightFast: (px, py) => world.terrain.heightFast(px, py), // m, the raycaster's fast terrain height (bilinear)
   renderPixels: () => view.lx.getImageData(0, 0, view.lo.width, view.lo.height).data, // RGBA of the last terrain render
   colourAt: (px, py) => colourOf(view.col, px, py),      // live colour map (with tracks)
