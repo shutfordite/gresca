@@ -15,6 +15,8 @@ const CSS_PX_PER_RENDER_PX = 1.6; // CSS px of screen per render column
 const RAY_START_M = 3;        // m, the first terrain sample along each column
 const RAY_SPREAD = 0.012;     // dimensionless, each sample is 1 m plus this fraction further than the last
 const BLEND_NEAR_M = 80;      // m, nearer samples blend the four colour-map cells around them (bilinear)
+const BLEND_MAX_STEP = 140;   // 0..765, summed RGB step between two samples: smaller steps are shaded smooth, more so
+                              // the smaller; from this step up the span stays flat (a painted edge)
 const TREE_FAR_M = 300;       // m along the view, further trees are not drawn
 const TREE_HEIGHT_M = 9;      // m, drawn height of a tree
 const SNAP_M = 8;             // m, a jump no step could make: show the current state as it is
@@ -157,6 +159,10 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
   const ru = ray.u;
   const rv = ray.v;
   let ym = RH;
+  let lastK = -2; // the sample drawn last, and its colour after fog: a span right after it blends from that colour
+  let lr = 0;
+  let lg = 0;
+  let lb = 0;
   for (let k = 0; k < NS; k++) {
    const z = rayZ[k];
    const uu = pu + ru * z;
@@ -191,14 +197,33 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
      const r = c0 + (FOG[0] - c0) * f;
      const g = c1 + (FOG[1] - c1) * f;
      const b = c2 + (FOG[2] - c2) * f;
-     for (let q = Math.max(0, ys); q < ym; q++) {
+     // Shade the span from this sample's colour at its top (ys) to the previous sample's at its bottom (ym), so a
+     // slope is a smooth gradient rather than a flat band per sample. Not across a gap (a crest hid the samples in
+     // between) or a painted edge (kicker, track, rock): there the edge stays sharp.
+     const step = Math.abs(lr - r) + Math.abs(lg - g) + Math.abs(lb - b);
+     const blend = lastK === k - 1 ? Math.max(0, 1 - step / BLEND_MAX_STEP) / (ym - ys) : 0;
+     const dr = (lr - r) * blend;
+     const dg = (lg - g) * blend;
+     const db = (lb - b) * blend;
+     const q0 = Math.max(0, ys);
+     let qr = r + dr * (q0 - ys);
+     let qg = g + dg * (q0 - ys);
+     let qb = b + db * (q0 - ys);
+     for (let q = q0; q < ym; q++) {
       const o = (q * RW + c) * 4;
-      D[o] = r;
-      D[o + 1] = g;
-      D[o + 2] = b;
+      D[o] = qr;
+      D[o + 1] = qg;
+      D[o + 2] = qb;
       D[o + 3] = 255;
+      qr += dr;
+      qg += dg;
+      qb += db;
      }
-     ym = Math.max(0, ys);
+     ym = q0;
+     lastK = k;
+     lr = r;
+     lg = g;
+     lb = b;
     }
    }
   }
