@@ -1,14 +1,14 @@
 // The menu: the Snowboard / Skis picker with its gresca-rig storage key, the stance key, the menu texts and the
 // finish screen (a SimEvent subscriber).
 import { on } from '../core/events.js';
+import { bindControls } from './controls.js';
 
 const RIG_KEY = 'gresca-rig';
 const OLD_RIG_KEY = 'gv-rig'; // before the rename; still read
 
-/** The start screen's instructions. */
-export const MENU_TEXT = 'Ride from the Encampadors ridge down to Pas de la Casa. Hold the left or right side of the ' +
- 'screen to turn. Press both sides together to jump, then tap left or right in the air to spin. Swipe down to brake. ' +
- 'Avoid the trees.';
+/** The start screen's text: where the run goes, and a pointer to the Controls screen. */
+export const MENU_TEXT = 'Ride from the Encampadors ridge down to Pas de la Casa. Avoid the trees. Tap Controls to see ' +
+ 'how to turn, jump, spin and brake.';
 
 /**
  * Picks the rig ('board' | 'ski'): writes session.rig, shows it on the buttons and remembers it in storage where the
@@ -27,10 +27,11 @@ export function setRig(ui, session, env, r) {
  }
 }
 
-/** Wires the picker's buttons, then restores the rig saved last visit (the new key wins over the old one). */
+/** Wires the picker's buttons and the Controls screen, then restores the rig saved last visit (the new key wins over the old one). */
 export function bindMenu(ui, session, env) {
  ui.pb.addEventListener('click', () => setRig(ui, session, env, 'board'));
  ui.ps.addEventListener('click', () => setRig(ui, session, env, 'ski'));
+ bindControls(ui);
  try {
   const s = env.localStorage.getItem(RIG_KEY) || env.localStorage.getItem(OLD_RIG_KEY);
   if (s === 'ski' || s === 'board') setRig(ui, session, env, s);
