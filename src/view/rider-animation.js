@@ -38,10 +38,12 @@ function riderAnimInput(view, game, dt) {
    ga = p.ga + ((gv - p.gv) / dt - p.ga) * k;
   }
  }
- const turn = dt > 0 && s > 1 && !air ? wrap(dir - p.dir) / dt : 0;
+ // rad/s, + turning right (clockwise in the world frame, where headings grow counter-clockwise)
+ const turn = dt > 0 && s > 1 && !air ? wrap(p.dir - dir) / dt : 0;
  const landed = a.landings !== p.n && !air && !a.wiped;
  view.animPrev = { x, y, dir, g, gv, ga, n: a.landings, air: air || a.grinding };
- view.riderYaw = wrap(a.facing - camera.heading) * 180 / Math.PI;
+ // deg, + with the rider turned to the right of the camera's view (clockwise)
+ view.riderYaw = wrap(camera.heading - a.facing) * 180 / Math.PI;
  return {
   wiped: a.wiped, grinding: a.grinding, airborne: air, braking: a.braking, landed,
   impact: a.impact, speed: s, pathTurn: turn, riderSide: a.riderSide, approach: !air && a.approach,

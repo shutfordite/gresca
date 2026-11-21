@@ -1,7 +1,8 @@
 // The camera: its state, following the rider (heading, height, slope), the partial slope-follow tilt, compass heading.
 import { CAM_BACK, CAM_HEIGHT, HORIZON_FRAC } from '../core/config.js';
+import { compassDeg } from '../world/map-frame.js';
 
-const START_HEADING = 1.57; // rad, straight down the map
+const START_HEADING = 1.57; // rad on the map's grid (clockwise from across, MapFrame): just short of straight down
 const START_SLOPE = 0.26;   // m/m, the run's mean slope
 const HEADING_RATE = 3.2;   // 1/s, how fast the camera swings round behind the direction of travel
 const SLOPE_RATE = 3;       // 1/s, how fast the slope estimate follows the ground ahead
@@ -18,33 +19,39 @@ const AIRBORNE_Z = 0.05;    // m above the snow, higher counts as in the air
 const R2D = 180 / Math.PI;
 
 /**
- * A new camera: heading (rad), height (m altitude), x, y (m, CAM_BACK behind the rider), dirX, dirY (unit view
- * direction), renderW, renderH (low-res render px), pixelScale (screen px per render px), focalPx, horizonPx
- * (render px), slope (m/m ahead, full-tilt tan), pitchPx (render px), tilt (tan, after partial follow and the clamp).
+ * A new camera, in world metres and radians (docs/adr/0005-enu-frame.md): heading (rad, counter-clockwise from east),
+ * height (m altitude), x, y (m, CAM_BACK behind the rider), dirX, dirY (unit view direction), renderW, renderH
+ * (low-res render px), pixelScale (screen px per render px), focalPx, horizonPx (render px), slope (m/m ahead,
+ * full-tilt tan), pitchPx (render px), tilt (tan, after partial follow and the clamp). frame: the map's MapFrame.
  */
-export function createCamera() {
+export function createCamera(frame) {
+ const dir = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the map until the first frame sets it
  return {
-  heading: START_HEADING, height: 0, x: 0, y: 0, dirX: 0, dirY: 1, renderW: 1, renderH: 1, pixelScale: 1,
+  heading: frame.headingToWorld(START_HEADING), height: 0, x: 0, y: 0, dirX: dir.x, dirY: dir.y, renderW: 1,
+  renderH: 1, pixelScale: 1,
   focalPx: 1, horizonPx: 0, slope: START_SLOPE, pitchPx: 0, tilt: START_SLOPE,
  };
 }
 
-/** Puts the camera behind a rider at the top of the run: heading down, groundM (m) the ground there. */
-export function resetCamera(camera, groundM) {
- camera.heading = START_HEADING;
+/** Puts the camera behind a rider at the top of the run: heading down the map (frame), groundM (m) the ground. */
+export function resetCamera(camera, groundM, frame) {
+ camera.heading = frame.headingToWorld(START_HEADING);
  camera.slope = START_SLOPE;
  camera.height = groundM + CAM_HEIGHT + camera.slope * CAM_BACK;
 }
 
-/** Puts the camera over the top of the run for the menu backdrop (keeps the slope estimate). groundM: m altitude. */
-export function menuCamera(camera, groundM) {
- camera.heading = START_HEADING;
+/**
+ * Puts the camera over the top of the run for the menu backdrop, heading down the map (frame), keeping the slope
+ * estimate. groundM: m altitude.
+ */
+export function menuCamera(camera, groundM, frame) {
+ camera.heading = frame.headingToWorld(START_HEADING);
  camera.height = groundM + CAM_HEIGHT;
 }
 
-/** Camera heading in compass degrees. Procedural map: world x = game x, world y = -game y. */
+/** Camera heading in compass degrees (0..360, clockwise from north): the art spec's unit. */
 export function camCompass(camera) {
- return ((Math.atan2(Math.cos(camera.heading), -Math.sin(camera.heading)) * 180 / Math.PI) % 360 + 360) % 360;
+ return compassDeg(camera.heading);
 }
 
 // cam.slope is the slope ahead (metres dropped per metre). The camera height still follows it, but the view tilt
@@ -79,7 +86,9 @@ export function followRider(camera, terrain, hanga, pose, rider, renderW, render
  const camA = camera.heading;
  const back = rider.vx * Math.cos(a) + rider.vy * Math.sin(a) < SWITCH_SPEED;
  const airTarget = Math.hypot(rider.vx, rider.vy) > AIR_TRACK_SPEED ? Math.atan2(rider.vy, rider.vx) : camA;
- const tgt = jz > AIRBORNE_Z ? airTarget : (back ? a + Math.PI : a);
+ // riding switch: look the other way along the board (- PI, the world mirror of the grid's + PI: exact at the default
+ // placement, docs/adr/0005-enu-frame.md)
+ const tgt = jz > AIRBORNE_Z ? airTarget : (back ? a - Math.PI : a);
  const dT = Math.atan2(Math.sin(tgt - camA), Math.cos(tgt - camA));
  camera.heading = camA + dT * Math.min(1, dt * HEADING_RATE);
  // Ground heights from the terrain's smooth surface (it clamps to the map edge): under the rider, under the camera,

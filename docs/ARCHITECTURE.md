@@ -106,11 +106,13 @@ src/
                  input-log.js  input recorded per sim step, for exact replays
                  facade-fields.js  how an area registers its façade fields
                  later: math.js
-  world/         terrain.js   Terrain interface, layer stack, bicubic grid (B3)
+  world/         terrain.js   Terrain interface, layer stack, bicubic grid placed by a MapFrame (B3, C2)
+                 map-frame.js createMapFrame(): a map's grid (u, v) in the ENU world; compassDeg() (C2, ADR 0005)
                  course.js    the procedural course: map size, centreline cx(), finish, kickers, rails, and
                               createProceduralCourse(terrain), its Course (s = y, d = x - cx(y); C1: polyline)
                  noise.js     value noise, fbm, row-wise fbm
-                 build.js     createWorld() (grids, trees, terrain, course) and buildWorld() (fills them)
+                 build.js     createWorld({rotationRad}) (frame, grids, trees and their lookup, terrain, course)
+                              and buildWorld() (fills them)
                  fields.js    Gresca.world (and Gresca.world.course)
                  later: trees.js, maps/procedural.js, maps/loader.js (C3, C4)
   sim/           state.js     createRider() (RiderState), createSession() (with the step's events), pushEvent()
@@ -152,10 +154,10 @@ Rules the layers keep:
 - No module holds state; nothing but `main.js` reads a browser global (ADR 0002).
 - `sim` talks outwards only through returned events (`land`, `crash`, `grindStart`, `grindEnd`, `finish`, `score`). `ui` and `view` subscribe.
 - `view` reads sim state and never writes it. The camera is updated in the app loop, not inside `draw()`.
-- All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians internally and compass degrees only at the spec boundary.
+- All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians counter-clockwise from east internally and compass degrees only at the spec boundary. Each map is authored on its own grid and placed by a `MapFrame` (origin, rotation); the procedural map's default placement runs downhill to the south (ADR 0005). `npm run test:rotated` runs the whole suite with the procedural map turned 37°.
 - The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural map (`world/course.js`, `world/build.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
 
-Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame; (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline in C1); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
+Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline in C1); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade.
 
 ## 5. Work packages for agents
 
@@ -211,9 +213,10 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - Re-express the procedural map: sample `cx(y)` into a polyline; kickers, rails and the finish placed in (s, d). The kicker launch test, "m to go", the autopilot, the minimap and the *460–740 empty stretch* invariant all move to s.
 - Accept when: the existing park and physics tests pass against the polyline version, and a new test rides a course that runs **north-east then turns back west** (impossible with `cx(y)`).
 
-**C2. One world frame (ENU)** *(after C1)*
+**C2. One world frame (ENU)** *(moved into the freeze, before C1; done, ADR 0005)*
 - Flip to x east, y north, z up. Delete `camCompass()`'s special case. The sun comes from `HANGA.maps[id].sun`. The camera heading is compass degrees at the spec boundary only.
 - Tests that check the sun on screen and the camera heading must still pass unchanged.
+- Done as: a `MapFrame` places the procedural grid in the world (default: piste runs south, exact, golden hash unchanged); the run start, camera start, carve limit, ramp flags and `keepOnMap` come from the frame; the procedural sun turns with the frame; `npm run test:rotated` (in CI) runs the whole suite at 37°, and `test/rotated.test.js` compares a seeded ride at 0° and 37° step by step.
 
 **C3. Map format `gresca-map-1`, validator and baker v2** ∥ with C1. *Amended by R2 and R3: split baked `<id>.terrain.json` from authored `<id>.course.json`; pluggable DEM sources (Terrarium tiles from Mapterhorn or AWS, local GeoTIFF) and pistes from OpenSkiMap GeoJSON with Overpass as fallback; raw-download cache; provenance and per-source attribution in the file; maps are ODbL.*
 - Schema: origin (lat/lon), `cellM`, heights (int16 decimetres, base64, or a PNG Terrarium blob), the chosen piste polyline in local ENU metres, `meanSlopeDeg`, sun (az, el), `horizon` profile (spec `mountains.real`), `treeSet`, park layout in (s, d), credits and attribution.

@@ -8,6 +8,8 @@ import {
 import { SIM_DT } from '../src/core/config.js';
 import { FIN, KICK, KBIG, RAILS, cx, createProceduralCourse, DEFAULT_COURSE } from '../src/world/course.js';
 import { Terrain } from '../src/world/terrain.js';
+import { DEFAULT_FRAME } from '../src/world/map-frame.js';
+import { NO_TREES } from '../src/world/build.js';
 import { createRider, createSession } from '../src/sim/state.js';
 import { step } from '../src/sim/step.js';
 import { createAnimInput, animInput } from '../src/sim/anim-input.js';
@@ -27,7 +29,7 @@ function stepOn(terrain, heading) {
  Object.assign(rider, { x: 32, y: 32, heading });
  const state = { rider, session: createSession(), spray: { particles: [], rng: { seed: 1, state: 1 } },
   gradient: { gx: 0, gy: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } };
- const world = { terrain, trees: new Map(), course: createProceduralCourse(terrain) };
+ const world = { terrain, trees: NO_TREES, course: createProceduralCourse(terrain) };
  step(state, createInput(), world, SIM_DT);
  return rider;
 }
@@ -48,17 +50,23 @@ describe('Course (core/contracts.js)', () => {
  });
 });
 
-describe('the procedural course (s = y, d = x - cx(y))', () => {
+describe('the procedural course (on its grid: s = y, d = x - cx(y))', () => {
  const course = DEFAULT_COURSE;
+ // the map's grid (x across, y down the piste) in the world, at the default placement (docs/adr/0005-enu-frame.md)
+ const F = DEFAULT_FRAME;
+ const world = (x, y) => F.toWorld(x, y, {});
+ const grid = (x, y) => F.toGrid(x, y, {});
  it('project and point are exact inverses and give today\'s numbers', () => {
-  const p = course.project(cx(700) + 5, 700, {});
+  const w = world(cx(700) + 5, 700);
+  const p = course.project(w.x, w.y, {});
   assert.equal(p.s, 700);
   assert.equal(p.d, cx(700) + 5 - cx(700));
-  assert.ok(Math.abs(Math.hypot(p.tx, p.ty) - 1) < 1e-12 && p.ty > 0, 'unit tangent, down the piste');
+  const t = F.vecToGrid(p.tx, p.ty, {}); // the tangent on the grid
+  assert.ok(Math.abs(Math.hypot(p.tx, p.ty) - 1) < 1e-12 && t.v > 0, 'unit tangent, down the piste');
   // the tangent follows the centreline: a step along it stays on the centreline to first order
-  const q = course.point(700 + p.ty, 0, {});
-  assert.ok(Math.abs(q.x - (cx(700) + p.tx)) < 1e-3);
-  assert.deepEqual(course.point(60, 0, {}), { x: cx(60), y: 60 });
+  const q = course.point(700 + t.v, 0, {});
+  assert.ok(Math.abs(grid(q.x, q.y).u - (cx(700) + t.u)) < 1e-3);
+  assert.deepEqual(course.point(60, 0, {}), world(cx(60), 60));
   assert.equal(course.finishS, FIN);
   assert.equal(course.startS, 60);
   assert.ok(course.length >= FIN && course.widthAt(700) > 0);
@@ -67,12 +75,16 @@ describe('the procedural course (s = y, d = x - cx(y))', () => {
  it('kickers and rails are the park, in s and d', () => {
   assert.deepEqual(course.kickers.map((k) => k.s), [...KICK]);
   assert.deepEqual(course.kickers.filter((k) => k.big).map((k) => k.s), [...KBIG]);
-  assert.equal(course.rails, RAILS);
-  for (const r of course.rails) {
-   assert.equal(r.s0, r.y0);
-   assert.equal(r.s1, r.y1);
-   assert.equal(r.d, r.x0 - cx(r.y0) > 0 ? 9 : -9);
-  }
+  assert.equal(course.rails.length, RAILS.length);
+  course.rails.forEach((r, i) => {
+   const R = RAILS[i]; // the rail as authored on the grid
+   assert.deepEqual([grid(r.x0, r.y0), grid(r.x1, r.y1)], [{ u: R.x0, v: R.y0 }, { u: R.x1, v: R.y1 }]);
+   assert.deepEqual(F.vecToGrid(r.dx, r.dy, {}), { u: R.dx, v: R.dy });
+   assert.equal(r.s0, R.y0);
+   assert.equal(r.s1, R.y1);
+   assert.equal(r.d, R.x0 - cx(R.y0) > 0 ? 9 : -9);
+  });
+  assert.ok(Object.isFrozen(course.rails) && Object.isFrozen(course.rails[0]));
  });
 
  it('kickerAt: the launch zone is within 9 m across and 5 m past the lip', () => {
@@ -121,15 +133,21 @@ describe('AnimInput (sim/anim-input.js)', () => {
   const out = createAnimInput();
   assert.deepEqual(checkAnimInput(out), []);
   const rider = createRider();
-  Object.assign(rider, { x: cx(KICK[3] - 5), y: KICK[3] - 5, vx: 0, vy: 10, heading: Math.PI / 2, landingSpeed: 3 });
+  // on the grid: (cx(KICK[3] - 5), KICK[3] - 5), 10 m/s straight down the piste; in the world, through the frame
+  const F = DEFAULT_FRAME;
+  const p = F.toWorld(cx(KICK[3] - 5), KICK[3] - 5, {});
+  const v = F.vecToWorld(0, 10, {});
+  Object.assign(rider, { x: p.x, y: p.y, vx: v.x, vy: v.y, heading: F.downhill, landingSpeed: 3 });
   const session = createSession();
   assert.equal(animInput(rider, session, DEFAULT_COURSE, out), out);
   assert.deepEqual(checkAnimInput(out), []);
-  assert.deepEqual([out.speed, out.travelDir, out.riderSide, out.impact, out.approach], [10, Math.PI / 2, 1, 3, true]);
+  assert.deepEqual([out.speed, out.travelDir, out.riderSide, out.impact, out.approach], [10, F.downhill, 1, 3, true]);
   session.stance = 'goofy';
   animInput(rider, session, DEFAULT_COURSE, out);
-  assert.deepEqual([out.facing, out.riderSide], [Math.PI / 2 + Math.PI, -1]);
-  rider.x += 10; // off the kicker's line
+  assert.deepEqual([out.facing, out.riderSide], [F.downhill - Math.PI, -1]);
+  const off = F.vecToWorld(10, 0, {}); // off the kicker's line: 10 m across
+  rider.x += off.x;
+  rider.y += off.y;
   assert.equal(animInput(rider, session, DEFAULT_COURSE, out).approach, false);
   assert.deepEqual(checkAnimInput({ ...out, speed: NaN, wiped: 0 }), ['speed is not a finite number',
    'wiped is not a boolean']);
@@ -138,18 +156,20 @@ describe('AnimInput (sim/anim-input.js)', () => {
 
 describe('the course through the façade (Gresca.world.course)', async () => {
  const g = await load();
- it('reports the course the game rides, in copies, and the old fields agree with it', () => {
-  const W = g.world, C = W.course;
-  assert.equal(C.finishS, W.finishY);
-  assert.deepEqual(C.point(700, 0), { x: W.centre(700), y: 700 });
-  assert.equal(C.project(W.centre(700) - 4, 700).d, W.centre(700) - 4 - W.centre(700));
-  assert.deepEqual(C.kickers.map((k) => k.s), W.kickers);
-  assert.equal(C.kickerAt(W.kickers[0] + 1, 0).s, W.kickers[0]);
+ it('reports the course the game rides, in copies, and it agrees with the procedural map', () => {
+  // in world metres, through the map frame (the façade itself, g.raw): exact at any placement
+  const R = g.raw.world, C = R.course, F = R.frame;
+  assert.equal(C.finishS, FIN);
+  assert.deepEqual(C.point(700, 0), F.toWorld(cx(700), 700));
+  const o = C.project(F.originX, F.originY); // grid (0, 0): on the grid, s = y and d = x - cx(y)
+  assert.deepEqual([o.s, o.d], [0, 0 - cx(0)]);
+  assert.deepEqual(C.kickers.map((k) => k.s), [...KICK]);
+  assert.equal(C.kickerAt(KICK[0] + 1, 0).s, KICK[0]);
   assert.ok(Object.isFrozen(C));
   g.place({ y: 700, vy: 10, heading: 0.3 });
   g.sim(SIM_DT);
   const s = g.state();
-  assert.ok(Math.abs(s.fallLine - C.fallLine(s.x, s.y).heading) < 1e-12);
+  assert.ok(Math.abs(s.fallLine - g.world.course.fallLine(s.x, s.y).heading) < 1e-12);
   assert.ok([1, -1].includes(s.downhillSide));
  });
 });

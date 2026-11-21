@@ -30,3 +30,6 @@ have to change. Brake, carve and fakie (F5 to F7) need the fall line under the r
 - Left for later packages, because changing them changes numbers: the run start and `Gresca.place()` still point the
   rider at heading π/2 with speed in +vy; the camera's start heading is 1.57; the big kickers' ramp flags are placed
   8 m up in map y from the lip's x (C1: `point(s − 8, d ± 11)`); `keepOnMap` clamps map y (the map edge, not the piste).
+
+Resolved in C2 (ADR 0005): the start, `place()` and the camera now take their heading and speed from the map frame,
+the ramp flags are offset along the frame's axes, and `keepOnMap` clamps to the map's rectangle.

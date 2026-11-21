@@ -3,9 +3,15 @@
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { mapView } from './map-view.js';
 
 const require = createRequire(import.meta.url);
 const ROOT = path.join(import.meta.dirname, '..');
+
+// deg, counter-clockwise: where every game load() makes puts the procedural map (docs/adr/0005-enu-frame.md).
+// npm run test:rotated sets GRESCA_MAP_ROTATION_DEG; the game never reads it (createGame takes env.mapRotationRad).
+export const MAP_ROTATION_DEG = Number(process.env.GRESCA_MAP_ROTATION_DEG || 0);
+if (!Number.isFinite(MAP_ROTATION_DEG)) throw new Error('GRESCA_MAP_ROTATION_DEG is not a number');
 export const GAME = path.join(ROOT, 'index.html');
 
 // Evaluates a code string with the names in scope visible (a sloppy-mode function, so `with` and the completion
@@ -88,7 +94,9 @@ function loadArt() {
 }
 
 // A new, independent game: the game's modules hold no state of their own (docs/adr/0002-es-modules-and-create-game.md),
-// so every load() in one process gets its own world, rider and page stubs.
+// so every load() in one process gets its own world, rider and page stubs. opts.rotationDeg (deg, counter-clockwise;
+// default MAP_ROTATION_DEG) places the map. g.game is the façade seen on the map's grid (map-view.js), g.raw the
+// façade itself, in world metres.
 export async function load(opts = {}) {
   const { createGame } = await import(APP);
   const els = {}, timers = [], raf = [], wl = {};
@@ -113,8 +121,10 @@ export async function load(opts = {}) {
     requestAnimationFrame(fn) { raf.push(fn); },
     HANGA: art.HANGA,
     RiderAnim: art.RiderAnim,
+    mapRotationRad: (opts.rotationDeg ?? MAP_ROTATION_DEG) * Math.PI / 180,
   };
-  const Gresca = createGame(env);
+  const raw = createGame(env);
+  const Gresca = mapView(raw);
   // g.run(code) evaluates a code string that may name only the art modules and storage of this game (and the
   // language's own globals such as Math): there is no game state in its scope, by construction.
   const scope = Object.freeze({ HANGA: art.HANGA, RiderAnim: art.RiderAnim, localStorage });
@@ -128,6 +138,10 @@ export async function load(opts = {}) {
     // dispatch a window-level event such as keydown
     fire(type, ev) { (wl[type] || []).forEach((fn) => fn(Object.assign({ preventDefault() {} }, ev))); },
     get game() { return G(); },
+    get raw() { return raw; },
+    // a <= b, a >= b for a value read back through the map frame (map-view.js: exact unless the map is rotated)
+    le: (a, b) => G().le(a, b),
+    ge: (a, b) => G().ge(a, b),
     get world() { return G().world; },
     get debug() { return G().debug; },
     get config() { return G().config; },

@@ -180,6 +180,10 @@ describe('tests use the façade, not game state', () => {
 describe('Gresca façade', async () => {
   const g = await load();
   const G = g.game;
+  // The façade itself, in world metres (docs/adr/0005-enu-frame.md), for the tests that write a value and read the
+  // same bits back: on the map's grid (G) that would pass through cos and sin of the map's rotation both ways.
+  const R = g.raw, F = R.world.frame;
+  const down = (v) => { const d = F.vecToWorld(0, v); return { vx: d.x, vy: d.y }; }; // v m/s straight down the map
 
   it('is frozen, and createGame() returns it rather than putting it on a global', () => {
     assert.ok(G && Object.isFrozen(G) && Object.isFrozen(G.world) && Object.isFrozen(G.debug));
@@ -188,47 +192,53 @@ describe('Gresca façade', async () => {
 
   it('set(state()) changes nothing, riding or grinding', () => {
     const same = () => {
-      const before = JSON.stringify(G.state());
-      G.set(G.state());
-      assert.equal(JSON.stringify(G.state()), before);
+      const before = JSON.stringify(R.state());
+      R.set(R.state());
+      assert.equal(JSON.stringify(R.state()), before);
     };
-    G.place({ vy: 12 });
+    R.place(down(12));
     g.frames(10);
-    G.sim(0.5);
+    R.sim(0.5);
     same();
-    const r = G.world.rails[0];
-    G.place({ x: r.x0 + r.dx * 0.3, y: r.y0 + r.dy * 0.3, vx: r.dx * 12, vy: r.dy * 12, heading: Math.atan2(r.dy, r.dx) });
-    G.sim(0.1);
-    assert.ok(G.state().grinding);
-    assert.equal(G.state().grind.rail, 0);
+    const r = R.world.rails[0];
+    const onRail = { x: r.x0 + r.dx * 0.3, y: r.y0 + r.dy * 0.3, vx: r.dx * 12, vy: r.dy * 12,
+      heading: Math.atan2(r.dy, r.dx) };
+    R.place(onRail);
+    R.sim(0.1);
+    assert.ok(R.state().grinding);
+    assert.equal(R.state().grind.rail, 0);
     same();
     // and the simulation carries on exactly as if nothing had been written
-    const a = G.state();
-    G.set(a);
-    G.sim(0.2);
-    const once = JSON.stringify(G.state());
-    G.place({ x: r.x0 + r.dx * 0.3, y: r.y0 + r.dy * 0.3, vx: r.dx * 12, vy: r.dy * 12, heading: Math.atan2(r.dy, r.dx) });
-    G.sim(0.1);
-    G.sim(0.2);
-    const s1 = JSON.parse(once), s2 = G.state();
+    const a = R.state();
+    R.set(a);
+    R.sim(0.2);
+    const once = JSON.stringify(R.state());
+    R.place(onRail);
+    R.sim(0.1);
+    R.sim(0.2);
+    const s1 = JSON.parse(once), s2 = R.state();
     for (const k of ['x', 'y', 'vx', 'vy', 'heading', 'z', 'grinding']) assert.equal(s2[k], s1[k], k);
   });
 
   it('place then state() reports what was placed', () => {
-    const o = { x: 480.5, y: 612.25, vx: 1.5, vy: 9.75, heading: 1.2, z: 0.4, vz: 2 };
-    G.set({ crashTimer: 1, crashes: 3, input: { left: 1, right: 1, brake: 1, jump: 1 } });
-    G.place(o);
-    const s = G.state();
+    // grid (480.5, 612.25), moving (1.5, 9.75) m/s, heading 1.2 rad on the grid: in the world
+    const p = F.toWorld(480.5, 612.25), v = F.vecToWorld(1.5, 9.75);
+    const o = { x: p.x, y: p.y, vx: v.x, vy: v.y, heading: F.headingToWorld(1.2), z: 0.4, vz: 2 };
+    R.set({ crashTimer: 1, crashes: 3, input: { left: 1, right: 1, brake: 1, jump: 1 } });
+    R.place(o);
+    const s = R.state();
     for (const k in o) assert.equal(s[k], o[k], k);
     assert.equal(s.phase, 'run');
     assert.equal(s.crashTimer, 0);
     assert.equal(s.crashed, false);
     assert.equal(s.crashes, 0);
     assert.deepEqual({ ...s.input }, { left: 0, right: 0, brake: 0, jump: 0 });
-    assert.equal(s.speed, Math.hypot(1.5, 9.75));
-    G.place({ y: 700 });
-    assert.equal(G.state().x, G.world.centre(700));
-    assert.equal(G.state().heading, Math.PI / 2);
+    assert.equal(s.speed, Math.hypot(o.vx, o.vy));
+    R.place({ s: 700 });
+    const at = R.world.course.point(700, 0); // on the centreline at s 700, heading straight down the map
+    assert.deepEqual([R.state().x, R.state().y], [at.x, at.y]);
+    assert.equal(R.state().heading, F.downhill);
+    assert.throws(() => R.place({ x: 1 }), /both x and y/);
   });
 
   it('state() and the world helpers return copies', () => {
@@ -248,9 +258,9 @@ describe('Gresca façade', async () => {
   });
 
   it('set() writes by the state() names and refuses unknown ones', () => {
-    G.place({ vy: 5 });
-    G.set({ x: 510, vz: 3, score: 7, popup: { text: 'hi' }, camera: { heading: 2 }, input: { brake: true } });
-    const s = G.state();
+    R.place(down(5));
+    R.set({ x: 510, vz: 3, score: 7, popup: { text: 'hi' }, camera: { heading: 2 }, input: { brake: true } });
+    const s = R.state();
     assert.equal(s.x, 510);
     assert.equal(s.vz, 3);
     assert.equal(s.score, 7);

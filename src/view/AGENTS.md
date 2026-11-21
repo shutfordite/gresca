@@ -6,6 +6,9 @@
 - Colours and sizes come from `HANGA` palette roles and values (passed in as `env.HANGA`), never copied hex or
   numbers. Some hex is still hard-coded in `sprites.js`; P4 moves it into the Look.
 - No per-frame allocations in the raycast, tree or sprite loops: reuse the buffers in `view-state.js`.
+- World frame (ADR 0005): positions are ENU metres and headings counter-clockwise from east, so screen-right is
+  clockwise. The colour map is a texture on the map's grid: reach it through `view.mapFrame`, never by world x, y.
+  Compass degrees only at the spec boundary (`camCompass()`, the sun).
 - Anything that changes render cost reports frame time before and after (Node and headless Chrome).
 - Visible changes come with before/after screenshots (at most two per check) and a "try in the preview" note;
   check Safari on iPad.

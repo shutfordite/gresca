@@ -60,8 +60,8 @@ export function updateCamera(view, scene, dt, alpha) {
 
 /**
  * Draws one frame from the camera and pose updateCamera() set. dt: s since the last drawn frame (animation).
- * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, course, treeArr, particles, timestep,
- * hanga, riderAnim}. Mutates view (render buffers, animation, counts); reads everything else.
+ * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, course, frame (the MapFrame), treeArr,
+ * particles, timestep, hanga, riderAnim}. Mutates view (render buffers, animation, counts); reads everything else.
  */
 export function draw(view, scene, dt) {
  const { ctx, camera, terrain, hanga } = scene;
@@ -74,12 +74,12 @@ export function draw(view, scene, dt) {
  raycast(view, camera, terrain, hanga, im.data, RW, RH);
  view.lx.putImageData(im, 0, 0);
  drawSky(ctx, hanga, camera, W, Hh); // behind the terrain: transparent render pixels show the sky,
- drawSun(ctx, hanga, camera, W, Hh); // and ridges cover the sun
+ drawSun(ctx, hanga, camera, W, Hh, scene.frame); // and ridges cover the sun
  ctx.imageSmoothingEnabled = true;
  ctx.drawImage(view.lo, 0, 0, W, Hh);
  drawTrees(ctx, view, camera, terrain, hanga, scene.treeArr, RW);
  view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view);
- view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view);
+ view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame);
  drawSpray(ctx, camera, terrain, scene.particles);
  drawRiderOnSnow(ctx, view, scene, gR, dt);
 }
@@ -88,12 +88,14 @@ export function draw(view, scene, dt) {
 // Within RAY_EXACT_M of the camera the heights are terrain.height, the same surface the rider and physics use, so the
 // board sits on the snow you see (docs/REAL-WORLD-DATA.md 3b). Further out they come from terrain.heightFast, its
 // documented fast path (bilinear: on the groomed piste within about 3 cm of height for 99% of points and 12 cm at
-// worst, at a big kicker's lip; test/terrain.test.js). Colours come from the colour map col, CW cells wide (the same
-// grid as the procedural terrain's base layer).
+// worst, at a big kicker's lip; test/terrain.test.js). Colours come from the colour map col, a texture CW × CH cells
+// (one per m) placed in the world by view.mapFrame (the map's MapFrame): each ray also walks its texel position
+// (u, v), a straight line in texels, so the lookup costs no transform per sample.
 function raycast(view, camera, terrain, hanga, D, RW, RH) {
  const occ = view.occ;
  const col = view.col;
  const FOG = view.fog;
+ const frame = view.mapFrame;
  const camA = camera.heading;
  const camH = camera.height;
  const px = camera.x;
@@ -101,27 +103,36 @@ function raycast(view, camera, terrain, hanga, D, RW, RH) {
  const sc = camera.focalPx;
  const hz = camera.horizonPx;
  const pt = camera.pitchPx;
- const TB = terrain.bounds;
- const X1 = TB.maxX - 2;
- const Y1 = TB.maxY - 2;
  const CW = view.map.width;
+ const U1 = CW - 2;
+ const V1 = view.map.height - 2;
  const CW4 = CW * 4;
+ const cam = frame.toGrid(px, py, view.texel);
+ const pu = cam.u;
+ const pv = cam.v;
+ const ray = view.rayTexel;
  for (let c = 0; c < RW; c++) {
   const ph = (c / RW - 0.5) * FOV;
   const cs = Math.cos(ph);
-  const rx = Math.cos(camA + ph);
-  const ry = Math.sin(camA + ph);
+  // columns run left to right, clockwise in the world (headings grow counter-clockwise)
+  const rx = Math.cos(camA - ph);
+  const ry = Math.sin(camA - ph);
+  frame.vecToGrid(rx, ry, ray);
+  const ru = ray.u;
+  const rv = ray.v;
   let ym = RH;
   let z = RAY_START_M;
   for (let k = 0; k < NS; k++) {
-   const xx = px + rx * z;
-   const yy = py + ry * z;
+   const uu = pu + ru * z;
+   const vv = pv + rv * z;
    occ[c * NS + k] = ym;
-   if (xx >= 1 && xx < X1 && yy >= 1 && yy < Y1) {
-    const ix = xx | 0;
-    const iy = yy | 0;
-    const fx = xx - ix;
-    const fy = yy - iy;
+   if (uu >= 1 && uu < U1 && vv >= 1 && vv < V1) {
+    const xx = px + rx * z;
+    const yy = py + ry * z;
+    const ix = uu | 0;
+    const iy = vv | 0;
+    const fx = uu - ix;
+    const fy = vv - iy;
     const mi = iy * CW + ix;
     const h = z < RAY_EXACT_M ? terrain.height(xx, yy) : terrain.heightFast(xx, yy);
     const ys = Math.floor((camH - h) / (z * cs) * sc + hz - pt);

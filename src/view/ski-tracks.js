@@ -17,8 +17,9 @@ export function markTrack(view, rider) {
  const col0 = view.col0;
  const dk = (rider.isBraking || rider.skid > SKID_DEEP) ? DEPTH_DEEP : DEPTH;
  const row = view.map.width * 4; // RGBA bytes per colour map row (one cell per m)
- const o = (rider.y | 0) * row + (rider.x | 0) * 4;
- // the 2 × 2 cells from (x, y): this one, the next across, and the two below them
+ const at = view.mapFrame.toGrid(rider.x, rider.y, view.texel); // the rider in colour map texels
+ const o = (at.v | 0) * row + (at.u | 0) * 4;
+ // the 2 × 2 texels from (u, v): this one, the next across, and the two below them
  darken(col, col0, o, dk);
  darken(col, col0, o + 4, dk);
  darken(col, col0, o + row, dk);

@@ -41,7 +41,9 @@ describe('Terrain (src/world/terrain.js on its own)', async () => {
   });
 
   it('reports its bounds, cell size and layers', () => {
-    assert.deepEqual({ ...t.bounds }, { minX: 0, minY: 0, maxX: nx * cellM, maxY: ny * cellM });
+    // a grid with no frame sits at the world origin, rows running north: its rectangle and the box around it
+    assert.deepEqual({ ...t.bounds }, { x0: 0, y0: 0, ax: 1, ay: 0, bx: 0, by: 1, width: nx * cellM,
+      length: ny * cellM, minX: 0, minY: 0, maxX: nx * cellM, maxY: ny * cellM });
     assert.equal(t.cellM, cellM);
     assert.deepEqual([...t.layers], ['base']);
     assert.throws(() => T.create({ base, rocks: {} }), /unknown layer rocks/);
@@ -154,10 +156,12 @@ describe('the game\'s terrain (through Gresca.world)', async () => {
     const r = rng(17);
     for (let k = 0; k < 500; k++) {
       const x = 2 + Math.floor(r() * 996), y = 2 + Math.floor(r() * 2446);
-      assert.ok(Math.abs(W.height(x, y) - W.cellHeight(x, y)) < 1e-3, `at ${x},${y}`);
+      // the raw sample at (x, y), read at its cell's centre so no rounding in the map frame picks a neighbour
+      assert.ok(Math.abs(W.height(x, y) - W.cellHeight(x + 0.5, y + 0.5)) < 1e-3, `at ${x},${y}`);
     }
     const k = W.kickers[2], c = Math.round(W.centre(k));
-    assert.ok(W.cellHeight(c, k) - W.height(c, k + 9) > 2, 'the big kicker lip stands above the snow past it');
+    assert.ok(W.cellHeight(c + 0.5, k + 0.5) - W.height(c, k + 9) > 2,
+      'the big kicker lip stands above the snow past it');
   });
 
   it('is smooth across cell edges near the piste, kickers included', () => {

@@ -19,15 +19,15 @@ const RAIL_BEHIND_M = 5;   // m up the piste behind the camera that rails are st
 const RAIL_FLAG_D = 3;     // m further out than a rail's start, its flag
 
 /**
- * Screen position of a map point (wx, wy) (m) at altitude h (m), in canvas px: {X, Y, s (px per m at that distance),
- * f (m along the view), z (m from the camera)}, or null if behind or off to the side. Allocates the result.
+ * Screen position of a world point (wx, wy) (m) at altitude h (m), in canvas px: {X, Y, s (px per m at that
+ * distance), f (m along the view), z (m from the camera)}, or null if behind or off to the side. Allocates the result.
  */
 export function project(camera, wx, wy, h) {
  const ox = wx - camera.x;
  const oy = wy - camera.y;
  const f = ox * camera.dirX + oy * camera.dirY;
  if (f < NEAR_M) return null;
- const r = -ox * camera.dirY + oy * camera.dirX;
+ const r = ox * camera.dirY - oy * camera.dirX; // m to the right of the view (clockwise of it)
  const p = Math.atan2(r, f);
  if (Math.abs(p) > FOV / 2 + FOV_MARGIN) return null;
  const kx = camera.pixelScale;
@@ -67,9 +67,10 @@ function pole(ctx, camera, terrain, wx, wy, hgt, color) {
 /**
  * Orange flags on both sides of every kicker lip (yellow ones up the ramp of the big ones), and a flag at the start
  * of each rail, so features can be spotted from far up the slope. course: the Course; view: its where and point
- * scratch. Returns the number of flags drawn.
+ * scratch; frame: the MapFrame (the big kickers' ramp flags and the rail flags are offset along the map's axes).
+ * Returns the number of flags drawn.
  */
-export function drawFlags(ctx, camera, terrain, course, view) {
+export function drawFlags(ctx, camera, terrain, course, view, frame) {
  let n = 0;
  const cs = course.project(camera.x, camera.y, view.where).s;
  const P = view.point;
@@ -81,16 +82,19 @@ export function drawFlags(ctx, camera, terrain, course, view) {
   course.point(k.s, k.d + KICKER_FLAG_D, P);
   n += pole(ctx, camera, terrain, P.x, P.y, h, KICKER_FLAG);
   if (k.big) {
-   // Still placed in map y beside the lip's x (where they have always been drawn): C1 moves them to
+   // Still placed up the map's grid from the lip (where they have always been drawn): C1 moves them to
    // point(s - RAMP_FLAG_BACK_M, d +- KICKER_FLAG_D), beside the ramp itself.
-   n += pole(ctx, camera, terrain, k.x - KICKER_FLAG_D, k.y - RAMP_FLAG_BACK_M, h, BIG_KICKER_FLAG);
-   n += pole(ctx, camera, terrain, k.x + KICKER_FLAG_D, k.y - RAMP_FLAG_BACK_M, h, BIG_KICKER_FLAG);
+   frame.vecToWorld(-KICKER_FLAG_D, -RAMP_FLAG_BACK_M, P);
+   n += pole(ctx, camera, terrain, k.x + P.x, k.y + P.y, h, BIG_KICKER_FLAG);
+   frame.vecToWorld(KICKER_FLAG_D, -RAMP_FLAG_BACK_M, P);
+   n += pole(ctx, camera, terrain, k.x + P.x, k.y + P.y, h, BIG_KICKER_FLAG);
   }
  }
  for (const r of course.rails) {
   if (r.s1 < cs || r.s0 > cs + DRAW_AHEAD_M) continue;
   const colour = r.t === 'box' ? BOX_COLOUR : RAIL_COLOUR;
-  n += pole(ctx, camera, terrain, r.x0 + (r.d > 0 ? RAIL_FLAG_D : -RAIL_FLAG_D), r.y0, 1.8, colour);
+  frame.vecToWorld(r.d > 0 ? RAIL_FLAG_D : -RAIL_FLAG_D, 0, P); // further out across the map than the rail
+  n += pole(ctx, camera, terrain, r.x0 + P.x, r.y0 + P.y, 1.8, colour);
  }
  return n;
 }

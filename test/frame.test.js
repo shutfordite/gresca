@@ -1,5 +1,6 @@
-// Lint for the course seam (B2c): nothing outside the procedural map knows cx(y), the park constants, the height
-// array or "+y is downhill". Everything else asks the Course (core/contracts.js) and the Terrain.
+// Lint for the course seam (B2c) and the world frame (C2): nothing outside the procedural map knows cx(y), the park
+// constants, the height array, "+y is downhill" or which way the map lies in the world. Everything else asks the
+// Course (core/contracts.js), the Terrain and the map frame (world/map-frame.js, docs/adr/0005-enu-frame.md).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,10 +30,23 @@ const DOWNHILL_Y = [
  // a kicker found by comparing y with its lip y (KICK.find((k) => y >= k ...))
  { re: /\by\s*[<>]=?\s*k\b/, what: 'a kicker found by its lip y' },
 ];
-// Lines outside the procedural map that may match DOWNHILL_Y, and why.
-const DOWNHILL_EXCEPTIONS = [
- { file: 'sim/step.js', has: 'rider.y < EDGE_M', why: 'the map edge, not the piste: x is clamped the same way' },
+// The axis assumptions C2 removed (ADR 0004 "Consequences"): each fixed a direction to the map's old axes.
+const MAP_AXES = [
+ // the run start, place() and the camera pointed at a fixed angle (PI/2, 1.57: "straight down +y")
+ { re: /\bheading\s*[:=]\s*(?:Math\.PI\s*\/\s*2|1\.57)\b/, what: 'a heading fixed to the map\'s old downhill' },
+ // a speed put straight into vy (rider.vy = START_SPEED)
+ { re: /\.vy\s*=\s*[A-Z][A-Z0-9_]*\s*;/, what: 'a speed along map y' },
+ // a view direction fixed to +y
+ { re: /\bdirY\s*:\s*1\b/, what: 'a view direction fixed to map y' },
+ // keepOnMap clamping y, or the axis-aligned box used as the map's edge
+ { re: /\.y\s*<\s*EDGE|\bbounds\.max[XY]\b/, what: 'the map edge as an axis-aligned box' },
+ // the big kickers' ramp flags placed up map y from the lip
+ { re: /\bk\.y\s*[-+]\s*(?:[A-Z][A-Z0-9_]+\b|\d)/, what: 'a feature offset along map y' },
+ // camCompass()'s special case for the procedural map (world y = -game y)
+ { re: /atan2\(\s*Math\.cos\([^)]*\)\s*,\s*-\s*Math\.sin/, what: 'the procedural map\'s compass special case' },
 ];
+// Lines outside the procedural map that may match DOWNHILL_Y or MAP_AXES, and why (none today).
+const DOWNHILL_EXCEPTIONS = [];
 
 // Every .js file under src/, as a path relative to src/.
 function sources(dir = SRC) {
@@ -84,6 +98,18 @@ test('no "+y is downhill" outside the procedural map', () => {
  assert.deepEqual(bad, []);
 });
 
+test('no axis of the map\'s old placement outside the procedural map (C2)', () => {
+ const bad = [];
+ for (const f of FILES) {
+  const lines = code(f).split('\n');
+  lines.forEach((line, i) => {
+   const ok = DOWNHILL_EXCEPTIONS.some((e) => e.file === f && line.includes(e.has));
+   for (const { re, what } of MAP_AXES) if (!ok && re.test(line)) bad.push(f + ':' + (i + 1) + ' ' + what);
+  });
+ }
+ assert.deepEqual(bad, []);
+});
+
 test('the lint catches what it says', () => {
  assert.deepEqual(courseImports("import { FIN, cx as c } from '../world/course.js';"), ['FIN', 'cx']);
  const hits = (line) => DOWNHILL_Y.filter(({ re }) => re.test(line)).length;
@@ -93,4 +119,17 @@ test('the lint catches what it says', () => {
  assert.equal(hits(' KICK.find((k) => y >= k && y < k + 5)'), 1);
  assert.equal(hits(' const oy = wy - camera.y;'), 0);
  assert.equal(hits(' rider.y += rider.vy * dt;'), 0);
+ const axes = (line) => MAP_AXES.filter(({ re }) => re.test(line)).length;
+ assert.equal(axes('  rider.heading = Math.PI / 2;'), 1);
+ assert.equal(axes("const PLACE = Object.freeze({ y: 500, heading: Math.PI / 2 });"), 1);
+ assert.equal(axes('  heading: 1.57, height: 0,'), 1);
+ assert.equal(axes('  rider.vy = START_SPEED;'), 1);
+ assert.equal(axes('  heading: START_HEADING, x: 0, dirX: 0, dirY: 1, renderW: 1,'), 1);
+ assert.equal(axes(' if (rider.y < EDGE_M) {'), 1);
+ assert.equal(axes(' if (rider.x > bounds.maxX - EDGE_M) {'), 1);
+ assert.equal(axes('   n += pole(ctx, camera, terrain, k.x - KICKER_FLAG_D, k.y - RAMP_FLAG_BACK_M, h, F);'), 1);
+ assert.equal(axes(' return ((Math.atan2(Math.cos(camera.heading), -Math.sin(camera.heading)) * 180 / Math.PI)'), 1);
+ assert.equal(axes('  rider.heading = frame.downhill;'), 0);
+ assert.equal(axes('  rider.vy = startVelocity.y;'), 0);
+ assert.equal(axes('   n += pole(ctx, camera, terrain, k.x + P.x, k.y + P.y, h, BIG_KICKER_FLAG);'), 0);
 });

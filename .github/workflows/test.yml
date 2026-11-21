@@ -17,3 +17,5 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      # the whole suite with the procedural map rotated 37 and 300 degrees (docs/adr/0005-enu-frame.md)
+      - run: npm run test:rotated

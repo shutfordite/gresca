@@ -6,10 +6,12 @@ const MINIMAP_W = 42;  // px, the minimap canvas (index.html #mc)
 const MINIMAP_H = 103;
 
 /**
- * Paints the colour map of the built world into view.map, keeps its pixels as view.col (live, ski tracks go here)
- * and view.col0 (as built), and draws the minimap from it.
+ * Paints the colour map of the built world into view.map (one px per m of the map's grid), keeps its pixels as
+ * view.col (live, ski tracks go here) and view.col0 (as built) and the frame that places it in the world as
+ * view.mapFrame, and draws the minimap from it.
  */
 export function buildColourMap(view, world, minimap) {
+ view.mapFrame = world.frame;
  paintColourMap(view.mx, world);
  view.col = view.mx.getImageData(0, 0, W0, H0).data;
  view.col0 = view.col.slice();
@@ -19,12 +21,12 @@ export function buildColourMap(view, world, minimap) {
 /**
  * Paints the built world (world/build.js) into mx, the 2D context of a W0 × H0 canvas, one pixel per map metre:
  * lavender shadows, warm lit snow, grey rock, corduroy on the groomed piste, then the lift line, the trees and their
- * shadows, the kickers, the rails, the village and the finish. Reads world.H, world.M and world.treeArr.
+ * shadows, the kickers, the rails, the village and the finish. Reads world.H, world.M, world.treeArr and world.frame.
  */
 function paintColourMap(mx, world) {
  paintSnow(mx, world.H, world.M);
  paintLift(mx);
- paintTrees(mx, world.treeArr);
+ paintTrees(mx, world.treeArr, world.frame);
  paintPark(mx);
  paintVillage(mx);
 }
@@ -87,9 +89,13 @@ function paintLift(mx) {
  }
 }
 
-// Each tree with a long soft shadow, in placement order.
-function paintTrees(mx, treeArr) {
- for (const { x, y } of treeArr) {
+// Each tree with a long soft shadow, in placement order (trees are in world metres: back to the grid).
+function paintTrees(mx, treeArr, frame) {
+ const at = { u: 0, v: 0 };
+ for (const T of treeArr) {
+  frame.toGrid(T.x, T.y, at);
+  const x = at.u;
+  const y = at.v;
   mx.fillStyle = 'rgba(96,86,150,.30)';
   mx.beginPath();
   mx.moveTo(x - 1.4, y);

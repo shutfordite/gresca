@@ -1,6 +1,9 @@
 // Golden trace: a fixed-seed, fixed-dt ride through the façade, dumped per step, to prove a refactor changes nothing.
-// Usage: node tools/golden-trace.mjs [out.json]  (prints the sha256 of the trace; writes the trace if out is given).
-// Imported by test/golden.test.js, which checks the hash against the one recorded before the B2c course seam.
+// Usage: node tools/golden-trace.mjs [out.json] [rotationDeg]  (prints the sha256 of the trace; writes the trace if
+// out is given; places the map at rotationDeg, default 0). Imported by test/golden.test.js, which checks the hash
+// against the one recorded before the B2c course seam. The trace is read through the test harness's map view
+// (test/map-view.js), so it is in the procedural map's own grid frame whatever the placement: the same ride at any
+// rotation gives the same numbers up to rounding (docs/adr/0005-enu-frame.md).
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { load } from '../test/harness.js';
@@ -76,9 +79,9 @@ function ride(g, seed, placeOpts, start) {
  return rows;
 }
 
-/** The golden trace: {rides: [{name, rows}]} from three fixed rides, and its sha256 hex. */
-export async function goldenTrace() {
- const g = await load();
+/** The golden trace: {rides: [{name, rows}]} from three fixed rides, and its sha256 hex. opts.rotationDeg: see load(). */
+export async function goldenTrace(opts = {}) {
+ const g = await load({ rotationDeg: opts.rotationDeg ?? 0 });
  const rides = [
   { name: 'from the top', rows: ride(g, 3, null, true) },
   { name: 'park from y 1960', rows: ride(g, 7, { y: 1960, vy: 15 }, false) },
@@ -89,7 +92,7 @@ export async function goldenTrace() {
 }
 
 if (import.meta.url === 'file://' + process.argv[1]) {
- const t = await goldenTrace();
+ const t = await goldenTrace({ rotationDeg: Number(process.argv[3] || 0) });
  if (process.argv[2]) fs.writeFileSync(process.argv[2], t.text);
  const steps = t.rides.map((r) => r.name + ': ' + r.rows.length + ' steps, ' +
   r.rows.filter((x) => x.e).flatMap((x) => x.e).length + ' events, last ' + JSON.stringify(r.rows.at(-1).r));
