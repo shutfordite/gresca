@@ -7,7 +7,7 @@ const DT = 1 / 120;       // s per sim step while a scene runs up (the loop's ow
 const SETTLE_DT = 1 / 30; // s per drawn frame while the pose settles
 const SETTLE_FRAMES = 12; // frames drawn after the run-up, so the rider animation reaches its pose (0.4 s)
 
-// The practice stretch of piste, empty of features (s 460..740, AGENTS.md "Do not break"), and the first small kicker.
+// The practice stretch of piste, empty of features (grid y 460..740, s about 470 to 760, AGENTS.md "Do not break"), and the first small kicker.
 const PRACTICE_S = 540; // m
 const SMALL_KICKER = 3; // index into course.kickers (a small one)
 const BIG_KICKER = 0;   // index into the big kickers (course.kickers filtered by big)
