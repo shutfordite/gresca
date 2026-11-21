@@ -73,7 +73,7 @@ function recorderFacade(g) {
 
 /**
  * The frozen façade for one game. g: the game's state objects and wiring from createGame (rider, session, input,
- * camera, view, world, rng, spray, timestep, sim, scene, hanga, hud, bus, inputLog, startRun, frame).
+ * camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun, frame).
  */
 export function createFacade(g) {
  const { rider, input, spray, timestep } = g;

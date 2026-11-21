@@ -11,11 +11,11 @@ const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs
  * column and terrain sample, the screen row the terrain reached: hides trees behind ridges), map/mx (the W0 × H0
  * colour map canvas, one px per m of the map's grid) and col/col0 (its live RGBA, with ski tracks, and as built) and
  * mapFrame (where its texels sit in the world; all three set after the build),
- * fog (spec terrain.fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), groundM (m, the
+ * fog (the Look's fog RGB), drawn (the rider pose last drawn: x, y m, z m above the ground, alpha), groundM (m, the
  * ground under it, from updateCamera()), the rider animation (anim, animPrev, riderList, riderYaw deg) and counts of
- * what the last frame drew.
+ * what the last frame drew. look: the Look (view/look/look.js).
  */
-export function createView(doc, hanga) {
+export function createView(doc, look) {
  const map = doc.createElement('canvas');
  map.width = W0;
  map.height = H0;
@@ -30,13 +30,14 @@ export function createView(doc, hanga) {
   lo,
   lx: lo.getContext('2d'),
   occ: new Int16Array(MAX_RENDER_COLUMNS * RAY_SAMPLES),
-  fog: hanga.terrain.fog.rgb.slice(),
+  fog: look.fog.rgb.slice(),
   drawn: { x: 0, y: 0, z: 0, alpha: 1 },
   groundM: 0,
   anim: null,
   animPrev: null,
   riderList: null,
   riderYaw: 0,
+  riderView: { yawDeg: 0, pitchDeg: null, stance: 'regular' }, // the Look's RiderView, refilled each drawn frame
   animIn: createAnimInput(), // the sim's AnimInput for the rider animation, refilled each drawn frame
   where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the camera projected on the course (sprites.js)
   point: { x: 0, y: 0 }, // scratch: a course point in the world (sprites.js)

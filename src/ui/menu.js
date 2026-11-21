@@ -39,10 +39,13 @@ export function bindMenu(ui, session, env) {
  }
 }
 
-/** Reads the snowboard stance from storage (spec rider.stance): writes session.stance 'goofy' if saved so. */
-export function loadStance(session, env, hanga) {
+/**
+ * Reads the snowboard stance from storage under storageKey (the Look's rider.stanceStorageKey, 'gresca-stance'):
+ * writes session.stance 'goofy' if saved so.
+ */
+export function loadStance(session, env, storageKey) {
  try {
-  if (env.localStorage.getItem(hanga.rider.stance.storageKey) === 'goofy') session.stance = 'goofy';
+  if (env.localStorage.getItem(storageKey) === 'goofy') session.stance = 'goofy';
  } catch (_) {
   // storage blocked: regular stance
  }

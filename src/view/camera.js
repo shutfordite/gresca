@@ -56,19 +56,19 @@ export function camCompass(camera) {
 
 // cam.slope is the slope ahead (metres dropped per metre). The camera height still follows it, but the view tilt
 // (pitchPx = focalPx * tilt) follows it only partly, from cameraTilt below.
-// Partial slope follow (spec camera.slopeFollow, HANGA.cameraPitch). The game's view is "full tilt": its look-down
+// Partial slope follow (the Look's camera framing: spec camera.slopeFollow). The game's view is "full tilt": its look-down
 // grows by atan(s). The spec's rule is applied as a change to that: aim at the ground lookAheadM ahead of the rider
 // from a camera rel metres above them, and look down by (fullPitch - partialPitch) less. Level ground: no change.
 /**
  * The view tilt (tan). s: full-tilt slope (tan); rel: m, camera height above the rider's ground; drop: m, how far the
- * ground lookAheadM ahead lies below the rider's. The rider clamp is applied in followRider(), in render pixels.
+ * ground lookAheadM ahead lies below the rider's. framing: the Look's camera. The rider clamp is applied in
+ * followRider(), in render pixels.
  */
-export function cameraTilt(hanga, s, rel, drop) {
- const F = hanga.camera.slopeFollow;
- const D = CAM_BACK + F.lookAheadM;
+export function cameraTilt(framing, s, rel, drop) {
+ const D = CAM_BACK + framing.lookAheadM;
  const level = -Math.atan(rel / D) * R2D;
  const full = -Math.atan((rel + drop) / D) * R2D;
- const part = hanga.cameraPitch(level, full, Infinity, 0); // negative = looking down
+ const part = framing.partialPitchDeg(level, full); // negative = looking down
  return Math.tan(Math.atan(s) - (part - full) / R2D);
 }
 
@@ -76,9 +76,9 @@ export function cameraTilt(hanga, s, rel, drop) {
  * Moves the camera after the rider drawn at pose (x, y m; z m above the ground), dt s after the last frame, for a
  * renderW × renderH low-res render on a screenW px wide screen. The camera follows the direction of travel, not the
  * nose: when riding switch it still looks down the slope, and it ignores the board while it spins in the air.
- * Returns the ground height under the rider (m). Mutates camera.
+ * framing: the Look's camera. Returns the ground height under the rider (m). Mutates camera.
  */
-export function followRider(camera, terrain, hanga, pose, rider, renderW, renderH, screenW, dt) {
+export function followRider(camera, terrain, framing, pose, rider, renderW, renderH, screenW, dt) {
  const x = pose.x;
  const y = pose.y;
  const jz = pose.z;
@@ -106,11 +106,10 @@ export function followRider(camera, terrain, hanga, pose, rider, renderW, render
  const hz = renderH * HORIZON_FRAC;
  const sc = renderH * FOCAL_FRAC;
  // View tilt: partial slope follow, then clamp so the rider stays riderMarginDeg inside the bottom of the frame.
- const follow = hanga.camera.slopeFollow;
- const LA = follow.lookAheadM;
- const yMax = renderH - sc * Math.tan(follow.riderMarginDeg * Math.PI / 180);
+ const LA = framing.lookAheadM;
+ const yMax = renderH - sc * Math.tan(framing.riderMarginDeg * Math.PI / 180);
  const rel = camera.height - gR;
- const tilt = Math.max(cameraTilt(hanga, camera.slope, rel, gR - terrain.height(x + dx * LA, y + dy * LA)),
+ const tilt = Math.max(cameraTilt(framing, camera.slope, rel, gR - terrain.height(x + dx * LA, y + dy * LA)),
   (rel / CAM_BACK * sc + hz - yMax) / sc);
  camera.tilt = tilt;
  camera.x = px;

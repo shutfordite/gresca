@@ -105,6 +105,8 @@ export async function load(opts = {}) {
       return els[id] || (els[id] = id === 'c' ? makeEl(id, 390, 844) : id === 'mc' ? makeEl(id, 56, 137) : makeEl(id));
     },
     createElement() { return makeEl('created'); },
+    // <html>: style.setProperty records CSS custom properties (the Look's ui tokens) in style.props
+    documentElement: { style: { props: {}, setProperty(k, v) { this.props[k] = v; } } },
   };
   const store = Object.assign({}, opts.store);
   const localStorage = {
@@ -135,6 +137,7 @@ export async function load(opts = {}) {
   const g = {
     run: (code) => evalIn(scope, code),
     el: (id) => document.getElementById(id),
+    cssProps: () => ({ ...document.documentElement.style.props }), // CSS custom properties the game set on <html>
     // dispatch a window-level event such as keydown
     fire(type, ev) { (wl[type] || []).forEach((fn) => fn(Object.assign({ preventDefault() {} }, ev))); },
     get game() { return G(); },
