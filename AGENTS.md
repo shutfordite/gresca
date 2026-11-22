@@ -51,7 +51,8 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Contracts: InputState, RiderState, SimEvent, Course, AnimInput | `src/core/contracts.js` (its own PR in phase 3) | `contracts`, `events` |
 | Event bus, input recording | `src/core/events.js`, `src/core/input-log.js` | `contracts`, `events` |
 | Terrain heights, layers, sampling | `src/world/terrain.js`, `noise.js` | `terrain`, `build` |
-| Course: centreline, finish, kickers, rails of the procedural map; the `Course` (s, d) the game asks | `src/world/course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
+| Course: centreline, finish, kickers, rails of the procedural test slope; `createGridCourse(layout, …)`, the `Course` (s, d) the game asks | `src/world/course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
+| The play mountain (steep, big kickers; the map the game opens on) and which map loads (`?map=test`, `createGame(env).map`, `MAPS` in `build.js`; ADR 0009) | `src/world/play-slope.js`, `src/world/build.js`, `src/main.js` | `play-slope`, `frame`, `terrain` |
 | The polyline course (arc-length s, `project`, `point`, widths) and `Course.fromRun(ways)`: join, resample, curvature limit | `src/world/polyline-course.js`, `src/world/run-geometry.js` (ADR 0004, R4) | `polyline-course`, `course` |
 | What the rider animation reads from the sim (`AnimInput`) | `src/sim/anim-input.js` | `course`, `rider-anim` |
 | The world frame: a map's grid placed in ENU (origin, rotation), compass degrees | `src/world/map-frame.js` (ADR 0005) | `course`, `golden`, `rotated`, all with `npm run test:rotated` |
@@ -71,8 +72,8 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
 | Which renderer draws the terrain (the GPU by default, the CPU raycaster with `?renderer=cpu`) and the fallback; the `?fps=1` readout | `src/view/renderer.js`, `src/view/fps-meter.js` (ADR 0008) | `gl-terrain`, `timer` |
-| The GPU terrain (E0, three.js in `vendor/three/`): projection matching the sprites, clipmap mesh, baked textures, snow and sky shaders and their Look uniforms, the trees' horizon | `src/view/gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `gl-budget.js` texture memory and its budget, `context-loss.js` lost WebGL context) | `gl-terrain`, `gl-resilience` (CI cannot run WebGL: check the preview) |
-| Ski tracks | `src/view/ski-tracks.js` | `features`, `games` |
+| The GPU terrain (E0, three.js in `vendor/three/`): projection matching the sprites, clipmap mesh, baked textures, snow and sky shaders and their Look uniforms, the trees' horizon | `src/view/gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `gl-budget.js` texture memory and its budget, `context-loss.js` lost WebGL context, `track-ribbon.js` the ski track's ribbon mesh and groove shader) | `gl-terrain`, `gl-resilience`, `track-trail` (CI cannot run WebGL: check the preview) |
+| Ski tracks: what the board or skis cut (T1: a ring of samples per contact line, from `boardHeading`, `travelHeading`, `skid`, braking, the rig) | `src/view/track-trail.js` (pure model); `src/view/ski-tracks.js` (the per-step hook; the CPU raycaster's colour-map track); `src/view/gl/track-ribbon.js` (the GPU ribbon) | `track-trail`, `features`, `games` |
 | Every colour, terrain tone, sky and fog value, sprite colour, camera framing value, CSS token, rider projection (the Look) | `src/view/look/look.js` (interface), `src/view/look/hanga.js` (from the spec; the only reader of `HANGA`'s fields) | `look-contract`, `look-lint`, `look` |
 | The look lab (every pose, yaw, pitch, tone, sprite and role) | `lab.html`, `src/view/look/lab.js` | `lab` |
 | Where snow, rock and park colours are painted (until D2) | `src/view/colour-map.js` (colours from the Look) | `features`, `build` |
@@ -166,6 +167,7 @@ Every agent session pays for what it reads and prints, so keep context small:
 
 ## Do not break
 - Tap-to-start, the Snowboard / Skis picker, and the `gresca-rig` / `gresca-stance` storage keys.
-- The empty stretch of piste between grid y 460 and 740 on the procedural map, s about 470 to 760 now that s is arc
-  length (the physics tests use it; `test/course.test.js` guards it).
+- The empty stretch of piste between grid y 460 and 740 on the procedural **test slope**, s about 470 to 760 now that s
+  is arc length (the physics tests use it; `test/course.test.js` guards it). The test slope itself (`map: 'test'`, the
+  harness's and every tool's map) stays as it is: the physics tests, the golden trace and the digests ride it.
 - Credits and ODbL attribution for any real map data.

@@ -46,6 +46,9 @@ iPad's 3.9 million pixels a frame.
   (about 4 million texels at 16 B each, so a grid larger than about 2000 × 2000 m) falls back to the CPU renderer with
   the reason. A real map that outgrows it needs smaller formats (an open question for the maps stream) or a bigger
   budget, in a new decision.
+- The ski track (T1) is a ring of 16384 samples (512 KiB of CPU memory, 32 bytes each: one quad of snow from the
+  previous sample, so a segment break needs no flag) that the GPU reads as an instanced buffer (512 KiB of GPU memory too) and draws draped on the height texture. Only samples added since the
+  last frame are uploaded. The aux texture's track channel is no longer shaded.
 - Two canvases are composited each frame; the GL one has no alpha and no MSAA (2x device pixels instead).
 - Trees still need the terrain's horizon (`view.occ`): a CPU pass computes it as the raycaster did, without pixels
   (`gl/horizon.js`). It follows the raycaster's heights, so a far ridge drawn by a coarse mesh level can differ from it

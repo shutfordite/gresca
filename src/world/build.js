@@ -1,42 +1,60 @@
-// The procedural world: createWorld() makes the height and groomed grids and their terrain; buildWorld() fills them.
+// The procedural worlds: createWorld() makes the height and groomed grids and their terrain for one map layout (the
+// test slope or the play mountain); buildWorld() fills them.
 import { Terrain } from './terrain.js';
 import { createMapFrame } from './map-frame.js';
-import { W0, H0, FIN, KICK, cx, bump, createProceduralCourse } from './course.js';
+import { W0, H0, cx, TEST_LAYOUT, createGridCourse } from './course.js';
+import { PLAY_LAYOUT } from './play-slope.js';
 import { hash, vn, fbmRows } from './noise.js';
 
 const TREE_CELL_M = 6;      // m, one tree candidate per cell of this size
 const TREE_KEY_STRIDE = 10000; // the trees map key is gx * TREE_KEY_STRIDE + gy
-const LIFT_X_M = 820;       // m, x of the lift line (kept clear of trees)
-const TREELINE_M = 2560;    // m of altitude, no trees above it
 
 const TREE_NEAR_MAX = 9;    // trees near() can return: one per cell of the 3 × 3 around the point
+
+// The test slope's whole layout: the course layout (course.js) plus where its lift runs (m of the grid), its treeline
+// (m of altitude), how far trees keep from the centreline (m), and how it fills its heights (below).
+const TEST_MAP = Object.freeze({
+ ...TEST_LAYOUT,
+ lift: Object.freeze({ x: 820, y0: 140, y1: 2290 }),
+ treeline: 2560,
+ treeClearM: 40,
+ ramp: Object.freeze({ back: 11, fwd: 4, half: 11 }), // m, the stamp's extent: before the lip, after it, across
+ fill: fillHeights,
+});
+
+/** The maps the game can build, by id: 'test' (the test slope: the physics tests, the golden trace) and 'play'. */
+export const MAPS = Object.freeze({ test: TEST_MAP, play: PLAY_LAYOUT });
 
 /**
  * A new, empty procedural world: H (m, float32 heights, 1 m cells), M (0..255 groomed mask), the trees (by grid cell
  * in treeCells, as a list in treeArr, and the lookup the sim uses in trees), the frame that places the map's grid in
  * the world (docs/adr/0005-enu-frame.md), the terrain that samples H and M, and the course (Course,
  * core/contracts.js) over it. o.rotationRad (rad, counter-clockwise, default 0) turns the whole map about the world
- * origin; at 0 the piste runs south. Memory: H 9.8 MB, M 2.5 MB. Fill it with buildWorld().
+ * origin; at 0 the piste runs south. map ('test' default, or 'play'): which layout of MAPS; it is kept as
+ * world.layout (the colour map and the façade read it). Memory: H 9.8 MB, M 2.5 MB. Fill it with buildWorld().
  */
-export function createWorld({ rotationRad = 0 } = {}) {
- const H = new Float32Array(W0 * H0);
- const M = new Uint8Array(W0 * H0);
+export function createWorld({ rotationRad = 0, map = 'test' } = {}) {
+ const layout = MAPS[map];
+ if (!layout) throw new Error('createWorld: unknown map ' + map);
+ const { W, H: Hm } = layout;
+ const H = new Float32Array(W * Hm);
+ const M = new Uint8Array(W * Hm);
  const frame = createMapFrame({ rotation: rotationRad });
  const at = { u: 0, v: 0 }; // scratch for groomed(): world to grid
  // The procedural map's terrain (world/terrain.js): one base layer, the H grid (1 m cells, kicker ramps baked in by
  // buildWorld()) placed by frame; sculpt, features and detail are empty. Groomed is the M mask of the grid cell
  // containing world (x,y), 0..1. Everything outside this file reads the ground through `terrain`, never H or M.
  const terrain = Terrain.create({
-  base: Terrain.grid(H, W0, H0, 1, frame),
+  base: Terrain.grid(H, W, Hm, 1, frame),
   groomed: (x, y) => {
    frame.toGrid(x, y, at);
-   return M[Math.max(0, Math.min(H0 - 1, at.v | 0)) * W0 + Math.max(0, Math.min(W0 - 1, at.u | 0))] / 255;
+   return M[Math.max(0, Math.min(Hm - 1, at.v | 0)) * W + Math.max(0, Math.min(W - 1, at.u | 0))] / 255;
   },
  });
  const treeCells = new Map();
  return {
-  H, M, frame, treeCells, treeArr: [], trees: createTreeLookup(treeCells, frame), terrain,
-  course: createProceduralCourse(terrain, frame),
+  layout, H, M, frame, treeCells, treeArr: [], trees: createTreeLookup(treeCells, frame), terrain,
+  course: createGridCourse(layout, terrain, frame),
  };
 }
 
@@ -67,8 +85,8 @@ function createTreeLookup(treeCells, frame) {
 
 /** Fills world (from createWorld) in place: heights, the groomed piste, kicker ramps and the trees. */
 export function buildWorld(world) {
- fillHeights(world.H, world.M);
- addKickerRamps(world.H);
+ world.layout.fill(world.H, world.M);
+ addKickerRamps(world.H, world.layout);
  placeTrees(world);
 }
 
@@ -92,11 +110,11 @@ function fillHeights(H, M) {
 }
 
 // Kicker ramps are real terrain, so they show up in the shading and in the 3D view.
-function addKickerRamps(H) {
+function addKickerRamps(H, { KICK, cx, bump, W, ramp }) {
  for (const k of KICK) {
-  for (let yy = k - 11; yy <= k + 4; yy++) {
+  for (let yy = k - ramp.back; yy <= k + ramp.fwd; yy++) {
    const c = Math.round(cx(yy));
-   for (let xx = c - 11; xx <= c + 11; xx++) H[yy * W0 + xx] += bump(xx, yy);
+   for (let xx = c - ramp.half; xx <= c + ramp.half; xx++) H[yy * W + xx] += bump(xx, yy);
   }
  }
 }
@@ -104,14 +122,15 @@ function addKickerRamps(H) {
 // One tree per TREE_CELL_M cell where the noise says forest: off the piste, away from the lift, below the treeline.
 // Placed on the grid, stored in world metres.
 function placeTrees(world) {
- const { H, M, treeCells, treeArr, frame } = world;
+ const { H, M, treeCells, treeArr, frame, layout } = world;
+ const { W: W0, H: H0, FIN, cx, lift, treeline, treeClearM } = layout;
  for (let gy = 0; gy < H0 / TREE_CELL_M; gy++) {
   for (let gx = 0; gx < W0 / TREE_CELL_M; gx++) {
    const x = gx * TREE_CELL_M + hash(gx, gy) * TREE_CELL_M;
    const y = gy * TREE_CELL_M + hash(gy, gx + 9) * TREE_CELL_M;
    const i = (y | 0) * W0 + (x | 0);
-   if (y < 20 || y > FIN - 10 || x < 10 || x > W0 - 10 || Math.abs(x - LIFT_X_M) < 10 || M[i] > 0) continue;
-   if (Math.abs(x - cx(y)) < 40 || H[i] > TREELINE_M) continue;
+   if (y < 20 || y > FIN - 10 || x < 10 || x > W0 - 10 || Math.abs(x - lift.x) < 10 || M[i] > 0) continue;
+   if (Math.abs(x - cx(y)) < treeClearM || H[i] > treeline) continue;
    if (vn(x / 60, y / 60) < 0.42 || hash(gx + 5, gy + 3) < 0.35) continue;
    const T = frame.toWorld(x, y, { x: 0, y: 0 });
    treeCells.set(gx * TREE_KEY_STRIDE + gy, T);

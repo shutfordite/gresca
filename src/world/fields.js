@@ -1,5 +1,4 @@
 // The world's façade (Gresca.world, debug.js): the map frame, the terrain and the course, read only, in world metres.
-import { bump } from './course.js';
 import { fbm } from './noise.js';
 
 // Gresca.world.course: the Course (core/contracts.js), read only; every query returns a new object.
@@ -40,11 +39,13 @@ function frameFacade(frame) {
 
 /** Gresca.world for a built world {terrain, course, frame, treeArr}: positions in world m, slopes in m/m. */
 export function worldFacade(world) {
+ const bump = world.layout.bump;
  const terrain = world.terrain;
  const course = world.course;
  const frame = world.frame;
  const onGrid = (x, y) => frame.toGrid(x, y, { u: 0, v: 0 });
  return Object.freeze({
+  map: world.layout.id, // which procedural map is built: 'test' (the test slope) or 'play' (the play mountain)
   frame: frameFacade(frame),
   bounds: terrain.bounds, // the map's rectangle: x0, y0, ax, ay, bx, by, width, length, minX..maxY (m; frozen)
   // The terrain (world/terrain.js) the physics, camera, renderer and rider all sample, kicker ramps included.
