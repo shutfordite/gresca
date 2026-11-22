@@ -17,6 +17,7 @@ export function viewFields(c) {
    height: prop(c, 'height'),       // m, camera altitude (absolute, same datum as world.height)
    x: prop(c, 'x'), y: prop(c, 'y'), // m, camera position (east, north), CAM_BACK behind the rider
    dirX: prop(c, 'dirX'), dirY: prop(c, 'dirY'), // unit view direction (east, north)
+   look: prop(c, 'look'),           // 0..1, how far the swing to look back uphill has got (input.lookBack asks for it)
    slope: prop(c, 'slope'),         // smoothed slope ahead, metres dropped per metre (full-tilt tan)
    tilt: prop(c, 'tilt'),           // view tilt (tan) after partial slope follow and the rider clamp
    pitchPx: prop(c, 'pitchPx'),     // view tilt in low-res render pixels (focalPx * tilt)
