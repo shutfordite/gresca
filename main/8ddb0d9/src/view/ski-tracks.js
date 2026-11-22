@@ -1,5 +1,6 @@
-// Ski tracks: the view's track buffer is its live colour map (view.col), darkened under the rider after each sim
-// step.
+// Ski tracks: after each sim step the colour map (view.col, the CPU raycaster's tracks) is darkened under the rider
+// and the equipment's trail (view.trail, the GPU ribbon's) is extended.
+import { recordTrail, clearTrail } from './track-trail.js';
 
 const AIRBORNE_Z = 0.05; // m above the snow, higher leaves no track (as sim/step.js)
 const SKID_DEEP = 3;     // m/s of sideways slip, more cuts a deeper track
@@ -9,9 +10,11 @@ const DEPTH_DEEP = 0.8;  // the same braking or skidding
 /**
  * Marks the track under the rider (RiderState) after a sim step, if it is on the snow. The track is a fixed depth
  * below the snow as built (col0), never compounded per step: a slow rider stays over one cell for many steps, which
- * turned it black. Reads the rider, writes only view.col and the changed rows, view.trackRows.
+ * turned it black. Also extends view.trail for rig ('board' | 'ski'). Reads the rider, writes only view.col and the
+ * changed rows, view.trackRows, and view.trail.
  */
-export function markTrack(view, rider) {
+export function markTrack(view, rider, rig) {
+ recordTrail(view.trail, rider, rig);
  if (rider.grind || rider.crashTimer > 0 || rider.z > AIRBORNE_Z) return;
  const col = view.col;
  const col0 = view.col0;
@@ -41,4 +44,5 @@ export function clearTracks(view) {
  view.col.set(view.col0);
  view.trackRows.v0 = 0;
  view.trackRows.v1 = view.map.height - 1;
+ clearTrail(view.trail);
 }
