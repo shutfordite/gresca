@@ -76,7 +76,7 @@ export function createGame(env) {
  };
  subscribeHud(bus, hud);
  subscribeFinish(bus, ui);
- onStep(bus, () => markTrack(view, rider));
+ onStep(bus, () => markTrack(view, rider, session.rig));
  // What draw() reads (view/draw.js).
  const scene = {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, course: world.course,

@@ -135,7 +135,8 @@ src/
                  camera.js      camera state, followRider(), cameraTilt(), camCompass()
                  draw.js        updateCamera() (the loop calls it before drawing), draw(): terrain raycast,
                                 trees, spray, rider; riderPose()
-                 ski-tracks.js  the track buffer (the live colour map), marked after each sim step
+                 ski-tracks.js  the per-step track hook: the CPU raycaster's track (the live colour map) and the trail
+                 track-trail.js the equipment's track: a ring of samples per contact line (pure, T1)
                  sky.js         sky gradient, sun disc, fog
                  sprites.js     project(), flags, rails
                  colour-map.js  paints the colour map from the built world (D2 removes it)
@@ -146,7 +147,8 @@ src/
                  gl/            the GPU terrain (three.js, vendored in vendor/three/): gl-renderer.js (textures,
                                 clipmap meshes, sky, per-frame uniforms), gl-projection.js (the sprites' projection
                                 in GLSL), terrain-mesh.js, terrain-bake.js, detail-texture.js, snow-material.js,
-                                sky-material.js, horizon.js (view.occ for the trees, without the raycast), gl-budget.js (texture
+                                sky-material.js, horizon.js (view.occ for the trees, without the raycast), track-ribbon.js (the ski track
+                                as one draped, instanced ribbon), gl-budget.js (texture
                                 memory and its budget), context-loss.js (lost-context state, drawer switch)
                  look/          look.js  the Look (P4, ADR 0007): colours, terrain tone, sky, fog, sprite colours,
                                          camera framing, UI tokens, rider.project; validateLook()
