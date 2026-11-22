@@ -11,6 +11,18 @@ export const FOG_LUT_SIZE = 64;       // samples of the Look's fog curve from 0 
 const DEFAULT_SUN_ELEVATION_DEG = 20; // deg, for a Look without sky.sun.elevationDeg (optional field)
 const DEG = Math.PI / 180;
 
+/** GLSL: uFar, uFogLut and fogAmount(d), the Look's fog (0..1) at d m from the camera. Shared with the track ribbon. */
+export const FOG_GLSL = `
+uniform float uFar;        // m, where the fog curve ends and the terrain stops (RAY_FAR)
+uniform float uFogLut[${FOG_LUT_SIZE}];
+float fogAmount(float d) {
+ float x = clamp(d / uFar, 0.0, 1.0) * float(${FOG_LUT_SIZE - 1});
+ int i = int(floor(x));
+ int j = min(i + 1, ${FOG_LUT_SIZE - 1});
+ return mix(uFogLut[i], uFogLut[j], x - float(i));
+}
+`;
+
 // Shader tunables (GLSL constants). Slopes are m/m added to the terrain's; distances m from the camera.
 const TUNE = `
 const float LIT_FROM = -0.08;       // sun cosine where snow starts to catch the sun (lit 0)
@@ -33,7 +45,12 @@ const float RIDGE_LIFT = 0.03;      // brightness added on a full ridge
 const float ROCK_FROM = 0.5;        // m/m, steeper than this starts to show rock (as the colour map)
 const float ROCK_TO = 0.75;         // m/m, fully rock
 const float CORDUROY_PERIOD_M = 0.3;  // m across the piste between corduroy ridges
-const float CORDUROY_GAIN = 1.0;    // times the Look's corduroy depth (the colour map's stripes are 3 m wide)
+const float CORDUROY_GAIN = 0.4;    // times the Look's corduroy depth (the colour map's stripes are 3 m wide)
+const float CORDUROY_FADE_NEAR_M = 8.0;   // m, corduroy at full strength nearer than this
+const float CORDUROY_FADE_FAR_M = 45.0;   // m, and gone past this (the groomed tone stays: only the ribs fade)
+const float CORDUROY_WOBBLE_RAD = 1.4;    // rad, how far the crust bends a ridge's phase (ridges are not straight)
+const float CORDUROY_BREAK_FROM = 0.3;    // 0..1 of the crust and ripple noise below which a ridge is gone
+const float CORDUROY_BREAK_TO = 0.62;     // and above which it is whole: the ribs come and go along the piste
 const float SPARKLE_CELL_M = 0.03;  // m, the size of one glint
 const float SPARKLE_DENSITY = 0.02;  // share of cells that can glint
 const float SPARKLE_FLICKER = 9.0;  // how fast glints change as the view direction turns
@@ -87,7 +104,7 @@ in vec2 vGrid;
 in float vDist;
 in vec3 vToCam;
 uniform sampler2D uSlope;  // RG16F: dh/du, dh/dv (m/m)
-uniform sampler2D uAux;    // RGBA8: relief, groomed, ski track (terrain-bake.js bakeAux)
+uniform sampler2D uAux;    // RGBA8: relief, groomed (terrain-bake.js bakeAux)
 uniform sampler2D uPaint;  // RGBA8: the colour map as built (painted features) and the feature weight (bakePaint)
 uniform sampler2D uPiste;  // R16F: the piste's across coordinate (m) every uPisteStep m
 uniform sampler2D uDetail; // RGBA8: ripple slope, grain, sparkle seed (detail-texture.js), tiling
@@ -104,16 +121,8 @@ uniform vec3 uRock;
 uniform vec3 uSunTint;     // the sun's colour over its brightest channel
 uniform vec3 uFog;
 uniform float uCorduroy;   // the Look's corduroy brightness swing
-uniform float uFar;        // m, where the fog curve ends and the terrain stops (RAY_FAR)
-uniform float uFogLut[${FOG_LUT_SIZE}];
+${FOG_GLSL}
 out vec4 outColour;
-
-float fogAmount(float d) {
- float x = clamp(d / uFar, 0.0, 1.0) * float(${FOG_LUT_SIZE - 1});
- int i = int(floor(x));
- int j = min(i + 1, ${FOG_LUT_SIZE - 1});
- return mix(uFogLut[i], uFogLut[j], x - float(i));
-}
 
 // Texture coordinates for a crisp lookup of a 1 m texture: bilinear only within a pixel of each texel edge, so a
 // painted feature keeps a sharp edge however close it is, and far away (texels under a pixel) it is plain bilinear.
@@ -139,7 +148,6 @@ void main() {
  vec4 aux = texture(uAux, tc);
  float relief = (aux.r * 255.0 - 128.0) * uReliefPerByte;
  float groomed = aux.g;
- float track = aux.b;
  float steep = length(g);
 
  float near = 1.0 - smoothstep(DETAIL_NEAR_M, DETAIL_FAR_M, vDist);
@@ -161,9 +169,12 @@ void main() {
  c *= 1.0 + ridge * RIDGE_LIFT + (crust.b - 0.5) * 2.0 * GRAIN * near;
 
  float across = texture(uPiste, (vGrid / uPisteStep + 0.5) / uPisteSize).r;
+ float wobble = (crust.g - 0.5) * 2.0 * CORDUROY_WOBBLE_RAD;
  float phase = across * 6.2831853 / CORDUROY_PERIOD_M;
  float resolved = 1.0 - smoothstep(0.25, 0.7, fwidth(phase) / 6.2831853); // fades stripes thinner than a pixel
- c *= 1.0 + uCorduroy * CORDUROY_GAIN * groomed * sin(phase) * resolved * (0.5 + 0.5 * lit);
+ float broken = smoothstep(CORDUROY_BREAK_FROM, CORDUROY_BREAK_TO, ripple.r * 0.6 + crust.b * 0.4);
+ float ribs = 1.0 - smoothstep(CORDUROY_FADE_NEAR_M, CORDUROY_FADE_FAR_M, vDist);
+ c *= 1.0 + uCorduroy * CORDUROY_GAIN * groomed * sin(phase + wobble) * resolved * broken * ribs * (0.5 + 0.5 * lit);
 
  float rock = smoothstep(ROCK_FROM, ROCK_TO, steep) * (1.0 - groomed);
  c = mix(c, uRock * (0.8 + 0.35 * lit), rock);
@@ -180,7 +191,6 @@ void main() {
 
  vec4 paint = texture(uPaint, crispUv(vGrid));
  c = mix(c, paint.rgb * mix(0.82, 1.06, lit), smoothstep(FEATURE_FROM, FEATURE_TO, paint.a));
- c *= vec3(track, min(1.0, track + 0.02), min(1.0, track + 0.07));
 
  c = mix(c, uFog, fogAmount(vDist));
  c += (hash12(gl_FragCoord.xy) - 0.5) / 255.0; // dither: no banding in the long gradients
