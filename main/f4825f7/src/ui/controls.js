@@ -8,6 +8,7 @@ const GESTURE_TEXT = Object.freeze({
  [GESTURES.HOLD_RIGHT]: 'Hold the right half of the screen',
  [GESTURES.HOLD_BOTH]: 'Hold both halves together',
  [GESTURES.SWIPE_DOWN]: 'Swipe down',
+ [GESTURES.SWIPE_UP_HOLD]: 'Swipe up and keep your finger down',
 });
 
 // Gesture diagrams: a screen outline (48 x 64) with the touched area filled. Colours come from CSS classes (var(--…)).
@@ -16,11 +17,14 @@ const LEFT_HALF = '<rect class="ctl-hit" x="6" y="6" width="18" height="52" rx="
 const RIGHT_HALF = '<rect class="ctl-hit" x="24" y="6" width="18" height="52" rx="3"/>';
 const SWIPE = '<circle class="ctl-hit" cx="24" cy="18" r="6"/>' +
  '<path class="ctl-arrow" d="M24 26v22M17 41l7 8 7-8"/>';
+const SWIPE_UP = '<circle class="ctl-hit" cx="24" cy="46" r="6"/>' +
+ '<path class="ctl-arrow" d="M24 38V16M17 23l7-8 7 8"/>';
 const DIAGRAMS = Object.freeze({
  [GESTURES.HOLD_LEFT]: SCREEN + LEFT_HALF,
  [GESTURES.HOLD_RIGHT]: SCREEN + RIGHT_HALF,
  [GESTURES.HOLD_BOTH]: SCREEN + LEFT_HALF + RIGHT_HALF,
  [GESTURES.SWIPE_DOWN]: SCREEN + SWIPE,
+ [GESTURES.SWIPE_UP_HOLD]: SCREEN + SWIPE_UP,
 });
 
 const ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
