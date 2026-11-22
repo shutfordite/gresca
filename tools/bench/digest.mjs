@@ -40,7 +40,7 @@ try {
     for (const size of PATH_SIZES) {
       const page = await browser.newPage({ viewport: size, deviceScaleFactor: 1 });
       await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
-      await page.goto(`${base}/?renderer=cpu`);
+      await page.goto(`${base}/?map=test&renderer=cpu`);
       await page.waitForFunction(() => window.Gresca && window.Gresca.state().phase === 'ready', null,
         { timeout: LOAD_TIMEOUT_MS, polling: 100 });
       const hash = await page.evaluate(async ({ source, traces: tr, frames, every }) => {
@@ -66,12 +66,12 @@ try {
     server.close();
     process.exit(0);
   }
-  const first = await open('?renderer=cpu');
+  const first = await open('?map=test&renderer=cpu');
   const scenes = await first.evaluate(() => window.Gresca.scenes().map((s) => s.name));
   await first.close();
   for (const scene of scenes) {
     for (const rig of RIGS) {
-      const page = await open(`?renderer=cpu&scene=${encodeURIComponent(scene)}`);
+      const page = await open(`?map=test&renderer=cpu&scene=${encodeURIComponent(scene)}`);
       const hash = await page.evaluate(async ([r, n, dt]) => {
         window.Gresca.set({ rig: r });
         for (let i = 0; i < n; i++) window.Gresca.frame(dt);

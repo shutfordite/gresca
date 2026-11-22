@@ -40,7 +40,7 @@ async function shoot(browser, base, scene, rig) {
  const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
  const problems = [];
  page.on('pageerror', (e) => problems.push(e.message));
- await page.goto(`${base}/?renderer=cpu&scene=${encodeURIComponent(scene)}`);
+ await page.goto(`${base}/?map=test&renderer=cpu&scene=${encodeURIComponent(scene)}`);
  await page.waitForFunction(() => window.Gresca && document.getElementById('msg').hidden, null,
   { timeout: LOAD_TIMEOUT_MS });
  await page.evaluate(([r, n, dt]) => {
@@ -60,7 +60,7 @@ async function main() {
  const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined });
  try {
   const first = await browser.newPage({ viewport: VIEWPORT });
-  await first.goto(base + '/?renderer=cpu');
+  await first.goto(base + '/?map=test&renderer=cpu');
   await first.waitForFunction(() => window.Gresca, null, { timeout: LOAD_TIMEOUT_MS });
   const known = await first.evaluate(() => window.Gresca.scenes().map((s) => s.name));
   await first.close();

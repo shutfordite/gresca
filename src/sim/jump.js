@@ -7,7 +7,7 @@ const JUMP_GRAVITY = 15;    // m/s², in the air (stronger than real gravity, fo
 const JUMP_SPEED = 6.5;     // m/s up, an ollie from the snow
 const TAKEOFF_Z = 0.01;     // m, first height of a jump (so the rider counts as airborne)
 const KICKER_MIN_SPEED = 4; // m/s, slower riders roll over the lip
-const KICKER_BIG_GAIN = 1.35; // dimensionless, extra launch speed off a big kicker
+const KICKER_BIG_GAIN = 1.35; // dimensionless, extra launch speed off a big kicker (a kicker's launchGain replaces it)
 const CRASH_TIME = 1.1;     // s of wipeout
 const CRASH_LAND_SPEED = -8; // m/s vertical, landing harder than this ...
 const CRASH_MISALIGN = 0.6; // rad ... with the board this far off the direction of travel is a crash
@@ -54,7 +54,7 @@ function takeOff(rider, input, s, course, where) {
  const kicker = s > KICKER_MIN_SPEED ? course.kickerAt(p.s, p.d) : null;
  if (kicker) {
   rider.z = TAKEOFF_Z;
-  rider.vz = (2.5 + s * 0.3) * (kicker.big ? KICKER_BIG_GAIN : 1);
+  rider.vz = (2.5 + s * 0.3) * (kicker.launchGain ?? (kicker.big ? KICKER_BIG_GAIN : 1));
   rider.airTime = 0;
   rider.rotation = 0;
   rider.fromKicker = true;

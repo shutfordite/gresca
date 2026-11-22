@@ -136,7 +136,7 @@ downloads elevation tiles and OpenSkiMap pistes and lifts once into `.map-cache/
 
 ## Known limits
 
-- The terrain is still procedural. Real elevation and OpenStreetMap pistes are the next step.
+- The terrain is still procedural. The game opens on a steep play mountain with big kickers (`src/world/play-slope.js`); `?map=test` loads the gentler test slope the tests ride. Real elevation and OpenStreetMap pistes are the next step.
 - Tests do not check pixels of trees, the rider or particles, because the canvas is stubbed.
 
 ## Credits and data
