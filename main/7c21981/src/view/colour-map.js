@@ -1,5 +1,5 @@
 // The colour map the raycaster reads (D2 replaces it with per-pixel shading): snow, rock, lift, trees, park, village.
-import { W0, H0, FIN, KICK, KBIG, RAILS, cx } from '../world/course.js';
+import { W0, H0 } from '../world/course.js';
 import { hash } from '../world/noise.js';
 
 const MINIMAP_W = 42;  // px, the minimap canvas (index.html #mc)
@@ -35,17 +35,18 @@ export function buildColourMap(view, world, minimap, look, keepSnow = false) {
  */
 function paintColourMap(mx, world, look, afterSnow) {
  const colour = look.colour;
- paintSnow(mx, world.H, world.M, look.terrainTone);
+ const layout = world.layout; // the map's cx, finish, park and lift (world/build.js MAPS)
+ paintSnow(mx, world.H, world.M, look.terrainTone, layout.cx);
  afterSnow();
- paintLift(mx, colour);
+ paintLift(mx, colour, layout.lift);
  paintTrees(mx, world.treeArr, world.frame, colour);
- paintPark(mx, colour);
- paintVillage(mx, colour);
+ paintPark(mx, colour, layout);
+ paintVillage(mx, colour, layout);
 }
 
 // Colour map: lavender shadows, warm lit snow, grey rock, fine corduroy stripes on the groomed piste, bluer hollows,
 // brighter ridges and a wind-blown grain. tone: the Look's terrainTone.
-function paintSnow(mx, H, M, tone) {
+function paintSnow(mx, H, M, tone, cx) {
  const img = mx.createImageData(W0, H0);
  const D = img.data;
  const rgb = [0, 0, 0];
@@ -114,20 +115,20 @@ function speckle(x, y) {
  return ((h ^ (h >>> 16)) & 0xffff) / 32767.5 - 1;
 }
 
-function paintLift(mx, colour) {
+function paintLift(mx, colour, lift) {
  mx.strokeStyle = colour('mapLift');
  mx.lineWidth = 1.2;
  mx.beginPath();
- mx.moveTo(820, 2290);
- mx.lineTo(820, 140);
+ mx.moveTo(lift.x, lift.y1);
+ mx.lineTo(lift.x, lift.y0);
  mx.stroke();
- for (let y = 140; y <= 2290; y += 70) {
+ for (let y = lift.y0; y <= lift.y1; y += 70) {
   mx.fillStyle = colour('mapLift');
-  mx.fillRect(818, y - 2, 5, 5);
+  mx.fillRect(lift.x - 2, y - 2, 5, 5);
  }
- for (let y = 200; y < 2290; y += 420) {
+ for (let y = lift.y0 + 60; y < lift.y1; y += 420) {
   mx.fillStyle = colour('mapLiftMarker');
-  mx.fillRect(817, y, 6, 4);
+  mx.fillRect(lift.x - 3, y, 6, 4);
  }
 }
 
@@ -154,11 +155,11 @@ function paintTrees(mx, treeArr, frame, colour) {
 
 // Kickers: a bluish pad up the ramp, then a pale lip with an orange edge (stronger for the big ones). Painted row by
 // row so it follows the curve of the piste. Then each rail's shadow.
-function paintPark(mx, colour) {
+function paintPark(mx, colour, { KICK, KBIG, RAILS, cx, ramp }) {
  for (const k of KICK) {
   const big = KBIG.includes(k);
-  const w = big ? 10 : 9;
-  for (let yy = k - 11; yy < k + 5; yy++) {
+  const w = (big ? 10 : 9) + (ramp.half - 11);
+  for (let yy = k - ramp.back; yy < k + 5; yy++) {
    const c = cx(yy);
    const pad = big ? 'mapBigKickerPad' : 'mapKickerPad';
    mx.fillStyle = colour(yy < k ? pad : (big ? 'mapBigKickerLip' : 'mapKickerLip'));
@@ -179,7 +180,7 @@ function paintPark(mx, colour) {
  }
 }
 
-function paintVillage(mx, colour) {
+function paintVillage(mx, colour, { FIN, cx }) {
  for (let k = 0; k < 26; k++) {
   const x = cx(FIN + 60) - 230 + hash(k, 1) * 460;
   const y = FIN + 40 + hash(k, 2) * 70;

@@ -18,11 +18,13 @@
  * @property {number} jumpPressed 0 or 1, set with each new jump request (pre-added; the sim still reads jump)
  * @property {number} flip -1..1, + is a front flip (pre-added, 0 until S1)
  * @property {number} spin -1..1, + spins right (pre-added, 0 until S1)
+ * @property {number} lookBack 0..1, how far the player asks the camera to look back uphill (a view request: the sim
+ *  ignores it; recorded with the input so replays carry it)
  */
 
 /** InputState fields that a recorded step holds, in this order (core/input-log.js). */
 export const INPUT_FIELDS = Object.freeze([
- 'left', 'right', 'brake', 'jump', 'steer', 'jumpHeld', 'jumpPressed', 'flip', 'spin',
+ 'left', 'right', 'brake', 'jump', 'steer', 'jumpHeld', 'jumpPressed', 'flip', 'spin', 'lookBack',
 ]);
 
 /**
@@ -112,8 +114,9 @@ const EVENT_FIELDS = Object.freeze({
  * @property {number} length m of s the course covers (from 0)
  * @property {number} startS m, s where a run starts
  * @property {number} finishS m, s of the finish line (riding past it finishes the run)
- * @property {ReadonlyArray<{s: number, d: number, halfWidth: number, depth: number, big: boolean}>} kickers frozen, in
- *  s order: lip at s, centred at d, launching within halfWidth across and depth past the lip (m)
+ * @property {ReadonlyArray<{s: number, d: number, halfWidth: number, depth: number, big: boolean, launchGain?: number}>}
+ *  kickers frozen, in s order: lip at s, centred at d, launching within halfWidth across and depth past the lip (m);
+ *  launchGain (optional, dimensionless) multiplies the launch speed up, replacing the big-kicker gain (sim/jump.js)
  * @property {ReadonlyArray<{s0: number, s1: number, d: number, x0: number, y0: number, x1: number, y1: number,
  *  dx: number, dy: number, len: number, h: number, t: string}>} rails frozen rails and boxes: s0..s1 at d (m), and
  *  their world geometry (m, unit direction, length m, top height m, 'rail' | 'box')
@@ -156,7 +159,9 @@ export function checkInputState(input) {
  for (const k of ['left', 'right', 'jump', 'jumpPressed']) {
   if (input[k] !== 0 && input[k] !== 1) bad.push(k + ' is not 0 or 1');
  }
- if (!(isNum(input.brake) && input.brake >= 0 && input.brake <= 1)) bad.push('brake is not in 0..1');
+ for (const k of ['brake', 'lookBack']) {
+  if (!(isNum(input[k]) && input[k] >= 0 && input[k] <= 1)) bad.push(k + ' is not in 0..1');
+ }
  for (const k of ['steer', 'flip', 'spin']) {
   if (!(isNum(input[k]) && input[k] >= -1 && input[k] <= 1)) bad.push(k + ' is not in -1..1');
  }
