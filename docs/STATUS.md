@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 21 Nov 2026, main after PR #43.
+Updated 22 Nov 2026, main after PR #49.
 
 ## Done
 | Package | PR |
@@ -37,22 +37,30 @@ Updated 21 Nov 2026, main after PR #43.
 | Docs: GPU renderer pulled forward as E0, S4 order | #41 |
 | E0 GPU terrain renderer (three.js, ADR 0008). Accepted on the iPad (50 to 60 fps) | #42 |
 | E1a GPU renderer by default (`?renderer=cpu` fallback), play link in the README | #43 |
+| E1-prep ray constants (`RAY_START_M`, `RAY_SPREAD`) in `core/config.js` | #44 |
+| E1b GPU renderer hardening: lost WebGL context, texture memory budget, softer corduroy | #45 |
+| T1 ski tracks cut by the equipment (`track-trail.js`, the GPU ribbon) | #46 |
+| M1 the play mountain (steep, big kickers), the map the game opens on; `?map=test` for the test slope (ADR 0009) | #48 |
+| L1 hold to look back: `InputState.lookBack` (L1a), swipe up and hold or `B`, the camera swings uphill (L1b) | #47, #49 |
 
 ## In progress (phase 3, the five streams; parallel, each in its own folders)
 | Stream | Package | Branch |
 |---|---|---|
-| Shared | Ray constants (`RAY_START_M`, `RAY_SPREAD`) into `core/config.js`; this file after #43 | `view/e1-ray-constants` |
-| S5 maps (+ small shared seam) | **M1** a steep play mountain with big kickers, the map the game opens on; the current procedural slope stays as the test track (`?map=test`) | `maps/m1-play-slope` |
-| S4 look, camera, render | **E1b** GPU renderer hardening: lost-context handling, texture memory budget, softer corduroy | `view/e1b-gl-hardening` |
+| Shared | This file after #49 | `docs/status-after-49` |
+| S1 controls and UI | **F4b** pause button and the Controls screen in game | `ui/f4b-pause` |
+| S2 sim feel | **F6** edge and carve model, no heading clamp, yaw counter-clockwise | `sim/f6-edge-carve` |
+| S3 rider animation | **F5-anim** brake counter-rotation: the upper body stays on the fall line | `anim/f5-counter-rotation` |
+| S4 look, camera, render | **E2** soft sun shadows from the terrain; rider and tree shadows on the GPU | `view/e2-shadows` |
+| S5 maps | **C3b** the course file `<id>.course.json` and its validator | `maps/c3b-course-file` |
 
 ## Next, in order
-- S1: F4b pause button and in-game controls → F3 flip input and air hints → stance picker.
-- S2: F6 edge and carve model (removes the heading clamp; flip yaw/turn rate to counter-clockwise) → F3 flip physics.
-- S3: F5 brake counter-rotation → F6 edge-driven lean → F7 fakie look → F3 flip tuck.
-- S4: E1b (in progress) → E2
-  soft shadows → E3 GPU trees and park objects → E4 tilt-shift and haze (`docs/ROADMAP.md`).
-- Later, its own workstream: **ski tracks** on the GPU (the owner: the line left in the snow needs a lot of work).
-- S5: C3b course file → C4 map loading (needs D0).
+- S1: F3 flip input and air hints → stance picker.
+- S2: F3 flip physics and scoring (ollie preload if F6 leaves it out).
+- S3: F6 edge-driven lean → F7 fakie look → F3 flip tuck.
+- S4: E3 GPU trees and park objects → E4 tilt-shift and haze (`docs/ROADMAP.md`). The camera framing on the play
+  mountain's 30° slopes (looks flat, #48) folds into E3 or its own small package.
+- Ski tracks: T1 is done; pressing them into the snow, lit edges and fading are the later tracks workstream.
+- S5: C4 map loading (needs D0).
 
 ## Known issues (not yet fixed)
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
