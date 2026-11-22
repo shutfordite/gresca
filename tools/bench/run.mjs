@@ -84,7 +84,7 @@ async function main() {
   if (process.argv.includes('--chrome') || gl) {
     const { runChrome } = await import('./chrome-run.mjs');
     const dpr = Number(arg('dpr', 1));
-    const chromeOpts = gl ? { ...opts, query: '?renderer=gl' } : opts;
+    const chromeOpts = gl ? { ...opts, query: '?map=test&renderer=gl' } : opts;
     const { results, version } = await runChrome(root, SIZES, chromeOpts, dpr, repeat);
     const chrome = fold(results);
     print('chrome', chrome);

@@ -108,8 +108,9 @@ src/
                  later: math.js
   world/         terrain.js   Terrain interface, layer stack, bicubic grid placed by a MapFrame (B3, C2)
                  map-frame.js createMapFrame(): a map's grid (u, v) in the ENU world; compassDeg() (C2, ADR 0005)
-                 course.js    the procedural course: map size, centreline cx(), finish, kickers, rails, and
-                              createProceduralCourse(terrain), a polyline course over cx(y) (C1)
+                 course.js    the procedural test slope: map size, centreline cx(), finish, kickers, rails, TEST_LAYOUT,
+                              and createGridCourse(layout, terrain), a polyline course over a layout's cx(y) (C1, M1)
+                 play-slope.js the play mountain: PLAY_LAYOUT, a steep map with big kickers (M1, ADR 0009)
                  polyline-course.js  the polyline Course (arc-length s, perpendicular d) and Course.fromRun(ways) (C1)
                  run-geometry.js     join ways, resample, curvature-limited smoothing (R4)
                  noise.js     value noise, fbm, row-wise fbm
@@ -170,7 +171,7 @@ Rules the layers keep:
 - `sim` talks outwards only through returned events (`land`, `crash`, `grindStart`, `grindEnd`, `finish`, `score`). `ui` and `view` subscribe.
 - `view` reads sim state and never writes it. The camera is updated in the app loop, not inside `draw()`.
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians counter-clockwise from east internally and compass degrees only at the spec boundary. Each map is authored on its own grid and placed by a `MapFrame` (origin, rotation); the procedural map's default placement runs downhill to the south (ADR 0005). `npm run test:rotated` runs the whole suite with the procedural map turned 37°.
-- The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural map (`world/course.js`, `world/build.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
+- The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural maps (`world/course.js`, `world/build.js`, `world/play-slope.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
 
 Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline course and `Course.fromRun` in C1: `world/polyline-course.js`, `world/run-geometry.js`); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade; the baked terrain file `gresca-map-1` (done: `docs/adr/0006-map-terrain-format.md`).
 
