@@ -69,7 +69,7 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Which keys and gestures do what (the one table; also read by the Controls screen) | `src/input/bindings.js` | `bindings`, `controls` |
 | Touch and key controls | `src/input/input.js` (logic, reads the table), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings` |
 | The Controls screen (generated from the table; gesture diagrams) | `src/ui/controls.js`, `styles/menu.css`, `index.html` | `controls` |
-| Camera follow, tilt, compass | `src/view/camera.js` | `camera`, `look` |
+| Camera follow, tilt, compass, the swing to look back (`InputState.lookBack`) | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
 | Which renderer draws the terrain (the GPU by default, the CPU raycaster with `?renderer=cpu`) and the fallback; the `?fps=1` readout | `src/view/renderer.js`, `src/view/fps-meter.js` (ADR 0008) | `gl-terrain`, `timer` |
 | The GPU terrain (E0, three.js in `vendor/three/`): projection matching the sprites, clipmap mesh, baked textures, snow and sky shaders and their Look uniforms, the trees' horizon | `src/view/gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `gl-budget.js` texture memory and its budget, `context-loss.js` lost WebGL context, `track-ribbon.js` the ski track's ribbon mesh and groove shader) | `gl-terrain`, `gl-resilience`, `track-trail` (CI cannot run WebGL: check the preview) |

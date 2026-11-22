@@ -35,7 +35,8 @@ There is nothing to build or install. Opening `index.html` straight from disk is
 | Press both halves together | Jump |
 | Left or right while in the air | Spin |
 | Swipe down (hold) | Brake |
-| Keyboard | Arrows or A/D steer, both together jump (or Space/Up/W), Down or S brakes |
+| Swipe up (hold) | Look back uphill |
+| Keyboard | Arrows or A/D steer, both together jump (or Space/Up/W), Down or S brakes, B (hold) looks back |
 
 The board and skis are twin tip. Landing after a 180 or 360 is clean, and the rider carries on down the slope
 switch (tail first). Landing sideways, such as after a 90, is a wipeout. On the snow you can carve within

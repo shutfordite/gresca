@@ -75,3 +75,94 @@ describe('camera in the game', () => {
     } finally { g.run('HANGA.camera.slopeFollow.tilt=0.55'); }
   });
 });
+
+describe('looking back (L1: InputState.lookBack)', () => {
+  const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+  const heading = () => g.state().camera.heading;
+  const lookBack = (v) => g.set({ input: { lookBack: v } });
+  // Where the rider's feet are drawn, canvas px, or null when off the view.
+  const riderOnScreen = () => {
+    const { x, y, z } = g.state();
+    const P = g.debug.project(x, y, g.world.height(x, y) + z);
+    const { width, height } = g.debug.screen();
+    return !!P && P.X > 0 && P.X < width && P.Y > 0 && P.Y < height;
+  };
+  // Settles a ride straight down the fall line and returns the camera's follow heading.
+  function ride() {
+    lookBack(0);
+    g.place({ vy: 10 });
+    frames(240);
+    return heading();
+  }
+
+  it('swings round to face uphill, to follow heading + PI, within three time constants', () => {
+    const follow = ride();
+    lookBack(1);
+    frames(63); // 1.05 s, three LOOK_TAU of 0.35 s
+    assert.ok(Math.abs(wrap(heading() - follow - Math.PI)) < 0.1, `camera at ${heading()}, follow ${follow}`);
+    frames(120);
+    assert.equal(g.state().camera.look, 1);
+    assert.ok(Math.abs(wrap(heading() - follow - Math.PI)) < 0.01);
+    lookBack(0);
+  });
+
+  it('takes the same time at 30 frames per second as at 60', () => {
+    const follow = ride();
+    lookBack(1);
+    frames(32, 1 / 30);
+    assert.ok(Math.abs(wrap(heading() - follow - Math.PI)) < 0.1, `camera at ${heading()}, follow ${follow}`);
+    lookBack(0);
+  });
+
+  it('swings smoothly: the turn never reverses and no frame moves it by more than a quarter turn', () => {
+    const follow = ride();
+    lookBack(1);
+    let prev = 0;
+    for (let i = 0; i < 90; i++) {
+      frames(1);
+      const turned = Math.abs(wrap(heading() - follow)); // the grid may be mirrored: only the size counts
+      assert.ok(turned >= prev - 0.02 && turned - prev < Math.PI / 4, `frame ${i}: ${prev} -> ${turned}`);
+      prev = turned;
+    }
+    lookBack(0);
+  });
+
+  it('swings home again on release, and is then exactly where it was', () => {
+    const follow = ride();
+    lookBack(1);
+    frames(90);
+    lookBack(0);
+    frames(63);
+    assert.ok(Math.abs(wrap(heading() - follow)) < 0.1, `camera at ${heading()}, follow ${follow}`);
+    frames(180);
+    assert.equal(g.state().camera.look, 0);
+    assert.ok(Math.abs(wrap(heading() - follow)) < 1e-3);
+  });
+
+  it('keeps the rider in view the whole way round and while looking back', () => {
+    ride();
+    lookBack(1);
+    for (let i = 0; i < 120; i++) {
+      frames(1);
+      assert.ok(riderOnScreen(), `rider off screen at frame ${i}`);
+    }
+    lookBack(0);
+  });
+
+  it('still follows the rider\'s direction of travel while looking back, and looks back in the air', () => {
+    ride();
+    lookBack(1);
+    g.place({ vx: 10 * Math.cos(2.2), vy: 10 * Math.sin(2.2), heading: 2.2 });
+    frames(240);
+    assert.ok(Math.abs(wrap(heading() - 2.2 - Math.PI)) < 0.05, `camera at ${heading()}`);
+    g.place({ vx: 10 * Math.cos(2.2), vy: 10 * Math.sin(2.2), heading: 2.2, z: 3, vz: 6 });
+    lookBack(1); // placing clears the input
+    frames(10);
+    assert.ok(g.state().z > 0.5, 'in the air');
+    assert.ok(g.state().camera.look > 0.1, 'swinging round in the air');
+    assert.ok(riderOnScreen());
+    frames(120);
+    assert.ok(Math.abs(wrap(heading() - 2.2 - Math.PI)) < 0.05, `camera at ${heading()}`);
+    lookBack(0);
+  });
+});
