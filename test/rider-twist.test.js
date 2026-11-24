@@ -103,7 +103,8 @@ test('no NaN for every pose and yaw', () => {
      { pathTurn: 2 }, { pathTurn: -2 }]) {
      for (const off of [-170, -60, 0, 60, 170]) {
       const s = run(RA.create(rig), { ...skid(off, off > 90 || off < -90 ? -1 : 1), ...flags }, 0.5);
-      assert.ok(Number.isFinite(s.twist) && Math.abs(s.twist) <= RA.tune.brakeTwistMax + 1e-9);
+      const bound = flags.braking ? RA.tune.brakeTwistMax : RA.tune.twistMax; // the brake widens the clamp
+      assert.ok(Number.isFinite(s.twist) && Math.abs(s.twist) <= bound + 1e-9);
       for (const it of RA.project(s, yaw, null, stance)) {
        for (const p of it.pts || []) assert.ok(p.every(Number.isFinite), `${rig} ${stance} ${yaw} ${it.id}`);
        for (const sh of it.shapes || []) for (const p of sh.pts) assert.ok(p.every(Number.isFinite));
