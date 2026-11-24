@@ -43,7 +43,7 @@ var RA = {
   twistMax: 45,        // deg, most the lower body and equipment turn away from the upper body (body twist)
   twistSmooth: 0.12,   // s, time constant of the twist easing in and out
   brakeSmooth: 0.1,    // s, time constant of the brake weight (0..1) easing in and out: no pop at the brake's edges
-  brakeTwistMax: 110,  // deg, most the twist reaches at full brake: the equipment across the fall line, the upper body down it
+  brakeTwistMax: 110,  // deg, most the twist reaches at full brake (equipment across the fall line, upper body down it)
   brakeTwistSmooth: 0.05, // s, twist time constant at full brake (the sim yaws the equipment at up to 230 deg/s)
   brakeHeadMax: 60,    // deg, most the head turns against the shoulders to keep facing travel at full brake
   brakeSideMin: 8,     // deg, the equipment this far off travel decides the brake pose's side
@@ -77,7 +77,8 @@ RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regul
 
 RA.create = function (rig) {
  return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
-          turn: 0, twist: 0, headYaw: 0, brakeW: 0, ahead: null, lookSide: 0, brakeSide: null, roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
+          turn: 0, twist: 0, headYaw: 0, brakeW: 0, ahead: null, lookSide: 0, brakeSide: null,
+          roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
           landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
 };
 
@@ -114,7 +115,8 @@ RA.update = function (s, inp, dt) {
  else if (s.landedAgo != null) { s.landedAgo += dt; if (!onSnow || s.landedAgo > 2) s.landedAgo = null; }
  // turn is already in the rider's frame (riderSide), so poseFor gets goofy: false and toe stays the +x edge
  var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne,
-                            landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide, approach: inp.approach && onSnow,
+                            landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide,
+                            approach: inp.approach && onSnow,
                             turn: s.turn, goofy: false });
  if (name !== s.pose) { s.from = copyJ(s.poseJ); s.pose = name; s.t = 0; s.dur = HANGA.blendTime(name); }
  s.t += dt;
@@ -147,7 +149,9 @@ RA.update = function (s, inp, dt) {
   twistT = clamp(raw, -lim, lim);
   // which way the ski tips turn (the board always skids on its heel edge), kept for the whole brake: from the first
   // clear angle off travel; until then, and without facing and travel, braking stays 'crouch'
-  if (bk && !s.brakeSide && Math.abs(raw) > T.brakeSideMin) s.brakeSide = rig === 'board' ? 'heel' : raw < 0 ? 'left' : 'right';
+  if (bk && !s.brakeSide && Math.abs(raw) > T.brakeSideMin) {
+   s.brakeSide = rig === 'board' ? 'heel' : raw < 0 ? 'left' : 'right';
+  }
  }
  s.twist += (twistT - s.twist) * Math.min(1, dt / tau);
  s.headYaw = s.brakeW > 0 ? -clamp(raw - s.twist, -T.brakeHeadMax, T.brakeHeadMax) * s.brakeW : 0;

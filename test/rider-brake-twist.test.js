@@ -19,7 +19,7 @@ const snow = (o) => Object.assign({ wiped: false, grinding: false, airborne: fal
   landed: false, impact: 0, speed: 10, pathTurn: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
 const course = { kickers: [], project: (x, y, out) => Object.assign(out, { s: 0, d: 0 }) };
 
-// Replays the brake trace for a rig and side (the trace's yaw mirrored for the other side); calls onFrame(s, off, inp, prevTwist).
+// Replays the brake trace for a rig and side (mirrored for the other side); calls onFrame(s, off, inp, prevTwist).
 function replay(rig, mirror, onFrame) {
  const tr = loadTrace('brake');
  const s = RA.create(rig);
@@ -61,7 +61,10 @@ for (const rig of ['ski', 'board']) {
     // the upper body's heading from travel: the equipment's offset less the twist (twist = equipment - upper body)
     const torso = -offDeg - s.twist;
     const moving = inp.speed >= RA.tune.holdSpeed; // stopped, travel is the heading (AnimInput)
-    if (moving && Math.abs(offDeg) > NEAR_ACROSS_DEG && inp.braking) { across++; worstTorso = Math.max(worstTorso, Math.abs(torso)); }
+    if (moving && Math.abs(offDeg) > NEAR_ACROSS_DEG && inp.braking) {
+     across++;
+     worstTorso = Math.max(worstTorso, Math.abs(torso));
+    }
     if (moving && inp.braking && s.brakeW > 0.9) headErr = Math.abs(torso + s.headYaw);
    });
    assert.ok(across > 20, `the equipment is across the fall line for a while (${across} frames)`);
