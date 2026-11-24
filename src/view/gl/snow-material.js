@@ -57,6 +57,7 @@ const float SPARKLE_FLICKER = 9.0;  // how fast glints change as the view direct
 const float SPARKLE_DOT_PX = 1.5;   // canvas px across one glint
 const float SPARKLE_NEAR_M = 2.0;   // m, glints at full strength from here
 const float SPARKLE_FAR_M = 24.0;   // m, and none past here
+const float SHADOW_TINT = 0.6;      // 0..1, how far the sun's cast shadow moves toward the Look's shadow colour
 const float FEATURE_FROM = 0.2;     // feature weight where painted features start to show
 const float FEATURE_TO = 0.55;      // and where they are solid: a crisp edge between 1 m texels
 `;
@@ -121,6 +122,9 @@ uniform vec3 uRock;
 uniform vec3 uSunTint;     // the sun's colour over its brightest channel
 uniform vec3 uFog;
 uniform float uCorduroy;   // the Look's corduroy brightness swing
+uniform vec3 uShadowTint;  // the Look's cast-shadow colour (0..1)
+uniform vec4 uRiderShadow; // the rider's shadow: centre on the grid (m), strength 0..1, soft edge 0..1 of its radii
+uniform vec4 uRiderAxes;   // its long axis on the grid (unit u, v) and its radii along and across (m)
 ${FOG_GLSL}
 out vec4 outColour;
 
@@ -161,11 +165,22 @@ void main() {
  float hollow = clamp(relief * HOLLOW_PER_M, 0.0, 1.0);
  float ridge = clamp(-relief * RIDGE_PER_M, 0.0, 1.0);
  lit *= 1.0 - hollow * HOLLOW_SHADE;
+ // cast shadows: the baked ridge and tree shadows (aux alpha), and the rider's soft ellipse
+ vec2 riderAt = vGrid - uRiderShadow.xy;
+ vec2 riderAcross = vec2(-uRiderAxes.y, uRiderAxes.x);
+ vec2 riderUv = vec2(dot(riderAt, uRiderAxes.xy) / uRiderAxes.z, dot(riderAt, riderAcross) / uRiderAxes.w);
+ float riderSoft = max(uRiderShadow.w, 0.01);
+ float riderEdge = smoothstep(1.0 - riderSoft, 1.0 + riderSoft, length(riderUv));
+ float riderCover = (1.0 - riderEdge) * uRiderShadow.z;
+ float sunVisible = aux.a * (1.0 - riderCover);
+ lit *= sunVisible;
 
  vec3 shade = mix(uShade, uGroomShade, groomed);
  vec3 litC = mix(uLit, uGroomLit, groomed) * mix(vec3(1.0), uSunTint, SUN_TINT);
  vec3 c = mix(shade, litC, lit);
  c = mix(c, uShade * HOLLOW_DEEP, hollow * HOLLOW_TINT);
+ float cast = (1.0 - sunVisible) * SHADOW_TINT;
+ c = mix(c, uShadowTint * (dot(c, vec3(0.3333)) / dot(uShadowTint, vec3(0.3333))), cast); // keeps the brightness
  c *= 1.0 + ridge * RIDGE_LIFT + (crust.b - 0.5) * 2.0 * GRAIN * near;
 
  float across = texture(uPiste, (vGrid / uPisteStep + 0.5) / uPisteSize).r;
@@ -201,6 +216,14 @@ void main() {
 // An [r, g, b] (0..1) from a Look tone (0..255).
 const unit = (rgb) => [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255];
 
+const SHADOW_TINT_ROLE = 'powderShade'; // the spec's colour of snow in shade (a Look without it uses its shade tone)
+
+// The cast shadows' colour (0..1 RGB): the Look's shade role, else its shade tone.
+function shadowTint(look) {
+ if (look.roles.includes(SHADOW_TINT_ROLE)) return unit(hexRgb(look.colour(SHADOW_TINT_ROLE)));
+ return unit(look.terrainTone(0, 0, 0, 0, [0, 0, 0]));
+}
+
 /**
  * The snow's uniform values from the Look (look.js) and the map's frame: tones shade, lit, groomShade, groomLit,
  * rock (0..1 RGB, the Look's terrainTone at its corners), corduroy (brightness swing), sunTint, fog (0..1 RGB),
@@ -223,6 +246,7 @@ export function snowLook(look, frame) {
   corduroy: tone(0, 1, 1, 0)[0] / groomShade[0] - 1,
   sunTint: [sun[0] / top, sun[1] / top, sun[2] / top],
   fog: unit(look.fog.rgb),
+  shadowTint: shadowTint(look),
   fogLut,
   far: RAY_FAR,
   sun: sunOnGrid(look.sky, frame),

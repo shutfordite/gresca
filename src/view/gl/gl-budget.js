@@ -11,11 +11,14 @@ export const GL_TEXTURE_BUDGET_BYTES = GL_TEXTURE_BUDGET_MB * MIB; // bytes
 // Bytes per texel of each texture (gl-renderer.js makeTextures): the format's size, and the CPU copy kept for it.
 const HEIGHT_BYTES = 4;  // R32F, one 32-bit float
 const SLOPE_BYTES = 4;   // RG16F, two half floats
-const AUX_BYTES = 4;     // RGBA8: relief, groomed, ski tracks, unused
+const AUX_BYTES = 4;     // RGBA8: relief, groomed, ski tracks, sun visibility (E2: the shadows cost no texture)
 const PAINT_BYTES = 4;   // RGBA8: the colour map and its feature weight
 const PISTE_BYTES = 2;   // R16F, one half float, on a PISTE_STEP_M grid
 const DETAIL_BYTES = 4;  // RGBA8, with a mipmap chain
 const MIPMAP_CHAIN = 4 / 3; // a full mipmap chain adds a third
+
+/** Transient CPU bytes of the shadow bake (one byte per texel, dropped once it is in the aux texture). */
+export const shadowBakeScratchBytes = (nx, ny) => nx * ny;
 
 /**
  * The texture memory (bytes) of the GPU terrain for a map grid of nx × ny texels: {gpuBytes (all textures on the GPU,
