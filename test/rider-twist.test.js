@@ -103,7 +103,7 @@ test('no NaN for every pose and yaw', () => {
      { pathTurn: 2 }, { pathTurn: -2 }]) {
      for (const off of [-170, -60, 0, 60, 170]) {
       const s = run(RA.create(rig), { ...skid(off, off > 90 || off < -90 ? -1 : 1), ...flags }, 0.5);
-      assert.ok(Number.isFinite(s.twist) && Math.abs(s.twist) <= RA.tune.twistMax + 1e-9);
+      assert.ok(Number.isFinite(s.twist) && Math.abs(s.twist) <= RA.tune.brakeTwistMax + 1e-9);
       for (const it of RA.project(s, yaw, null, stance)) {
        for (const p of it.pts || []) assert.ok(p.every(Number.isFinite), `${rig} ${stance} ${yaw} ${it.id}`);
        for (const sh of it.shapes || []) for (const p of sh.pts) assert.ok(p.every(Number.isFinite));
@@ -124,12 +124,15 @@ test('along the recorded traces the twist stays within the clamp', async (t) => 
    const a = createAnimInput();
    const session = { rig: tr.rig, stance: 'regular' };
    let max = 0;
+   // the clamp is twistMax, and brakeTwistMax along a trace that brakes
+   const braked = tr.states.some((st) => st.isBraking);
+   const bound = braked ? RA.tune.brakeTwistMax : RA.tune.twistMax;
    for (const st of tr.states) {
     animInput(st, session, course, a);
     const inp = snow({ speed: a.speed, riderSide: a.riderSide, braking: a.braking, airborne: st.z > 0.05,
      facing: a.facing, travelDir: a.travelDir });
     for (let i = 0; i < 3; i++) RA.update(s, inp, tr.dt * tr.every / 3);
-    assert.ok(Number.isFinite(s.twist) && Math.abs(s.twist) <= RA.tune.twistMax + 1e-9);
+    assert.ok(Number.isFinite(s.twist) && Math.abs(s.twist) <= bound + 1e-9);
     max = Math.max(max, Math.abs(s.twist));
    }
    if (name === 'brake') assert.ok(max > 5, `the braking trace skids: max twist ${max}`);
