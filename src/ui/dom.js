@@ -29,6 +29,11 @@ export function getUi(doc) {
   ctl: $('ctl'),     // the Controls screen
   ctlBody: $('ctl-body'), // where the table's rows go
   cc: $('cc'),       // Back button on the Controls screen
+  pz: $('pz'),       // pause button (in the run)
+  pausep: $('pausep'), // the pause panel
+  pr: $('pr'),       // Resume
+  pc: $('pc'),       // Controls, from the pause panel
+  pm: $('pm'),       // Back to menu
   minimap: $('mc'),  // minimap canvas
  };
 }

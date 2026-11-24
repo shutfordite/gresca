@@ -100,11 +100,13 @@ function loadArt() {
 // map's grid (map-view.js), g.raw the façade itself, in world metres.
 export async function load(opts = {}) {
   const { createGame } = await import(APP);
-  const els = {}, timers = [], raf = [], wl = {};
+  const els = {}, timers = [], raf = [], wl = {}, dl = {};
   const document = {
     getElementById(id) {
       return els[id] || (els[id] = id === 'c' ? makeEl(id, 390, 844) : id === 'mc' ? makeEl(id, 56, 137) : makeEl(id));
     },
+    hidden: false, // document.hidden: a test sets it with g.setHidden()
+    addEventListener(t, fn) { (dl[t] = dl[t] || []).push(fn); },
     createElement() { return makeEl('created'); },
     // <html>: style.setProperty records CSS custom properties (the Look's ui tokens) in style.props
     documentElement: { style: { props: {}, setProperty(k, v) { this.props[k] = v; } } },
@@ -165,6 +167,8 @@ export async function load(opts = {}) {
     emitParticles: (...args) => G().emitParticles(...args),
     // draw n frames of dt seconds each
     frames(n, dt = 1 / 60) { for (let i = 0; i < n; i++) G().frame(dt); },
+    // the page goes to the background (true) or comes back: sets document.hidden and fires visibilitychange
+    setHidden(hidden) { document.hidden = hidden; (dl.visibilitychange || []).forEach((fn) => fn({})); },
     // one real browser frame: run the requestAnimationFrame callbacks waiting now (the game loop) with timestamp ts, ms
     raf(ts) { raf.splice(0).forEach((fn) => fn(ts)); },
     speed: () => G().state().speed,
