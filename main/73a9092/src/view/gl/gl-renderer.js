@@ -4,8 +4,10 @@ import { NEAR_M, FAR_M, createProjection, setProjection } from './gl-projection.
 import { CLIPMAP, levelGrid, levelOrigin, levelSpacing } from './terrain-mesh.js';
 import { bakeHeights, bakeSlopes, bakeRelief, bakeAux, bakePaint, bakePiste, halfArray, PISTE_STEP_M,
  RELIEF_M_PER_BYTE } from './terrain-bake.js';
+import { bakeSunVisibility, castTreeShadows } from './sun-shadow.js';
+import { riderShadow } from './rider-shadow.js';
 import { makeDetailTexture, DETAIL_SIZE } from './detail-texture.js';
-import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook } from './snow-material.js';
+import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook, sunOnGrid } from './snow-material.js';
 import { createTrackRibbon, ribbonLook } from './track-ribbon.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
@@ -28,6 +30,21 @@ function dataTexture(THREE, data, w, h, format, type, internalFormat, linear) {
  return t;
 }
 
+// The sun visibility of every texel (sun-shadow.js): the terrain's own shadows, then each tree's.
+function bakeShadows(heights, nx, ny, frame, scene) {
+ const sun = sunOnGrid(scene.look.sky, frame);
+ const vis = bakeSunVisibility(heights, nx, ny, sun);
+ const trees = scene.treeArr;
+ const at = { u: 0, v: 0 };
+ const grid = new Float32Array(trees.length * 2);
+ for (let n = 0; n < trees.length; n++) {
+  frame.toGrid(trees[n].x, trees[n].y, at);
+  grid[n * 2] = at.u;
+  grid[n * 2 + 1] = at.v;
+ }
+ return castTreeShadows(vis, nx, ny, grid, sun);
+}
+
 // The terrain's textures from the built world (terrain-bake.js).
 function makeTextures(THREE, renderer, view, scene) {
  const nx = view.map.width;
@@ -35,7 +52,8 @@ function makeTextures(THREE, renderer, view, scene) {
  const frame = view.mapFrame;
  if (!view.colSnow) throw new Error('GL terrain: the colour map was built without its plain snow (keepSnow)');
  const heights = bakeHeights(scene.terrain, frame, nx, ny);
- const aux = bakeAux(bakeRelief(heights, nx, ny), scene.terrain, frame, nx, ny);
+ const sunVisibility = bakeShadows(heights, nx, ny, frame, scene);
+ const aux = bakeAux(bakeRelief(heights, nx, ny), scene.terrain, frame, nx, ny, sunVisibility);
  const piste = bakePiste(scene.course, scene.terrain, frame, nx, ny);
  const detail = new THREE.DataTexture(makeDetailTexture(), DETAIL_SIZE, DETAIL_SIZE, THREE.RGBAFormat);
  detail.wrapS = THREE.RepeatWrapping;
@@ -95,6 +113,9 @@ function sharedUniforms(THREE, tex, view, look) {
   uCorduroy: { value: s.corduroy },
   uFar: { value: s.far },
   uFogLut: { value: s.fogLut },
+  uShadowTint: v3(s.shadowTint),
+  uRiderShadow: { value: new THREE.Vector4() },
+  uRiderAxes: { value: new THREE.Vector4() },
  };
 }
 
@@ -180,6 +201,9 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const unused = new THREE.Camera(); // three.js wants one; the shaders project for themselves
  const proj = createProjection();
  const at = { u: 0, v: 0 };
+ const sun = s.sun;
+ const rs = { du: 0, dv: 0, axisU: 0, axisV: 0, along: 1, across: 1, strength: 0, soft: 0 };
+ const ground = { u: 0, v: 0 };
  const origin = { u: 0, v: 0 };
  function render(v, sc) {
   const p = setProjection(proj, sc.camera, v.W, v.Hh);
@@ -196,6 +220,11 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   const sun = sunDisc(sc.look.sky, sc.camera, v.W, v.Hh, sc.frame, v.sun);
   sky.uniforms.uRows.value.set(Math.max(1, p.rowC), p.Hh);
   sky.uniforms.uSun.value.set(sun.X, sun.Y, sun.r, sun.on ? 1 : 0);
+  // the rider's shadow: read-only on the drawn pose (view.drawn: x, y m, z m above the ground)
+  v.mapFrame.toGrid(v.drawn.x, v.drawn.y, ground);
+  riderShadow(v.drawn.z, sun, rs);
+  shared.uRiderShadow.value.set(ground.u + rs.du, ground.v + rs.dv, rs.strength, rs.soft);
+  shared.uRiderAxes.value.set(rs.axisU, rs.axisV, rs.along, rs.across);
   ribbon.update(v.trail);
   renderer.render(glScene, unused);
  }
