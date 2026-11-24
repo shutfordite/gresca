@@ -596,13 +596,17 @@ function checkAgainstTerrain(f, terrain, ctx) {
   return at('run', 'does not make a course: ' + e.message);
  }
  if (!runIsInside(course, terrain.bounds)) at('run', 'leaves the terrain\'s bounds');
- if (course.length < MIN_LENGTH_M) at('run', 'is ' + Math.round(course.length) + ' m long, under ' + MIN_LENGTH_M + ' m');
+ if (course.length < MIN_LENGTH_M) {
+  at('run', 'is ' + Math.round(course.length) + ' m long, under ' + MIN_LENGTH_M + ' m');
+ }
  if (f.finishS > course.length) {
   return at('finishS', f.finishS + ' m is past the end of the run (' + Math.round(course.length * 10) / 10 + ' m)');
  }
  const measured = measureMeanSlopeDeg(course, layer, f.startS, f.finishS);
  report.stats = { lengthM: course.length, measuredMeanSlopeDeg: measured };
- if (!(measured > 0)) at('startS', 'the start must be above the finish: the run climbs ' + (-measured).toFixed(1) + ' deg');
+ if (!(measured > 0)) {
+  at('startS', 'the start must be above the finish: the run climbs ' + (-measured).toFixed(1) + ' deg');
+ }
  if (Math.abs(measured - f.meanSlopeDeg) > MEAN_SLOPE_TOLERANCE_DEG) {
   at('meanSlopeDeg', f.meanSlopeDeg + ' deg does not match the run measured on the terrain (' + measured.toFixed(2) +
    ' deg, tolerance ' + MEAN_SLOPE_TOLERANCE_DEG + ' deg)');

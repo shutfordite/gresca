@@ -120,28 +120,32 @@ describe('validateCourse rejects', () => {
  });
 
  it('a finish before the start, a start below zero, or a finish past the end of the run', () => {
-  assert.match(errorsAfter((f) => { f.startS = 300; f.finishS = 200; }), /finishS: finish \(200 m\) must be after the start/);
+  assert.match(errorsAfter((f) => { f.startS = 300; f.finishS = 200; }),
+   /finishS: finish \(200 m\) must be after the start/);
   assert.match(errorsAfter((f) => { f.startS = -1; }), /startS: .*startS >= 0/);
   assert.match(errorsAfter((f) => { f.finishS = 5000; }), /finishS: 5000 m is past the end of the run/);
   assert.match(errorsAfter((f) => { f.startS = 0; f.finishS = 10; }), /at least 50 m/);
  });
 
  it('park items outside the piste width, out of order, or outside start and finish', () => {
-  assert.match(errorsAfter((f) => { f.kickers[0].d = 14; }), /kickers\[0\]\.d: the kicker .* outside the piste width \(\+-15 m\)/);
+  assert.match(errorsAfter((f) => { f.kickers[0].d = 14; }),
+   /kickers\[0\]\.d: the kicker .* outside the piste width \(\+-15 m\)/);
   assert.match(errorsAfter((f) => { f.rails[0].d = 16; }), /rails\[0\]\.d: the rail .* outside the piste width/);
   assert.match(errorsAfter((f) => { f.widths = [[0, 8]]; }), /kickers\[1\]\.d: .*outside the piste width \(\+-4 m\)/);
   assert.match(errorsAfter((f) => { f.kickers.reverse(); }), /kickers\[1\]\.s: 100 m is not after the previous kicker/);
   assert.match(errorsAfter((f) => { f.rails.push({ s0: 150, s1: 160, d: 0, h: 0.4, t: 'box' }); }),
    /rails\[1\]\.s0: 150 m is before the previous rail/);
-  assert.match(errorsAfter((f) => { f.kickers[1].s = 430; }), /kickers\[1\]\.s: the kicker .* between the start and the finish/);
-  assert.match(errorsAfter((f) => { f.finishS = 120; }), /kickers\[1\]\.s: the kicker .* between the start and the finish/);
+  const between = /kickers\[1\]\.s: the kicker .* between the start and the finish/;
+  assert.match(errorsAfter((f) => { f.kickers[1].s = 430; }), between);
+  assert.match(errorsAfter((f) => { f.finishS = 120; }), between);
  });
 
  it('malformed park items', () => {
   assert.match(errorsAfter((f) => { f.kickers[0].big = 'yes'; }), /kickers\[0\]: must be \{s, d, halfWidth, depth/);
   assert.match(errorsAfter((f) => { f.kickers[0].launchGain = 9; }), /kickers\[0\]\.launchGain: must be 0\.5\.\.3/);
   assert.match(errorsAfter((f) => { f.kickers[0].depth = 0; }), /kickers\[0\]\.depth: must be 1\.\.40 m/);
-  assert.match(errorsAfter((f) => { f.rails[0].t = 'wall'; }), /rails\[0\]: must be \{s0, s1, d, h \(m\), t: "rail" or "box"\}/);
+  assert.match(errorsAfter((f) => { f.rails[0].t = 'wall'; }),
+   /rails\[0\]: must be \{s0, s1, d, h \(m\), t: "rail" or "box"\}/);
   assert.match(errorsAfter((f) => { f.rails[0].s1 = 100; }), /rails\[0\]\.s1: must be after s0/);
   assert.match(errorsAfter((f) => { f.kickers = {}; }), /kickers: must be an array/);
  });
@@ -210,7 +214,9 @@ describe('widthAtS', () => {
 describe('the course CLI', () => {
  function tempCopy() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gresca-course-'));
-  for (const name of ['test-map.terrain.json', 'test-map.config.json']) fs.copyFileSync(path.join(DIR, name), path.join(dir, name));
+  for (const name of ['test-map.terrain.json', 'test-map.config.json']) {
+   fs.copyFileSync(path.join(DIR, name), path.join(dir, name));
+  }
   return dir;
  }
  const quiet = () => {};
@@ -237,7 +243,8 @@ describe('the course CLI', () => {
    assert.equal(await runCli(['--course', '--terrain', terrainPath, '--run', 'way/8', '--out', out], quiet), 0);
    assert.equal(JSON.parse(fs.readFileSync(out, 'utf8')).run.osm[0], 'way/8');
    const named = path.join(dir, 'b.course.json');
-   assert.equal(await runCli(['--course', '--terrain', terrainPath, '--run-name', 'Run zz-cross', '--out', named], quiet), 0);
+   const byName = ['--course', '--terrain', terrainPath, '--run-name', 'Run zz-cross', '--out', named];
+   assert.equal(await runCli(byName, quiet), 0);
    const broken = JSON.parse(TERRAIN_TEXT);
    broken.format = 'nope';
    fs.writeFileSync(terrainPath, JSON.stringify(broken));
