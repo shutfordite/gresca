@@ -18,6 +18,7 @@ import { createFpsMeter, tickFps, drawFps } from './view/fps-meter.js';
 import { markTrack, clearTracks } from './view/ski-tracks.js';
 import { getUi, applyUiTokens } from './ui/dom.js';
 import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
+import { bindPause, updatePauseButton } from './ui/pause.js';
 import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
 import { createFacade } from './debug.js';
 
@@ -129,6 +130,7 @@ export function createGame(env) {
   updateCamera(view, scene, dt, alpha);
   render.draw(view, scene, dt);
   updateHud(ui, hud, view.drawn, rider, session, world.terrain.bounds, world.course);
+  updatePauseButton(ui, hud, session);
   if (fps) {
    tickFps(fps, clock.dt, env.now() - t0, view.renderer.name);
    drawFps(ui.ctx, fps, look, view.Hh);
@@ -139,9 +141,10 @@ export function createGame(env) {
   const dt = Math.max(0, (ts - clock.lastMs) / 1000 || 0);
   clock.lastMs = ts;
   clock.dt = dt;
-  const alpha = advance(sim, timestep, dt);
+  // paused: no steps, the accumulator and the camera stand still (dt 0), the last pose is drawn again
+  const alpha = hud.paused ? timestep.acc / SIM_DT : advance(sim, timestep, dt);
   // the camera and animation get the real frame time, capped like the simulation
-  if (session.phase !== 'load') frame(Math.min(dt, SIM_MAX * SIM_DT), alpha);
+  if (session.phase !== 'load') frame(hud.paused ? 0 : Math.min(dt, SIM_MAX * SIM_DT), alpha);
   env.requestAnimationFrame(loop);
  }
 
@@ -153,6 +156,13 @@ export function createGame(env) {
    want: env.renderer, THREE: env.THREE || null, document: env.document, screen: ui.canvas,
    warn: env.warn || (() => {}),
   }, view, scene);
+  showMenu();
+  if (env.scene) facade.scene(env.scene); // ?scene=<name> (src/scenes.js): open that scene, paused
+ }
+
+ // The start screen over the rider at the top: after the boot, and for Back to menu in the pause panel.
+ function showMenu() {
+  hud.paused = false;
   session.phase = 'ready';
   placeAtStart();
   rider.vx = rider.vy = 0;
@@ -161,15 +171,20 @@ export function createGame(env) {
   session.crashes = 0;
   session.time = 0;
   rider.wipeoutSpin = 0;
+  rider.z = rider.vz = 0;
+  rider.grind = null;
+  spray.particles.length = 0;
   menuCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
   ui.msgT.textContent = MENU_TEXT;
+  ui.go.textContent = 'Drop in';
   ui.go.hidden = false;
-  if (env.scene) facade.scene(env.scene); // ?scene=<name> (src/scenes.js): open that scene, paused
+  ui.msg.hidden = false;
  }
 
- bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right));
+ const pause = bindPause(ui, hud, session, input, env, showMenu);
+ bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right), pause.toggle);
  ui.go.addEventListener('click', startRun);
- bindMenu(ui, session, env);
+ bindMenu(ui, session, env, hud);
  loadStance(session, env, look.rider.stanceStorageKey);
  env.setTimeout(boot, BOOT_DELAY_MS);
  env.requestAnimationFrame(loop);
