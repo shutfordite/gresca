@@ -133,8 +133,9 @@ function paintLift(mx, colour, lift) {
  }
 }
 
-// Each tree (with its painted shadow unless the GPU bakes its own), in placement order (trees are in world metres: back to the grid).
-/** Paints the trees (and, if paintShadows, their painted shadows) of treeArr into mx; exported for the tests. */
+// Each tree (with its painted shadow unless the GPU bakes its own), in placement order (trees are in world metres:
+// back to the grid).
+/** Paints the trees, and their painted shadows if paintShadows, of treeArr into mx; exported for the tests. */
 export function paintTrees(mx, treeArr, frame, colour, paintShadows) {
  const at = { u: 0, v: 0 };
  for (const T of treeArr) {
