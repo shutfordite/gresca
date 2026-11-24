@@ -361,11 +361,13 @@ function drawRiderOnSnow(ctx, view, scene, gR, dt) {
  const ss = 1 / (1 + jz * 0.25);
  ctx.save();
  ctx.translate(view.W / 2, ((camera.height - gR) / CAM_BACK * sc + camera.horizonPx - camera.pitchPx) * kx);
- ctx.globalAlpha = SHADOW_ALPHA;
- ctx.fillStyle = look.colour(shd.colour);
- ctx.beginPath();
- ctx.ellipse(shd.c[0] * m, -shd.c[1] * m, shd.rx * m * ss, shd.ry * m * ss, 0, 0, 7);
- ctx.fill();
+ if (view.renderer.name !== 'gl') { // the GPU terrain shades the rider's shadow itself (gl/rider-shadow.js)
+  ctx.globalAlpha = SHADOW_ALPHA;
+  ctx.fillStyle = look.colour(shd.colour);
+  ctx.beginPath();
+  ctx.ellipse(shd.c[0] * m, -shd.c[1] * m, shd.rx * m * ss, shd.ry * m * ss, 0, 0, 7);
+  ctx.fill();
+ }
  ctx.globalAlpha = 1;
  ctx.translate(0, -jz * mf);
  if (rider.crashTimer > 0) {
