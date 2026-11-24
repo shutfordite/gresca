@@ -12,7 +12,7 @@ const screen = () => g.el('ctl-body').innerHTML;
 // The visible text of the screen's HTML (tags dropped, the few entities it uses decoded).
 const text = (html) => html.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 const keycaps = (row) => row.keys.map((k) => ({ ' ': 'Space', ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up',
- ArrowDown: 'Down' }[k] || k.toUpperCase()));
+ ArrowDown: 'Down', Escape: 'Esc' }[k] || k.toUpperCase()));
 
 describe('Controls screen', () => {
  it('has a Touch and a Keyboard section, in that order', () => {

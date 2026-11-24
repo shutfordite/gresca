@@ -45,6 +45,8 @@ export const BINDINGS = deepFreeze([
  { device: 'keyboard', action: 'look-back', label: 'Look back uphill (hold)', slot: SLOTS.LOOK, keys: ['b'] },
  { device: 'keyboard', action: 'spin-left', label: 'Spin left in the air', slot: null, keys: ['ArrowLeft', 'a'] },
  { device: 'keyboard', action: 'spin-right', label: 'Spin right in the air', slot: null, keys: ['ArrowRight', 'd'] },
+ // No slot: pause is not part of the InputState; bind-input.js hands these keys to the pause toggle (ui/pause.js).
+ { device: 'keyboard', action: 'pause', label: 'Pause', keys: ['Escape', 'p'] },
 ]);
 
 /** The bindings of one device ('touch' | 'keyboard'), in table order. */
@@ -71,9 +73,12 @@ export const BRAKE_SWIPE_PX = binding('touch', 'brake').minPx;
 /** CSS px a finger must move up, and keep down, to look back (the touch look-back row). */
 export const LOOK_BACK_SWIPE_PX = binding('touch', 'look-back').minPx;
 
+/** KeyboardEvent.key values that pause or resume the run (the keyboard pause row). */
+export const PAUSE_KEYS = binding('keyboard', 'pause').keys;
+
 // Readable names for keys whose KeyboardEvent.key is not what the player sees on the keycap.
 const KEY_NAMES = Object.freeze({
- ' ': 'Space', ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down',
+ ' ': 'Space', ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', Escape: 'Esc',
 });
 
 /** The name to show for a key: 'Space' for ' ', 'Left' for ArrowLeft, upper case for letters. */
