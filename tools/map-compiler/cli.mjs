@@ -1,14 +1,17 @@
 // The map compiler's command line: reads a map config, gets the raw downloads from the cache (or the network with
 // --fetch), compiles maps/<id>.terrain.json with core.js, and writes it only if validate.js accepts it.
 // Usage: node tools/map-compiler/cli.mjs --config maps/sources/<id>.json [--cache .map-cache] [--out <file>] [--fetch]
+// Course: node tools/map-compiler/cli.mjs --course --terrain maps/<id>.terrain.json (--run way/1,way/2 | --run-name
+// "<piste>" | --config maps/sources/<id>.json with a "course" block) [--out <file>] [--overwrite]: offline, writes
+// maps/<id>.course.json (docs/adr/0010-map-course-format.md).
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { compileTerrain, createProjection, gridFor, latLonBox, stringifyMap } from './core.js';
+import { compileCourse, compileTerrain, createProjection, gridFor, latLonBox, stringifyMap } from './core.js';
 import { createTerrariumDem, decodeTerrarium, tilesCovering, tileUrl } from './sources/terrarium.js';
 import { parseOpenSkiMapLifts, parseOpenSkiMapRuns, parseOverpass } from './sources/openskimap.js';
-import { validateTerrain } from './validate.js';
+import { validateCourse, validateTerrain } from './validate.js';
 
 const MANIFEST = 'manifest.json';
 const MAX_DOWNLOAD_BYTES = 1024 * 1024 * 1024; // bytes, the largest raw download kept (the world's runs GeoJSON)
@@ -17,6 +20,7 @@ const USER_AGENT = 'gresca-map-compiler/1 (offline map baker)';
 /** Runs the compiler with command-line args (without node and the script); returns the exit code (0 when written). */
 export async function runCli(args, log = console.log) {
  const opts = parseArgs(args);
+ if (opts.course) return runCourseCli(opts, log);
  const config = JSON.parse(fs.readFileSync(opts.config, 'utf8'));
  const cache = openCache(opts.cache, opts.fetch);
  const grid = gridFor(config);
@@ -41,15 +45,50 @@ export async function runCli(args, log = console.log) {
  return 0;
 }
 
+// Makes maps/<id>.course.json from a baked terrain file: offline, from the file alone. The run comes from --run
+// (OSM ids), --run-name or the config's "course" block; the rest of the block (park, sun, widths) is authored input.
+// An existing course file is never replaced without --overwrite: it holds hand-made level design (R2).
+function runCourseCli(opts, log) {
+ if (!opts.terrain) throw new Error('map compiler: --terrain maps/<id>.terrain.json is required with --course');
+ const terrain = JSON.parse(fs.readFileSync(opts.terrain, 'utf8'));
+ const terrainResult = validateTerrain(terrain);
+ if (!terrainResult.ok) {
+  for (const e of terrainResult.errors) log('error: ' + e);
+  return 1;
+ }
+ const authored = opts.config ? JSON.parse(fs.readFileSync(opts.config, 'utf8')).course || {} : {};
+ const run = opts.run ? { osm: opts.run.split(',') } : opts.runName ? { name: opts.runName } : authored.run;
+ if (!run) throw new Error('map compiler: give --run, --run-name or a "course.run" in the config');
+ const file = compileCourse({ ...authored, terrain, run });
+ const result = validateCourse(file, terrain);
+ for (const w of result.warnings) log('warning: ' + w);
+ if (!result.ok) {
+  for (const e of result.errors) log('error: ' + e);
+  return 1;
+ }
+ const out = opts.out || path.join(path.dirname(opts.terrain), terrain.id + '.course.json');
+ if (fs.existsSync(out) && !opts.overwrite) {
+  throw new Error('map compiler: ' + out + ' exists and may hold authored level design (use --overwrite)');
+ }
+ fs.writeFileSync(out, stringifyMap(file));
+ log('wrote ' + out + ': ' + Math.round(result.stats.lengthM) + ' m, mean slope ' + file.meanSlopeDeg + ' deg');
+ return 0;
+}
+
 function parseArgs(args) {
- const opts = { config: null, cache: '.map-cache', out: null, fetch: false };
+ const opts = { config: null, cache: '.map-cache', out: null, fetch: false, course: false, overwrite: false,
+  terrain: null, run: null, runName: null };
+ const values = { '--config': 'config', '--cache': 'cache', '--out': 'out', '--terrain': 'terrain', '--run': 'run',
+  '--run-name': 'runName' };
  for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === '--fetch') opts.fetch = true;
-  else if (a === '--config' || a === '--cache' || a === '--out') opts[a.slice(2)] = args[++i];
+  else if (a === '--course') opts.course = true;
+  else if (a === '--overwrite') opts.overwrite = true;
+  else if (Object.hasOwn(values, a)) opts[values[a]] = args[++i];
   else throw new Error('map compiler: unknown argument ' + a);
  }
- if (!opts.config) throw new Error('map compiler: --config maps/sources/<id>.json is required');
+ if (!opts.config && !opts.course) throw new Error('map compiler: --config maps/sources/<id>.json is required');
  return opts;
 }
 

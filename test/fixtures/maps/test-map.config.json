@@ -1,0 +1,14 @@
+{
+ "id": "test-map",
+ "notes": "Authored input for the course CLI test: the run and park of the synthetic map in test/map-fixtures.js.",
+ "course": {
+  "run": { "osm": ["way/8"] },
+  "kickers": [
+   { "s": 100, "d": 0, "halfWidth": 3, "depth": 6, "big": false },
+   { "s": 250, "d": -4, "halfWidth": 3, "depth": 6, "big": true, "launchGain": 1.5 }
+  ],
+  "rails": [
+   { "s0": 180, "s1": 200, "d": 5, "h": 0.4, "t": "rail" }
+  ]
+ }
+}
