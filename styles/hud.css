@@ -8,3 +8,6 @@
 .glove{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:18px;width:46px;height:54px;color:var(--light);opacity:.3;pointer-events:none;transition:opacity .08s}
 .glove.r{left:auto;right:18px;transform:scaleX(-1)}
 .glove.on{opacity:.85}
+/* The pause button: a 44 px target left of the minimap, clear of the notch and the iPad's rounded corners. */
+#pz{position:absolute;top:calc(4px + env(safe-area-inset-top,0px));right:calc(62px + env(safe-area-inset-right,0px));width:44px;height:44px;padding:10px;border:2px solid var(--mini-edge);border-radius:12px;background:var(--halo);color:var(--ink);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#pz svg{display:block;width:100%;height:100%}

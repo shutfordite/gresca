@@ -28,10 +28,10 @@ export function setRig(ui, session, env, r) {
 }
 
 /** Wires the picker's buttons and the Controls screen, then restores the rig saved last visit (the new key wins over the old one). */
-export function bindMenu(ui, session, env) {
+export function bindMenu(ui, session, env, hud) {
  ui.pb.addEventListener('click', () => setRig(ui, session, env, 'board'));
  ui.ps.addEventListener('click', () => setRig(ui, session, env, 'ski'));
- bindControls(ui);
+ bindControls(ui, hud);
  try {
   const s = env.localStorage.getItem(RIG_KEY) || env.localStorage.getItem(OLD_RIG_KEY);
   if (s === 'ski' || s === 'board') setRig(ui, session, env, s);
