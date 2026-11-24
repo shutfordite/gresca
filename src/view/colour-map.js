@@ -15,13 +15,14 @@ const DRIFT_SHARE = 0.6;        // 0..1, how much of the grain is drifts (the re
  * view.col (live, ski tracks go here) and view.col0 (as built) and the frame that places it in the world as
  * view.mapFrame, and draws the minimap from it. look: the Look (view/look/look.js), for every colour. keepSnow
  * (optional): also keep the plain snow before the features are painted over it as view.colSnow (the GPU terrain
- * shades the snow itself and takes only the features from the colour map).
+ * shades the snow itself and takes only the features from the colour map; it also bakes its own soft tree shadows,
+ * so the painted ones are left out).
  */
 export function buildColourMap(view, world, minimap, look, keepSnow = false) {
  view.mapFrame = world.frame;
  paintColourMap(view.mx, world, look, () => {
   if (keepSnow) view.colSnow = view.mx.getImageData(0, 0, W0, H0).data;
- });
+ }, !keepSnow);
  view.col = view.mx.getImageData(0, 0, W0, H0).data;
  view.col0 = view.col.slice();
  minimap.getContext('2d').drawImage(view.map, 0, 0, W0, H0, 0, 0, MINIMAP_W, MINIMAP_H);
@@ -33,13 +34,13 @@ export function buildColourMap(view, world, minimap, look, keepSnow = false) {
  * shadows, the kickers, the rails, the village and the finish. Reads world.H, world.M, world.treeArr and world.frame.
  * afterSnow() is called between the snow and the rest.
  */
-function paintColourMap(mx, world, look, afterSnow) {
+function paintColourMap(mx, world, look, afterSnow, paintShadows) {
  const colour = look.colour;
  const layout = world.layout; // the map's cx, finish, park and lift (world/build.js MAPS)
  paintSnow(mx, world.H, world.M, look.terrainTone, layout.cx);
  afterSnow();
  paintLift(mx, colour, layout.lift);
- paintTrees(mx, world.treeArr, world.frame, colour);
+ paintTrees(mx, world.treeArr, world.frame, colour, paintShadows);
  paintPark(mx, colour, layout);
  paintVillage(mx, colour, layout);
 }
@@ -132,20 +133,24 @@ function paintLift(mx, colour, lift) {
  }
 }
 
-// Each tree with a long soft shadow, in placement order (trees are in world metres: back to the grid).
-function paintTrees(mx, treeArr, frame, colour) {
+// Each tree (with its painted shadow unless the GPU bakes its own), in placement order (trees are in world metres:
+// back to the grid).
+/** Paints the trees, and their painted shadows if paintShadows, of treeArr into mx; exported for the tests. */
+export function paintTrees(mx, treeArr, frame, colour, paintShadows) {
  const at = { u: 0, v: 0 };
  for (const T of treeArr) {
   frame.toGrid(T.x, T.y, at);
   const x = at.u;
   const y = at.v;
-  mx.fillStyle = colour('mapTreeShadow');
-  mx.beginPath();
-  mx.moveTo(x - 1.4, y);
-  mx.lineTo(x + 1.4, y);
-  mx.lineTo(x + 9, y - 10);
-  mx.closePath();
-  mx.fill();
+  if (paintShadows) {
+   mx.fillStyle = colour('mapTreeShadow');
+   mx.beginPath();
+   mx.moveTo(x - 1.4, y);
+   mx.lineTo(x + 1.4, y);
+   mx.lineTo(x + 9, y - 10);
+   mx.closePath();
+   mx.fill();
+  }
   mx.fillStyle = colour('treeCrown');
   mx.beginPath();
   mx.arc(x, y, 1.6, 0, 7);

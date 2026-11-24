@@ -8,6 +8,8 @@ const CAVITY_RADIUS_M = 6;      // m, half-width of the box blur the relief is m
 const CAVITY_BYTE_PER_M = 96;   // byte steps per m of relief (128 = flat): ±1.3 m fills the byte
 const FEATURE_MIN_DIFF = 3;     // 0..255, a colour map texel this far from plain snow in any channel is a feature
 const FEATURE_FULL_DIFF = 24;   // 0..255, and this far is fully a feature
+/** The bytes of one aux texel and what each holds (gl-budget.js counts them). */
+export const AUX_CHANNELS = Object.freeze(['relief', 'groomed', 'track', 'sunVisibility']);
 export const PISTE_STEP_M = 4;  // m between samples of the piste's across coordinate (linear in between)
 const PISTE_MARGIN = 2;         // samples, the across coordinate is kept this far around groomed snow
 
@@ -93,9 +95,10 @@ export function bakePaint(col0, snow) {
 
 /**
  * The aux texture, RGBA bytes nx × ny: r relief (reliefByte), g groomed (0..255, terrain.groomed at the texel's
- * centre), b ski-track brightness (255: untouched; trackRows() rewrites it), a unused (255).
+ * centre), b ski-track brightness (255: untouched; trackRows() rewrites it), a sun visibility (255 lit, 0 in the
+ * shadow of a ridge or a tree; sun-shadow.js; 255 everywhere if sunVisibility is left out).
  */
-export function bakeAux(relief, terrain, frame, nx, ny) {
+export function bakeAux(relief, terrain, frame, nx, ny, sunVisibility = null) {
  const out = new Uint8Array(nx * ny * 4);
  const at = { x: 0, y: 0 };
  for (let j = 0; j < ny; j++) {
@@ -105,7 +108,7 @@ export function bakeAux(relief, terrain, frame, nx, ny) {
    out[k * 4] = reliefByte(relief[k]);
    out[k * 4 + 1] = Math.round(terrain.groomed(at.x, at.y) * 255);
    out[k * 4 + 2] = 255;
-   out[k * 4 + 3] = 255;
+   out[k * 4 + 3] = sunVisibility === null ? 255 : sunVisibility[k];
   }
  }
  return out;
