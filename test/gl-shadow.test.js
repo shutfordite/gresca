@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { bakeSunVisibility, castTreeShadows, treeShadowCover, SUN_SHADOW } from '../src/view/gl/sun-shadow.js';
 import { riderShadow } from '../src/view/gl/rider-shadow.js';
 import { bakeAux, AUX_CHANNELS } from '../src/view/gl/terrain-bake.js';
-import { sunOnGrid, snowLook } from '../src/view/gl/snow-material.js';
+import { sunOnGrid, snowLook, SNOW_FRAGMENT } from '../src/view/gl/snow-material.js';
 import { terrainTextureBytes, shadowBakeScratchBytes } from '../src/view/gl/gl-budget.js';
 import { createHangaLook } from '../src/view/look/hanga.js';
 import { createMapFrame } from '../src/world/map-frame.js';
@@ -162,6 +162,20 @@ describe('rider shadow', () => {
  it('writes into the object it is given and returns it', () => {
   assert.equal(riderShadow(1, sun, out), out);
   assert.equal(Math.abs(riderShadow(-2, sun, out).du), 0, 'below the ground counts as on it');
+ });
+});
+
+describe('the snow shader', () => {
+ it('uses no GLSL ES 3.0 reserved word as a name (a compile error the Node tests cannot see)', () => {
+  const reserved = ['cast', 'common', 'partition', 'active', 'filter', 'input', 'output', 'sample', 'superp',
+   'namespace', 'using', 'template', 'this', 'resource', 'subroutine', 'inline', 'noinline', 'public', 'external',
+   'interface',
+   'long', 'short', 'half', 'fixed', 'unsigned', 'hvec2', 'fvec2', 'sizeof', 'goto', 'enum', 'typedef', 'union',
+   'asm', 'class', 'volatile', 'static', 'extern'];
+  for (const word of reserved) {
+   assert.ok(!new RegExp('\\b(float|vec[234]|int|bool)\\s+' + word + '\\b').test(SNOW_FRAGMENT), word);
+  }
+  assert.match(SNOW_FRAGMENT, /uRiderShadow/);
  });
 });
 

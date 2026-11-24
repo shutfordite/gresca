@@ -179,8 +179,9 @@ void main() {
  vec3 litC = mix(uLit, uGroomLit, groomed) * mix(vec3(1.0), uSunTint, SUN_TINT);
  vec3 c = mix(shade, litC, lit);
  c = mix(c, uShade * HOLLOW_DEEP, hollow * HOLLOW_TINT);
- float cast = (1.0 - sunVisible) * SHADOW_TINT;
- c = mix(c, uShadowTint * (dot(c, vec3(0.3333)) / dot(uShadowTint, vec3(0.3333))), cast); // keeps the brightness
+ float shadowAmount = (1.0 - sunVisible) * SHADOW_TINT;
+ vec3 tinted = uShadowTint * (dot(c, vec3(0.3333)) / dot(uShadowTint, vec3(0.3333))); // the same brightness
+ c = mix(c, tinted, shadowAmount);
  c *= 1.0 + ridge * RIDGE_LIFT + (crust.b - 0.5) * 2.0 * GRAIN * near;
 
  float across = texture(uPiste, (vGrid / uPisteStep + 0.5) / uPisteSize).r;
