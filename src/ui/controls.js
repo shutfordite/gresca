@@ -78,7 +78,10 @@ export function showControls(ui, open, paused = false) {
  ui.pausep.hidden = !paused || open;
 }
 
-/** Fills the Controls screen from the table and wires the Controls buttons (menu, pause panel) and Back. hud.paused says which panel is home. */
+/**
+ * Fills the Controls screen from the table and wires the Controls buttons (menu, pause panel) and Back.
+ * hud.paused says which panel is home.
+ */
 export function bindControls(ui, hud) {
  ui.ctlBody.innerHTML = controlsHtml();
  for (const button of [ui.cb, ui.pc]) button.addEventListener('click', () => showControls(ui, true, hud.paused));

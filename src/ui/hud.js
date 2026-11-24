@@ -6,7 +6,10 @@ const MINIMAP_W_PX = 42; // CSS px, the minimap's size (index.html #mini)
 const MINIMAP_H_PX = 103;
 const POPUP_TIME = 1.6;  // s of sim time a trick popup stays on screen
 
-/** The HUD's own state: paused (true while the pause panel is up), popup {text, t: s left on screen}, where (scratch: the drawn rider on the course). */
+/**
+ * The HUD's own state: paused (true while the pause panel is up), popup {text, t: s left on screen}, where (scratch:
+ * the drawn rider on the course).
+ */
 export function createHud() {
  return { paused: false, popup: { text: '', t: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } };
 }

@@ -1,5 +1,5 @@
 // Pause (S1/F4b): the button, the Escape and P keys, the page-hidden auto-pause, the frozen simulation and camera,
-// the pause panel with the Controls screen, and Back to menu. Everything goes through the façade and the page's handlers.
+// the pause panel with the Controls screen, and Back to menu. All through the façade and the page's handlers.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './harness.js';
@@ -154,7 +154,7 @@ describe('pause', () => {
   assert.equal(g.state().input.left, 0);
  });
 
- it('the pause button is a separate element: touches on the canvas still steer, the button is not on the canvas', async () => {
+ it('a touch on the pause button is not a steer or a jump', async () => {
   const g = await running();
   g.el('pz').fire('pointerdown', { clientX: 100, clientY: 20 });
   assert.equal(g.state().input.left + g.state().input.right, 0);

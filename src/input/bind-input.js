@@ -4,7 +4,8 @@ import { pointerDown, pointerMove, pointerUp, keyDown, keyUp } from './input.js'
 
 /**
  * Listens on canvas (pointers) and target (keys: the window). After each event, onChange(input) runs (the glove
- * hints). onPause() runs on the pause keys (a press, not a key repeat). Pointer positions are CSS px; the canvas's current width decides which half a finger is on.
+ * hints). onPause() runs on the pause keys (a press, not a key repeat). Pointer positions are CSS px; the canvas's
+ * current width decides which half a finger is on.
  */
 export function bindInput(canvas, target, input, onChange, onPause = () => {}) {
  const half = () => canvas.clientWidth / 2;
