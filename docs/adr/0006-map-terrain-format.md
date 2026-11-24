@@ -65,7 +65,7 @@ disk, 2.6 MB in memory. El Tarter's 7 × 7 km box at 10 m is about 1.3 MB on dis
 2 MB file and C4's 60 MB budget, so the heights are one block, not tiles (tiling can be a new encoding later).
 
 ## Not in this file (deferred)
-The course (C3b: chosen runs, widths, park, start and finish), `meanSlopeDeg` of the run (needs the course), the sun,
+The course (C3b, now ADR 0010: chosen runs, widths, park, start and finish), `meanSlopeDeg` of the run (needs the course), the sun,
 the horizon profile, tree areas (R6) and snow parks. They are new optional fields or the course file, added
 additively; any change that breaks a reader is `gresca-map-2`.
 

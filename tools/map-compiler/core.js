@@ -3,6 +3,11 @@
 import {
  FORMAT, KIND_TERRAIN, PROJECTION, POINT_ROUND_M, encodeHeights, roundTo,
 } from './format.js';
+import { KIND_COURSE, DEFAULT_SUN_ELEVATION_DEG } from './course-format.js';
+import {
+ compassBearingDeg, computeHorizon, difficultyOf, measureMeanSlopeDeg, runCourse, selectParts, terrainLayer,
+} from './course-run.js';
+import { DIFFICULTY_WIDTH_M } from '../../src/world/polyline-course.js';
 
 /** The compiler's name and version, written into every file it makes. */
 export const GENERATOR = 'gresca-map-compiler/1';
@@ -219,8 +224,12 @@ function dedupe(points) {
 }
 
 // One source record, in the file's key order. Strings default to ''.
-function sourceRecord(s, fixes) {
+function sourceRecord(s, fixes, forCourse = false) {
  const str = (v) => (typeof v === 'string' ? v : '');
+ if (forCourse) {
+  return { role: str(s.role), name: str(s.name), url: str(s.url), licence: str(s.licence),
+   attribution: str(s.attribution), retrieved: str(s.retrieved) };
+ }
  const record = {
   role: str(s.role), name: str(s.name), url: str(s.url), licence: str(s.licence),
   attribution: str(s.attribution), retrieved: str(s.retrieved), files: Number.isInteger(s.files) ? s.files : 0,
@@ -263,6 +272,60 @@ export function compileTerrain({ config, dem, pistes = [], lifts = [], sources }
    name: r.name, difficulty: r.difficulty, grooming: r.grooming, area: r.area,
   })),
   lifts: placeLines(lifts, projection, grid.bounds, (l) => ({ name: l.name, kind: l.kind })),
+ };
+}
+
+const SUN_SIDE_DEG = 90; // deg, the default sun stands to the side of the run, which lights the slope's relief
+const SLOPE_ROUND_DEG = 0.01; // deg, meanSlopeDeg's rounding
+const HORIZON_ROUND_DEG = 0.1; // deg, the horizon profile's rounding
+const SUN_ROUND_DEG = 1; // deg, the default sun azimuth's rounding
+
+/**
+ * The course file (a plain object, key order fixed) for a validated terrain file and a run {osm: ["way/1", ...]} or
+ * {name}. Optional: name, widthM (m, default by the run's difficulty), startS and finishS (m of s, default the whole
+ * run), kickers and rails (park items in (s, d), see docs/adr/0010), sun {azimuthDeg, elevationDeg} (compass deg;
+ * default side light 90 deg off the run's direction, 16 deg up), treeSet (default 'pine'), horizonStepDeg (default
+ * 1). The far horizon layer repeats the near one: only the terrain grid is known here. Throws an Error when the run
+ * is not in the terrain or does not join. Write it with stringifyMap().
+ */
+export function compileCourse({ terrain, run, name, widthM, startS = 0, finishS, kickers = [], rails = [], sun,
+ treeSet = 'pine', horizonStepDeg = 1 }) {
+ const layer = terrainLayer(terrain);
+ const { parts, problems } = selectParts(terrain, run);
+ if (problems.length > 0) throw new Error('compileCourse: ' + problems.join('; '));
+ const course = runCourse(terrain, parts, layer);
+ const end = finishS ?? course.length;
+ const difficulty = difficultyOf(parts);
+ const width = widthM ?? DIFFICULTY_WIDTH_M[difficulty];
+ const top = course.point(startS, 0, {});
+ const bottom = course.point(end, 0, {});
+ const middle = course.point((startS + end) / 2, 0, {});
+ const profile = Array.from(computeHorizon(terrain, layer, middle.x, middle.y, horizonStepDeg),
+  (v) => roundTo(v, HORIZON_ROUND_DEG));
+ const slope = measureMeanSlopeDeg(course, layer, startS, end);
+ const runName = name ?? (parts.find((p) => p.name)?.name || terrain.name);
+ return {
+  format: FORMAT,
+  kind: KIND_COURSE,
+  id: terrain.id,
+  name: runName,
+  generator: GENERATOR,
+  licence: 'ODbL-1.0',
+  terrain: { id: terrain.id, heightsFnv1a32: terrain.heights.fnv1a32 },
+  sources: terrain.sources.map((s) => sourceRecord(s, null, true)),
+  run: { osm: [...new Set(parts.flatMap((p) => p.osm))].sort(), name: run.name || runName, difficulty },
+  widths: [[0, roundTo(width, POINT_ROUND_M)]],
+  startS: roundTo(startS, POINT_ROUND_M),
+  finishS: roundTo(end, POINT_ROUND_M),
+  meanSlopeDeg: roundTo(slope, SLOPE_ROUND_DEG),
+  kickers,
+  rails,
+  sun: sun ?? {
+   azimuthDeg: roundTo((compassBearingDeg(top, bottom) + SUN_SIDE_DEG) % 360, SUN_ROUND_DEG),
+   elevationDeg: DEFAULT_SUN_ELEVATION_DEG,
+  },
+  treeSet,
+  horizon: { stepDeg: horizonStepDeg, source: 'terrain-grid', near: profile, far: profile.slice() },
  };
 }
 

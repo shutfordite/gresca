@@ -3,7 +3,7 @@
 
 /** The format tag of a terrain file. */
 export const FORMAT = 'gresca-map-1';
-/** What kind of gresca-map-1 file this is (C3b adds 'course'). */
+/** What kind of gresca-map-1 file this is (the course kind is in course-format.js). */
 export const KIND_TERRAIN = 'terrain';
 /** The horizontal projection: WGS84 lat/lon onto the tangent plane at the origin (core.js createProjection). */
 export const PROJECTION = 'wgs84-tangent-plane';

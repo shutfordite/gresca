@@ -190,10 +190,13 @@ describe('validateTerrain warns', () => {
 
 describe('the validator and format modules', () => {
  it('are pure: they import only each other and name no Node or browser API', () => {
-  for (const f of ['validate.js', 'format.js']) {
+  // The course half (ADR 0010) adds its sibling modules and the pure src/world/ modules the game also loads.
+  const allowed = (s) => ['./format.js', './course-format.js', './course-run.js'].includes(s) ||
+   /^\.\.\/\.\.\/src\/world\/[a-z-]+\.js$/.test(s);
+  for (const f of ['validate.js', 'format.js', 'course-format.js', 'course-run.js']) {
    const src = fs.readFileSync(path.join(ROOT, 'tools', 'map-compiler', f), 'utf8');
    const imports = [...src.matchAll(/^import[^;]*from\s+'([^']+)'/gm)].map((m) => m[1]);
-   assert.ok(imports.every((s) => s === './format.js'), f + ' imports ' + imports);
+   assert.ok(imports.every(allowed), f + ' imports ' + imports);
    const code = src.replace(/\/\/.*$/gm, '').replace(/'(?:[^'\\]|\\.)*'/g, "''");
    for (const api of ['process', 'Buffer', 'require', 'window', 'document', 'fetch', 'Date', 'Math.random']) {
     assert.ok(!new RegExp('\\b' + api.replace('.', '\\.') + '\\b').test(code), f + ' names ' + api);

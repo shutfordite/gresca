@@ -94,8 +94,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `tools/map-compiler/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the file | `tools/map-compiler/core.js` (pure) | `map-compiler` |
 | DEM and piste sources (Terrarium PNG tiles; OpenSkiMap, Overpass) | `tools/map-compiler/sources/` | `map-compiler` |
-| Map validator (pure; the game reuses it in C4) | `tools/map-compiler/validate.js` | `map-validate` |
-| Baking a map: download cache, `--fetch` (run by the owner) | `tools/map-compiler/cli.mjs`, `maps/sources/<id>.json` | `map-compiler` |
+| Map validators (pure; the game reuses them in C4): terrain `validateTerrain`, course `validateCourse` | `tools/map-compiler/validate.js` | `map-validate`, `map-course` |
+| The course file `gresca-map-1` kind `course` (`maps/<id>.course.json`): constants and limits; the run behind it (piste selection, `Course.fromRun`, mean slope, horizon); `compileCourse` | `tools/map-compiler/course-format.js`, `course-run.js`, `core.js`, ADR 0010 | `map-course` |
+| Baking a map: download cache, `--fetch` (run by the owner); `--course` writes the course file offline | `tools/map-compiler/cli.mjs`, `maps/sources/<id>.json` | `map-compiler`, `map-course` |
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
 
 Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.

@@ -3,6 +3,11 @@
 import {
  FORMAT, KIND_TERRAIN, PROJECTION, HEIGHT_ENCODING, SPIKE_MIN_M, SPIKE_SLOPE, fnv1a32, heightBytes, median8,
 } from './format.js';
+import {
+ KIND_COURSE, TREE_SETS, RAIL_TYPES, MEAN_SLOPE_TOLERANCE_DEG, MAX_MEAN_SLOPE_DEG, WIDTH_RANGE_M, MIN_LENGTH_M,
+ RUN_BOUNDS_TOLERANCE_M, SUN_ELEVATION_RANGE_DEG, HORIZON_STEPS_DEG, HORIZON_ANGLE_RANGE_DEG,
+} from './course-format.js';
+import { measureMeanSlopeDeg, runCourse, selectParts, terrainLayer } from './course-run.js';
 
 /** The validator's size limits: anything larger is rejected before it is decoded or walked. */
 export const VALIDATE_LIMITS = Object.freeze({
@@ -47,10 +52,10 @@ export function validateTerrain(input) {
  return { ok: report.errors.length === 0, errors: report.errors, warnings: report.warnings, stats: report.stats };
 }
 
-function parse(input, report) {
+function parse(input, report, maxChars = VALIDATE_LIMITS.fileChars) {
  if (typeof input !== 'string') return input;
- if (input.length > VALIDATE_LIMITS.fileChars) {
-  report.errors.push('(file): ' + input.length + ' characters is over the limit of ' + VALIDATE_LIMITS.fileChars);
+ if (input.length > maxChars) {
+  report.errors.push('(file): ' + input.length + ' characters is over the limit of ' + maxChars);
   return undefined;
  }
  try {
@@ -301,4 +306,314 @@ function checkPoints(points, bounds, field, at) {
   }
  }
  return points.length;
+}
+
+/** The course validator's size limits (a course file is small and authored: far under the terrain's). */
+export const COURSE_LIMITS = Object.freeze({
+ fileChars: 1024 * 1024, // characters of JSON text
+ osm: 200, // OSM ids in the run
+ widths: 200, // width stops
+ items: 500, // kickers, and rails
+});
+const KICKER_HALF_WIDTH_M = Object.freeze({ min: 0.5, max: 20 }); // m, a kicker's launch zone across
+const KICKER_DEPTH_M = Object.freeze({ min: 1, max: 40 }); // m, a kicker's launch zone along
+const KICKER_GAIN = Object.freeze({ min: 0.5, max: 3 }); // dimensionless, launchGain (sim/jump.js: 1 and 1.35)
+const RAIL_HEIGHT_M = Object.freeze({ min: 0.05, max: 3 }); // m, a rail's or box's top above the snow
+const COURSE_TOP_KEYS = ['format', 'kind', 'id', 'name', 'generator', 'licence', 'terrain', 'sources', 'run',
+ 'widths', 'startS', 'finishS', 'meanSlopeDeg', 'kickers', 'rails', 'sun', 'treeSet', 'horizon'];
+const COMPASS_FULL_DEG = 360;
+
+/**
+ * Checks a course file (JSON text or a parsed value) and, when terrain is given (a terrain file that
+ * validateTerrain() accepted), the course against it: the run exists and joins, lies inside the bounds, is long
+ * enough, the park and finish fit on it, and meanSlopeDeg matches the run measured on that terrain. Without terrain
+ * only the file itself is checked. Returns {ok, errors: [string], warnings: [string], stats: {lengthM,
+ * measuredMeanSlopeDeg} or null}. Never throws on bad input.
+ */
+export function validateCourse(input, terrain = null) {
+ const report = { errors: [], warnings: [], stats: null };
+ const file = parse(input, report, COURSE_LIMITS.fileChars);
+ if (file !== undefined && checkTree(file, report) && isRecord(file)) {
+  const ctx = courseContext(file, report);
+  checkCourseFile(file, ctx);
+  if (terrain && ctx.fileOk) checkAgainstTerrain(file, terrain, ctx);
+ } else if (report.errors.length === 0) report.errors.push('(root): must be an object');
+ return { ok: report.errors.length === 0, errors: report.errors, warnings: report.warnings, stats: report.stats };
+}
+
+function courseContext(f, report) {
+ const name = (typeof f.id === 'string' && ID_PATTERN.test(f.id) ? f.id : '(unknown id)') + '.course.json';
+ const at = (field, why) => {
+  if (report.errors.length < VALIDATE_LIMITS.errors) report.errors.push(name + ' ' + field + ': ' + why);
+ };
+ return { report, name, at, fileOk: false };
+}
+
+function checkCourseFile(f, ctx) {
+ const { at, report, name } = ctx;
+ const before = report.errors.length;
+ if (f.format !== FORMAT) at('format', 'must be "' + FORMAT + '"');
+ if (f.kind !== KIND_COURSE) at('kind', 'must be "' + KIND_COURSE + '"');
+ if (typeof f.id !== 'string' || !ID_PATTERN.test(f.id)) at('id', 'must be lower-case kebab-case, 1..64 characters');
+ checkText(f, 'name', at, true);
+ checkText(f, 'generator', at, false);
+ if (f.licence !== 'ODbL-1.0') at('licence', 'must be "ODbL-1.0": the run comes from OpenStreetMap');
+ for (const key of Object.keys(f)) {
+  if (!COURSE_TOP_KEYS.includes(key)) report.warnings.push(name + ': unknown field "' + key + '" is ignored');
+ }
+ checkTerrainRef(f, at);
+ checkCourseSources(f, at);
+ checkRunRef(f, at);
+ const widths = checkWidths(f, at);
+ const span = checkSpan(f, at);
+ if (!isNumber(f.meanSlopeDeg) || f.meanSlopeDeg < 0 || f.meanSlopeDeg > MAX_MEAN_SLOPE_DEG) {
+  at('meanSlopeDeg', 'must be 0..' + MAX_MEAN_SLOPE_DEG + ' deg');
+ }
+ if (widths && span) {
+  checkKickers(f.kickers, widths, span, at);
+  checkRails(f.rails, widths, span, at);
+ }
+ checkSun(f.sun, at);
+ if (!TREE_SETS.includes(f.treeSet)) at('treeSet', 'must be one of ' + TREE_SETS.join(', '));
+ checkHorizon(f.horizon, at);
+ ctx.widths = widths;
+ ctx.fileOk = report.errors.length === before;
+}
+
+function checkTerrainRef(f, at) {
+ const t = f.terrain;
+ if (!isRecord(t)) return at('terrain', 'must be {id, heightsFnv1a32}: the terrain this course was authored on');
+ if (t.id !== f.id) at('terrain.id', 'must be "' + f.id + '": a course is <id>.course.json beside <id>.terrain.json');
+ if (typeof t.heightsFnv1a32 !== 'string' || !/^[0-9a-f]{8}$/.test(t.heightsFnv1a32)) {
+  at('terrain.heightsFnv1a32', 'must be 8 hex digits');
+ }
+}
+
+// A course is OSM-derived: it carries the ODbL licence and the credit for the pistes (and the elevation source).
+function checkCourseSources(f, at) {
+ if (!Array.isArray(f.sources) || f.sources.length === 0) return at('sources', 'must list at least one source');
+ if (f.sources.length > VALIDATE_LIMITS.sources) return at('sources', 'more than ' + VALIDATE_LIMITS.sources);
+ f.sources.forEach((s, i) => {
+  const field = 'sources[' + i + ']';
+  if (!isRecord(s)) return at(field, 'must be an object');
+  if (!ROLES.has(s.role)) at(field + '.role', 'must be one of ' + [...ROLES].join(', '));
+  for (const k of ['name', 'licence', 'attribution']) checkText(s, k, at, true, field + '.' + k);
+  for (const k of ['url', 'retrieved']) checkText(s, k, at, false, field + '.' + k);
+ });
+ const credited = f.sources.some((s) => isRecord(s) && (s.role === 'pistes' || s.role === 'lifts') &&
+  /ODbL/.test(String(s.licence)) && /OpenStreetMap/.test(String(s.attribution)));
+ if (!credited) at('sources', 'needs a pistes source with an ODbL licence crediting OpenStreetMap (ODbL attribution)');
+}
+
+function checkRunRef(f, at) {
+ const run = f.run;
+ if (!isRecord(run)) return at('run', 'must be {osm, name, difficulty}');
+ const osm = run.osm;
+ const hasOsm = Array.isArray(osm) && osm.length > 0;
+ if (osm !== undefined && !Array.isArray(osm)) at('run.osm', 'must be a list of OSM ids like "way/123"');
+ else if (hasOsm && (osm.length > COURSE_LIMITS.osm || !osm.every((id) => typeof id === 'string' && OSM_ID.test(id)))) {
+  at('run.osm', 'must be at most ' + COURSE_LIMITS.osm + ' OSM ids like "way/123"');
+ }
+ checkText(run, 'name', at, !hasOsm, 'run.name');
+ checkText(run, 'difficulty', at, false, 'run.difficulty');
+ if (typeof run.difficulty === 'string' && !DIFFICULTIES.has(run.difficulty)) {
+  at('run.difficulty', 'must be one of ' + [...DIFFICULTIES].map((d) => '"' + d + '"').join(', '));
+ }
+}
+
+// The width stops [[s, m], ...]; returns them when usable, else null.
+function checkWidths(f, at) {
+ const w = f.widths;
+ if (!Array.isArray(w) || w.length === 0 || w.length > COURSE_LIMITS.widths) {
+  return at('widths', 'must be 1..' + COURSE_LIMITS.widths + ' stops [s, widthM]') ?? null;
+ }
+ let ok = true;
+ w.forEach((stop, i) => {
+  const field = 'widths[' + i + ']';
+  if (!Array.isArray(stop) || stop.length !== 2 || !isNumber(stop[0]) || !isNumber(stop[1])) {
+   ok = false;
+   return at(field, 'must be [s, widthM] in metres');
+  }
+  if (stop[1] < WIDTH_RANGE_M.min || stop[1] > WIDTH_RANGE_M.max) {
+   ok = false;
+   at(field, 'width ' + stop[1] + ' m is outside ' + WIDTH_RANGE_M.min + '..' + WIDTH_RANGE_M.max + ' m');
+  }
+  if (i > 0 && !(stop[0] > w[i - 1][0])) {
+   ok = false;
+   at(field, 's ' + stop[0] + ' m must be greater than the previous stop\'s (stops are in s order)');
+  }
+ });
+ if (ok && w[0][0] !== 0) {
+  ok = false;
+  at('widths[0]', 'must start at s 0');
+ }
+ return ok ? w : null;
+}
+
+function checkSpan(f, at) {
+ if (!isNumber(f.startS) || !isNumber(f.finishS) || f.startS < 0) {
+  at('startS', 'startS and finishS must be numbers of metres, startS >= 0');
+  return null;
+ }
+ if (!(f.startS < f.finishS)) {
+  at('finishS', 'finish (' + f.finishS + ' m) must be after the start (' + f.startS + ' m)');
+  return null;
+ }
+ if (f.finishS - f.startS < MIN_LENGTH_M) {
+  at('finishS', 'the run from start to finish must be at least ' + MIN_LENGTH_M + ' m');
+ }
+ return { startS: f.startS, finishS: f.finishS };
+}
+
+/** m, the width of the piste at s: the stops [[s, m], ...] joined by straight lines, constant past the ends. */
+export function widthAtS(widths, s) {
+ if (s <= widths[0][0]) return widths[0][1];
+ for (let i = 1; i < widths.length; i++) {
+  if (s <= widths[i][0]) {
+   const t = (s - widths[i - 1][0]) / (widths[i][0] - widths[i - 1][0]);
+   return widths[i - 1][1] + t * (widths[i][1] - widths[i - 1][1]);
+  }
+ }
+ return widths[widths.length - 1][1];
+}
+
+// m, the narrowest the piste is anywhere in [a, b]: at a, at b or at a stop between them.
+function narrowestOver(widths, a, b) {
+ let least = Math.min(widthAtS(widths, a), widthAtS(widths, b));
+ for (const [s, m] of widths) if (s > a && s < b) least = Math.min(least, m);
+ return least;
+}
+
+function checkList(list, key, at) {
+ if (!Array.isArray(list)) return at(key, 'must be an array') ?? false;
+ if (list.length > COURSE_LIMITS.items) return at(key, 'more than ' + COURSE_LIMITS.items + ' items') ?? false;
+ return true;
+}
+
+function checkKickers(list, widths, span, at) {
+ if (!checkList(list, 'kickers', at)) return;
+ let previous = -Infinity;
+ list.forEach((k, i) => {
+  const field = 'kickers[' + i + ']';
+  if (!isRecord(k) || ![k.s, k.d, k.halfWidth, k.depth].every(isNumber) || typeof k.big !== 'boolean') {
+   return at(field, 'must be {s, d, halfWidth, depth (m), big (true or false)}');
+  }
+  if (!(k.halfWidth >= KICKER_HALF_WIDTH_M.min && k.halfWidth <= KICKER_HALF_WIDTH_M.max)) {
+   at(field + '.halfWidth', 'must be ' + KICKER_HALF_WIDTH_M.min + '..' + KICKER_HALF_WIDTH_M.max + ' m');
+  }
+  if (!(k.depth >= KICKER_DEPTH_M.min && k.depth <= KICKER_DEPTH_M.max)) {
+   at(field + '.depth', 'must be ' + KICKER_DEPTH_M.min + '..' + KICKER_DEPTH_M.max + ' m');
+  }
+  if (k.launchGain !== undefined && !(k.launchGain >= KICKER_GAIN.min && k.launchGain <= KICKER_GAIN.max)) {
+   at(field + '.launchGain', 'must be ' + KICKER_GAIN.min + '..' + KICKER_GAIN.max + ' (dimensionless)');
+  }
+  if (!(k.s > previous)) at(field + '.s', k.s + ' m is not after the previous kicker (kickers are in s order)');
+  previous = k.s;
+  if (k.s < span.startS || k.s + k.depth > span.finishS) {
+   at(field + '.s', 'the kicker (' + k.s + ' to ' + (k.s + k.depth) + ' m) must lie between the start and the finish');
+  }
+  const half = narrowestOver(widths, k.s, k.s + k.depth) / 2;
+  if (Math.abs(k.d) + k.halfWidth > half) {
+   at(field + '.d', 'the kicker (d ' + k.d + ' m, half-width ' + k.halfWidth + ' m) is outside the piste width (+-' +
+    half + ' m)');
+  }
+ });
+}
+
+function checkRails(list, widths, span, at) {
+ if (!checkList(list, 'rails', at)) return;
+ let previous = -Infinity;
+ list.forEach((r, i) => {
+  const field = 'rails[' + i + ']';
+  if (!isRecord(r) || ![r.s0, r.s1, r.d, r.h].every(isNumber) || !RAIL_TYPES.includes(r.t)) {
+   return at(field, 'must be {s0, s1, d, h (m), t: ' + RAIL_TYPES.map((t) => '"' + t + '"').join(' or ') + '}');
+  }
+  if (!(r.s1 > r.s0)) at(field + '.s1', 'must be after s0');
+  if (!(r.h >= RAIL_HEIGHT_M.min && r.h <= RAIL_HEIGHT_M.max)) {
+   at(field + '.h', 'must be ' + RAIL_HEIGHT_M.min + '..' + RAIL_HEIGHT_M.max + ' m');
+  }
+  if (!(r.s0 >= previous)) at(field + '.s0', r.s0 + ' m is before the previous rail (rails are in s order)');
+  previous = r.s0;
+  if (r.s0 < span.startS || r.s1 > span.finishS) {
+   at(field + '.s0', 'the rail (' + r.s0 + ' to ' + r.s1 + ' m) must lie between the start and the finish');
+  }
+  const half = narrowestOver(widths, r.s0, r.s1) / 2;
+  if (Math.abs(r.d) > half) {
+   at(field + '.d', 'the rail (d ' + r.d + ' m) is outside the piste width (+-' + half + ' m)');
+  }
+ });
+}
+
+// The sun is the one place a course holds compass degrees (clockwise from north), as the art spec wants them.
+function checkSun(sun, at) {
+ if (!isRecord(sun) || !isNumber(sun.azimuthDeg) || !isNumber(sun.elevationDeg)) {
+  return at('sun', 'must be {azimuthDeg, elevationDeg} in compass degrees');
+ }
+ if (sun.azimuthDeg < 0 || sun.azimuthDeg >= COMPASS_FULL_DEG) at('sun.azimuthDeg', 'must be 0..360 deg (compass)');
+ if (sun.elevationDeg < SUN_ELEVATION_RANGE_DEG.min || sun.elevationDeg > SUN_ELEVATION_RANGE_DEG.max) {
+  at('sun.elevationDeg', 'must be ' + SUN_ELEVATION_RANGE_DEG.min + '..' + SUN_ELEVATION_RANGE_DEG.max + ' deg');
+ }
+}
+
+// {stepDeg, near, far}: degrees above the horizontal for each compass heading, as the spec's mountains.real wants.
+function checkHorizon(h, at) {
+ if (!isRecord(h)) return at('horizon', 'must be {stepDeg, near, far}');
+ if (!HORIZON_STEPS_DEG.includes(h.stepDeg)) {
+  return at('horizon.stepDeg', 'must be a whole number of degrees that divides 360 (1 to 10)');
+ }
+ checkText(h, 'source', at, false, 'horizon.source');
+ const count = COMPASS_FULL_DEG / h.stepDeg;
+ for (const layer of ['near', 'far']) {
+  const v = h[layer];
+  if (!Array.isArray(v) || v.length !== count) {
+   at('horizon.' + layer, 'must be ' + count + ' angles (one per ' + h.stepDeg + ' deg of compass heading)');
+  } else {
+   const bad = v.findIndex((a) => !isNumber(a) || a < HORIZON_ANGLE_RANGE_DEG.min || a > HORIZON_ANGLE_RANGE_DEG.max);
+   if (bad >= 0) {
+    at('horizon.' + layer + '[' + bad + ']', 'must be ' + HORIZON_ANGLE_RANGE_DEG.min + '..' +
+     HORIZON_ANGLE_RANGE_DEG.max + ' deg above the horizontal');
+   }
+  }
+ }
+}
+
+// The checks that need the terrain: the run, its length and place, and its measured slope.
+function checkAgainstTerrain(f, terrain, ctx) {
+ const { at, report } = ctx;
+ if (terrain.id !== f.id) return at('id', 'is "' + f.id + '" but the terrain file is "' + terrain.id + '"');
+ if (terrain.heights && terrain.heights.fnv1a32 !== f.terrain.heightsFnv1a32) {
+  report.warnings.push(ctx.name + ' terrain.heightsFnv1a32: the terrain was re-baked since this course was made; ' +
+   'check the run, the park and meanSlopeDeg against it');
+ }
+ const { parts, problems } = selectParts(terrain, f.run);
+ if (problems.length > 0) return problems.forEach((p) => at('run', p));
+ let course;
+ let layer;
+ try {
+  layer = terrainLayer(terrain);
+  course = runCourse(terrain, parts, layer);
+ } catch (e) {
+  return at('run', 'does not make a course: ' + e.message);
+ }
+ if (!runIsInside(course, terrain.bounds)) at('run', 'leaves the terrain\'s bounds');
+ if (course.length < MIN_LENGTH_M) at('run', 'is ' + Math.round(course.length) + ' m long, under ' + MIN_LENGTH_M + ' m');
+ if (f.finishS > course.length) {
+  return at('finishS', f.finishS + ' m is past the end of the run (' + Math.round(course.length * 10) / 10 + ' m)');
+ }
+ const measured = measureMeanSlopeDeg(course, layer, f.startS, f.finishS);
+ report.stats = { lengthM: course.length, measuredMeanSlopeDeg: measured };
+ if (!(measured > 0)) at('startS', 'the start must be above the finish: the run climbs ' + (-measured).toFixed(1) + ' deg');
+ if (Math.abs(measured - f.meanSlopeDeg) > MEAN_SLOPE_TOLERANCE_DEG) {
+  at('meanSlopeDeg', f.meanSlopeDeg + ' deg does not match the run measured on the terrain (' + measured.toFixed(2) +
+   ' deg, tolerance ' + MEAN_SLOPE_TOLERANCE_DEG + ' deg)');
+ }
+}
+
+function runIsInside(course, b) {
+ const { xy } = course.centreline();
+ const t = RUN_BOUNDS_TOLERANCE_M;
+ for (let i = 0; i < xy.length; i += 2) {
+  if (xy[i] < b.minX - t || xy[i] > b.maxX + t || xy[i + 1] < b.minY - t || xy[i + 1] > b.maxY + t) return false;
+ }
+ return true;
 }
