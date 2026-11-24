@@ -68,15 +68,22 @@ export function controlsHtml(bindings = BINDINGS) {
  return '<h1>Controls</h1>' + section('touch', 'Touch') + section('keyboard', 'Keyboard');
 }
 
-/** Opens (true) or closes (false) the Controls screen in place of the menu; ui: dom.js getUi(). */
-export function showControls(ui, open) {
+/**
+ * Opens (true) or closes (false) the Controls screen in place of its home panel: the pause panel while paused, the
+ * menu otherwise; closing shows that home panel again. ui: dom.js getUi().
+ */
+export function showControls(ui, open, paused = false) {
  ui.ctl.hidden = !open;
- ui.menuMain.hidden = open;
+ ui.menuMain.hidden = paused || open;
+ ui.pausep.hidden = !paused || open;
 }
 
-/** Fills the Controls screen from the table and wires the menu's Controls button and the screen's Back button. */
-export function bindControls(ui) {
+/**
+ * Fills the Controls screen from the table and wires the Controls buttons (menu, pause panel) and Back.
+ * hud.paused says which panel is home.
+ */
+export function bindControls(ui, hud) {
  ui.ctlBody.innerHTML = controlsHtml();
- ui.cb.addEventListener('click', () => showControls(ui, true));
- ui.cc.addEventListener('click', () => showControls(ui, false));
+ for (const button of [ui.cb, ui.pc]) button.addEventListener('click', () => showControls(ui, true, hud.paused));
+ ui.cc.addEventListener('click', () => showControls(ui, false, hud.paused));
 }
