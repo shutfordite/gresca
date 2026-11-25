@@ -64,10 +64,12 @@ test('every <script src> exists', () => {
 
 // The look lab (lab.html, P4) is a second page: its one module script imports src/view/look/lab.js, the lab's root.
 const LAB_ROOTS = ['src/view/look/lab.js'];
+// Modules built ahead of the code that loads them: the map loader (C4a) until the menu uses it (C4b removes this).
+const PENDING_ROOTS = ['src/world/map-loader.js'];
 
 test('every module in src/ is reached from src/main.js (or, for the look lab, from lab.html\'s module) through ' +
   'static imports, and every import exists', () => {
-  const seen = new Set(), todo = [ENTRY, ...LAB_ROOTS];
+  const seen = new Set(), todo = [ENTRY, ...LAB_ROOTS, ...PENDING_ROOTS];
   while (todo.length) {
     const f = todo.pop();
     if (seen.has(f)) continue;
@@ -91,8 +93,16 @@ test('every module in src/ is reached from src/main.js (or, for the look lab, fr
       walk.push(path.posix.normalize(path.posix.join(path.posix.dirname(f), spec)));
   }
   for (const f of LAB_ROOTS) assert.ok(!fromMain.has(f), `${f} is the lab's root: the game must not load it`);
-  const orphans = listJs('src').filter((f) => !fromMain.has(f) && !LAB_ROOTS.includes(f));
-  assert.deepEqual(orphans, [], 'only the lab root may be outside what main.js reaches');
+  const pending = new Set(), ahead = [...PENDING_ROOTS];
+  while (ahead.length) {
+    const f = ahead.pop();
+    if (pending.has(f)) continue;
+    pending.add(f);
+    for (const spec of staticImports(fs.readFileSync(path.join(ROOT, f), 'utf8')))
+      ahead.push(path.posix.normalize(path.posix.join(path.posix.dirname(f), spec)));
+  }
+  const orphans = listJs('src').filter((f) => !fromMain.has(f) && !LAB_ROOTS.includes(f) && !pending.has(f));
+  assert.deepEqual(orphans, [], 'only the lab root and the pending roots may be outside what main.js reaches');
 });
 
 test('the import scanner finds static imports and re-exports', () => {
