@@ -71,8 +71,13 @@ Updated 25 Nov 2026, main after PR #54.
 
 ## Owner to do
 - **Bake El Tarter** (the agents' sandbox blocks the tile and piste hosts): `node tools/map-compiler/cli.mjs --config
-  maps/sources/el-tarter.json --fetch`, then `--course --terrain maps/el-tarter.terrain.json --run-name "<piste>"` (the first run is still to be picked, `docs/REAL-WORLD-DATA.md` question 1), and commit `maps/el-tarter.terrain.json`
-  and `maps/el-tarter.course.json`. C4b's acceptance (El Tarter rideable start to finish) waits on it.
+  maps/sources/el-tarter.json --fetch`, then list the piste names the file holds with
+  `node -e "const t=require('./maps/el-tarter.terrain.json');console.log([...new Set(t.pistes.map(p=>p.name))].join('\n'))"`,
+  and write the course with `--course --terrain maps/el-tarter.terrain.json --run-name "<name>"` (the name must match
+  exactly, accents included). Commit `maps/el-tarter.terrain.json` and `maps/el-tarter.course.json`. C4b's acceptance
+  (El Tarter rideable start to finish) waits on it.
+- **The first real course (owner, 25 Nov):** El Tarter's snow park if OpenSkiMap maps it as a piste; otherwise Àliga.
+  The snow park's kickers and rails go in the course file's park layout (ADR 0010) until real park features are mapped.
 
 ## Known issues (not yet fixed)
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
