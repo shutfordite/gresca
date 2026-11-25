@@ -61,6 +61,7 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
 | Riding physics: steer, grip, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
 | The brake (yaw across the fall line, skid friction) and its tunables | `src/sim/brake.js`, `src/sim/tuning.js` | `brake`, `physics`, `golden` |
+| The edge and carve (steer sets an edge angle, carve radius from the rig's sidecut, skid past the edge's grip) and its tunables; rig data in `RIGS` | `src/sim/edge.js`, `src/sim/tuning.js`, `src/core/config.js` | `edge`, `physics`, `park`, `golden` |
 | Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
 | Rails and boxes | `src/sim/grind.js` | `park`, `sim` |
 | Snow spray | `src/sim/particles.js` | `features`, `sim` |
