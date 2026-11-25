@@ -147,7 +147,10 @@ test('F7: skis ridden switch look over the downhill-side shoulder', async (t) =>
   await t.test('the swap takes about 0.3 s', () => {
     const s = settleSw();
     const timeToSwap = () => {
-      for (let i = 1; i < 120; i++) { RA.update(s, sw({ downhillSide: -1, fallAngle: -1.2 }), DT); if (s.headYaw > 85) return i * DT; }
+      for (let i = 1; i < 120; i++) {
+        RA.update(s, sw({ downhillSide: -1, fallAngle: -1.2 }), DT);
+        if (s.headYaw > 85) return i * DT;
+      }
       return Infinity;
     };
     const took = timeToSwap();

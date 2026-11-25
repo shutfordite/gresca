@@ -80,7 +80,8 @@ RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regul
 
 RA.create = function (rig) {
  return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
-          turn: 0, twist: 0, headYaw: 0, brakeW: 0, fakieW: 0, fakieSide: 0, fakieLook: 0, ahead: null, lookSide: 0, brakeSide: null,
+          turn: 0, twist: 0, headYaw: 0, brakeW: 0, fakieW: 0, fakieSide: 0, fakieLook: 0, ahead: null, lookSide: 0,
+          brakeSide: null,
           roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
           landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
 };
@@ -123,7 +124,8 @@ RA.update = function (s, inp, dt) {
  // F7: a skier riding switch looks over the downhill-side shoulder; the side keeps a hysteresis around the fall line
  var fakie = rig === 'ski' && !!inp.isSwitch && onSnow;
  if (fakie) {
-  var ds = inp.downhillSide || 0, sa = inp.fallAngle != null ? Math.sin(inp.fallAngle) : ds, hy = inp.fallAngle != null ? Math.sin(T.fakieHyst * D2R) : 0;
+  var ds = inp.downhillSide || 0, hasAngle = inp.fallAngle != null;
+  var sa = hasAngle ? Math.sin(inp.fallAngle) : ds, hy = hasAngle ? Math.sin(T.fakieHyst * D2R) : 0;
   if (!s.fakieSide) s.fakieSide = sa > 0 ? 1 : sa < 0 ? -1 : (ds || -1);
   else if (s.fakieSide > 0 && sa < -hy) s.fakieSide = -1;
   else if (s.fakieSide < 0 && sa > hy) s.fakieSide = 1;
@@ -133,7 +135,8 @@ RA.update = function (s, inp, dt) {
  // turn is already in the rider's frame (riderSide), so poseFor gets goofy: false and toe stays the +x edge
  var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne,
                             landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide,
-                            approach: inp.approach && onSnow, isSwitch: fakie, lookSide: s.fakieSide > 0 ? 'left' : 'right',
+                            approach: inp.approach && onSnow, isSwitch: fakie,
+                            lookSide: s.fakieSide > 0 ? 'left' : 'right',
                             turn: s.turn, goofy: false });
  if (name !== s.pose) { s.from = copyJ(s.poseJ); s.pose = name; s.t = 0; s.dur = HANGA.blendTime(name); }
  s.t += dt;
