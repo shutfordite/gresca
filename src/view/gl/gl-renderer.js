@@ -179,7 +179,8 @@ function addSky(THREE, glScene, look) {
 /**
  * The GPU terrain on canvas (with its WebGL2 context gl) for the built world: bakes the textures (about 40 MB on the
  * GPU for the procedural map, terrain-bake.js) and builds the meshes once. Returns {render(view, scene), bytes
- * (terrainTextureBytes plus the trees' buffers), trees {drawCalls, trianglesPerTree, drawn, triangles: this frame's}}; render draws the terrain and sky for the camera updateCamera() set, at the screen canvas's
+ * (terrainTextureBytes plus the trees' buffers), trees {drawCalls, trianglesPerTree, drawn, triangles: this frame's}};
+ * render draws the terrain, sky and trees for the camera updateCamera() set, at the screen canvas's
  * size (view.W × view.Hh px). Throws if the GPU cannot hold the map or the textures are over GL_TEXTURE_BUDGET_MB.
  * THREE: the three.js module (env.THREE).
  */

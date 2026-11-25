@@ -99,7 +99,8 @@ describe('tree culling', () => {
   const { n, outTree, outStyle } = run(inst);
   assert.equal(n, 1);
   assert.deepEqual(Array.from(outTree.subarray(0, 4)), Array.from(inst.subarray(INSTANCE_STRIDE, INSTANCE_STRIDE + 4)));
-  assert.deepEqual(Array.from(outStyle.subarray(0, 2)), Array.from(inst.subarray(INSTANCE_STRIDE + 4, INSTANCE_STRIDE + 6)));
+  const style = inst.subarray(INSTANCE_STRIDE + 4, INSTANCE_STRIDE + 6);
+  assert.deepEqual(Array.from(outStyle.subarray(0, 2)), Array.from(style));
  });
 
  it('handles a camera turned any way (headings are world headings)', () => {
@@ -150,7 +151,7 @@ describe('tree model', () => {
   assert.ok(widest >= SUN_SHADOW.TREE_ROOT_HALF_WIDTH_M && widest <= TREE_MESH.RADIUS_M);
  });
 
- it('winds every face counter-clockwise seen from outside (its normal points away from the trunk or the ground)', () => {
+ it('winds every face counter-clockwise seen from outside (its normal points away from the tree)', () => {
   for (let t = 0; t < g.triangles; t++) {
    const o = t * 9;
    const p = (k) => [g.positions[o + k * 3], g.positions[o + k * 3 + 1], g.positions[o + k * 3 + 2]];
@@ -183,7 +184,8 @@ describe('tree colours and light', () => {
   it('light from the same sun as the baked shadows (map turned ' + rotation + ' rad)', () => {
    const grid = frame.vecToGrid(L.sun[0], L.sun[1], { u: 0, v: 0 });
    const baked = sunOnGrid(look.sky, frame);
-   assert.ok(Math.abs(grid.u - baked[0]) < 1e-9 && Math.abs(grid.v - baked[1]) < 1e-9 && Math.abs(L.sun[2] - baked[2]) < 1e-9);
+   assert.ok(Math.abs(grid.u - baked[0]) < 1e-9 && Math.abs(grid.v - baked[1]) < 1e-9, 'across');
+   assert.ok(Math.abs(L.sun[2] - baked[2]) < 1e-9, 'up');
   });
  }
 });
