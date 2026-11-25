@@ -19,7 +19,7 @@ var HANGA = root.HANGA || (typeof require === 'function' ? require('./gresca-han
 var D2R = Math.PI / 180, R2D = 180 / Math.PI, G = 9.81, LIVE = '__live';
 
 var RA = {
- version: '0.2.0',
+ version: '0.3.0',
  /* Every number here is a starting point to tune on a phone. */
  tune: {
   turnFull: 1.6,       // rad/s of path turn that counts as a full carve (turn = 1 for poseFor)
@@ -48,6 +48,9 @@ var RA = {
   brakeHeadMax: 60,    // deg, most the head turns against the shoulders to keep facing travel at full brake
   brakeSideMin: 8,     // deg, the equipment this far off travel decides the brake pose's side
   holdSpeed: 1.2,      // m/s, slower than this the upper body keeps its last heading (travel is no longer known)
+  fakieSwap: 0.3,      // s, a switch skier's look swaps from one shoulder to the other (a full -1..+1 swing)
+  fakieHyst: 10,       // deg, the fall line must pass this far beyond the board's line before the look swaps shoulders
+  fakieSmooth: 0.1,    // s, time constant of the fakie look easing in and out (entering and leaving switch)
   sideHold: 0.26,      // cos of the angle from travel the equipment must pass before the upper body's side flips
   maxStep: 1 / 60      // s, springs are sub-stepped so a slow frame cannot blow them up
  },
@@ -77,7 +80,7 @@ RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regul
 
 RA.create = function (rig) {
  return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
-          turn: 0, twist: 0, headYaw: 0, brakeW: 0, ahead: null, lookSide: 0, brakeSide: null,
+          turn: 0, twist: 0, headYaw: 0, brakeW: 0, fakieW: 0, fakieSide: 0, fakieLook: 0, ahead: null, lookSide: 0, brakeSide: null,
           roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
           landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
 };
@@ -100,6 +103,10 @@ function spring(x, v, rest, hz, zeta, force, dt) {
  *   riderSide   +1 if the rider's +x (right hand, or toe edge) is on the right of travel, else -1
  *   facing, travelDir   rad, optional: the equipment heading and the direction of travel (any angle convention, but
  *               the same for both). Without them there is no body twist
+ *   isSwitch    skis riding tail first (the F7 look over the downhill shoulder; boards ignore it)
+ *   downhillSide  +1 when the fall line is counter-clockwise of the equipment (the rider's left), -1 clockwise, 0 flat
+ *   fallAngle   rad, optional: the fall line's angle from facing, + counter-clockwise (its sign is downhillSide); with
+ *               it the look swaps only once the fall line is fakieHyst past the board's line (no flicker)
  *   feetAccelUp m/s², vertical acceleration of the ground under the feet (0 in the air)
  *   slopeDeg, meanSlopeDeg   local slope and the map's mean gradient
  * }
@@ -113,10 +120,20 @@ RA.update = function (s, inp, dt) {
  s.turn += (turnIn - s.turn) * Math.min(1, dt / T.turnSmooth);
  if (inp.landed && onSnow) { s.landedAgo = 0; s.compV += Math.min(inp.impact || 0, T.impactMax) * T.landKick; s.compPeak = 0; }
  else if (s.landedAgo != null) { s.landedAgo += dt; if (!onSnow || s.landedAgo > 2) s.landedAgo = null; }
+ // F7: a skier riding switch looks over the downhill-side shoulder; the side keeps a hysteresis around the fall line
+ var fakie = rig === 'ski' && !!inp.isSwitch && onSnow;
+ if (fakie) {
+  var ds = inp.downhillSide || 0, sa = inp.fallAngle != null ? Math.sin(inp.fallAngle) : ds, hy = inp.fallAngle != null ? Math.sin(T.fakieHyst * D2R) : 0;
+  if (!s.fakieSide) s.fakieSide = sa > 0 ? 1 : sa < 0 ? -1 : (ds || -1);
+  else if (s.fakieSide > 0 && sa < -hy) s.fakieSide = -1;
+  else if (s.fakieSide < 0 && sa > hy) s.fakieSide = 1;
+ } else if (s.fakieW === 0) s.fakieSide = 0;
+ if (s.fakieW === 0) s.fakieLook = s.fakieSide;
+ s.fakieLook += clamp(s.fakieSide - s.fakieLook, -2 * dt / T.fakieSwap, 2 * dt / T.fakieSwap);
  // turn is already in the rider's frame (riderSide), so poseFor gets goofy: false and toe stays the +x edge
  var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne,
                             landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide,
-                            approach: inp.approach && onSnow,
+                            approach: inp.approach && onSnow, isSwitch: fakie, lookSide: s.fakieSide > 0 ? 'left' : 'right',
                             turn: s.turn, goofy: false });
  if (name !== s.pose) { s.from = copyJ(s.poseJ); s.pose = name; s.t = 0; s.dur = HANGA.blendTime(name); }
  s.t += dt;
@@ -153,8 +170,17 @@ RA.update = function (s, inp, dt) {
    s.brakeSide = rig === 'board' ? 'heel' : raw < 0 ? 'left' : 'right';
   }
  }
+ // F7: ease the switch look in and out with the weight fakieW; the shoulders open and the head turns (the spec's
+ // switchL / switchR twist and head yaw, + for the left shoulder), swapping with fakieLook (-1 right .. +1 left)
+ var fw = s.fakieW += ((fakie && !bk ? 1 : 0) - s.fakieW) * Math.min(1, dt / T.fakieSmooth), fh = 0;
+ if (fw < 1e-3) s.fakieW = fw = 0;
+ if (fw > 0) {
+  var sw = HANGA.rider.poses.ski.switchL;
+  twistT += (sw.twistDeg * s.fakieLook - twistT) * fw;
+  fh = sw.headYawDeg * s.fakieLook * fw;
+ }
  s.twist += (twistT - s.twist) * Math.min(1, dt / tau);
- s.headYaw = s.brakeW > 0 ? -clamp(raw - s.twist, -T.brakeHeadMax, T.brakeHeadMax) * s.brakeW : 0;
+ s.headYaw = (s.brakeW > 0 ? -clamp(raw - s.twist, -T.brakeHeadMax, T.brakeHeadMax) * s.brakeW : 0) * (1 - fw) + fh;
 
  // ---- 2. body dynamics ----
  // Lean: the angle a rider tilts to balance the turn, atan(v·ω/g), scaled for an arcade turn rate.
