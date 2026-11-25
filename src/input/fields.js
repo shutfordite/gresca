@@ -7,7 +7,7 @@ const flag = (input, key) => field(() => input[key], (v) => { input[key] = v ? 1
 
 /**
  * The input's fields: input {left, right, brake, jump, lookBack, flip}; flip is -1..1 and follows the air controls;
- * jump is one-shot (writing it also sets jumpPressed); and bindings, the frozen controls table (input/bindings.js), read only.
+ * jump is one-shot (writing it also sets jumpPressed); and bindings, the frozen controls table, read only.
  */
 export function inputFields(input) {
  const jump = field(() => input.jump, (v) => {

@@ -1,5 +1,5 @@
 // The air hints: the arrows that teach the flips (up front flip, down backflip, left and right spin), shown over the
-// first few jumps of a profile and on the Controls screen; and the per-step link from the rider to the input's air state.
+// first few jumps of a profile and on the Controls screen; and the per-step link from the rider to the input.
 import { onStep } from '../core/events.js';
 import { setAirborne } from '../input/input.js';
 

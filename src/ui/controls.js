@@ -69,7 +69,7 @@ function rowHtml(row) {
   '"><span class="ctl-label">' + escapeHtml(row.label) + '</span>' + how + '</li>';
 }
 
-/** The Controls screen's inner HTML, made from the bindings table: a Touch and a Keyboard section, then the air hints. */
+/** The Controls screen's inner HTML, made from the bindings table: a Touch and a Keyboard section, then the hints. */
 export function controlsHtml(bindings = BINDINGS) {
  const section = (device, title) => '<section><h2>' + title + '</h2><ul class="ctl-list">' +
   bindingsOf(bindings, device).map(rowHtml).join('') + '</ul></section>';
