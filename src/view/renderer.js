@@ -3,7 +3,6 @@ import { draw, drawSprites } from './draw.js';
 import { GL_STAGE } from './view-state.js';
 import { createGlTerrain } from './gl/gl-renderer.js';
 import { guardContext } from './gl/context-loss.js';
-import { fillHorizon, horizonSamples } from './gl/horizon.js';
 
 // The GL canvas's context: no alpha (the 2D canvas over it carries the sprites), no MSAA (2x device pixels instead),
 // a stencil (the ski track darkens each pixel once).
@@ -21,16 +20,14 @@ function placeUnder(canvas, screen) {
  screen.parentNode.insertBefore(canvas, screen);
 }
 
-// One frame with the GPU terrain: terrain and sky on the GL canvas, the horizon for the trees, then the sprites and
-// rider on the cleared screen canvas (as draw() draws them).
-function drawWithGl(gpu, rayZ, view, scene, dt) {
+// One frame with the GPU terrain: terrain, sky and trees on the GL canvas (the trees are depth-tested against the
+// terrain: no horizon pass), then the sprites and rider on the cleared screen canvas (as draw() draws them).
+function drawWithGl(gpu, view, scene, dt) {
  const timer = view.timer;
  gpu.render(view, scene);
  if (timer !== null) timer.lap(GL_STAGE.GL);
- fillHorizon(view, scene.camera, scene.terrain, rayZ);
- if (timer !== null) timer.lap(GL_STAGE.HORIZON);
  scene.ctx.clearRect(0, 0, view.W, view.Hh);
- drawSprites(view, scene, dt);
+ drawSprites(view, scene, dt, true);
 }
 
 /**
@@ -43,6 +40,7 @@ function drawWithGl(gpu, rayZ, view, scene, dt) {
  */
 export function chooseRenderer(opts, view, scene) {
  view.renderer = { name: 'cpu', fallback: null };
+ view.treeGpu = null;
  if (opts.want !== 'gl') return draw;
  try {
   if (!opts.THREE) throw new Error('three.js did not load');
@@ -53,10 +51,11 @@ export function chooseRenderer(opts, view, scene) {
   }
   const gpu = createGlTerrain(opts.THREE, gl, canvas, view, scene);
   placeUnder(canvas, opts.screen);
-  const rayZ = horizonSamples();
-  return guardContext(canvas, view, gpu.bytes, (v, s, dt) => drawWithGl(gpu, rayZ, v, s, dt), draw);
+  view.treeGpu = gpu.trees;
+  return guardContext(canvas, view, gpu.bytes, (v, s, dt) => drawWithGl(gpu, v, s, dt), draw);
  } catch (e) {
   view.renderer = { name: 'cpu', fallback: e.message };
+  view.treeGpu = null;
   opts.warn('Gresca: the GPU terrain could not start (' + e.message + '); drawing on the CPU');
   return draw;
  }
