@@ -133,6 +133,60 @@ test('body dynamics', async (t) => {
   });
 });
 
+test('F7: skis ridden switch look over the downhill-side shoulder', async (t) => {
+  const sw = (o = {}) => snow(Object.assign({ isSwitch: true, riderSide: -1, downhillSide: 1, fallAngle: 1.2 }, o));
+  const settleSw = (o) => run(RA.create('ski'), sw(o), 1.5);
+  await t.test('head yaw sign follows downhillSide, 80 to 100 degrees, shoulders open about 35', () => {
+    const l = settleSw(), r = settleSw({ downhillSide: -1, fallAngle: -1.2 });
+    assert.equal(l.pose, 'switchL');
+    assert.equal(r.pose, 'switchR');
+    assert.ok(l.headYaw <= -80 && l.headYaw >= -100, 'left shoulder: ' + l.headYaw);
+    assert.ok(r.headYaw >= 80 && r.headYaw <= 100, 'right shoulder: ' + r.headYaw);
+    assert.ok(Math.abs(Math.abs(l.twist) - 35) < 3 && l.twist > 0 && r.twist < 0, `twist ${l.twist} / ${r.twist}`);
+  });
+  await t.test('the swap takes about 0.3 s', () => {
+    const s = settleSw();
+    const timeToSwap = () => {
+      for (let i = 1; i < 120; i++) {
+        RA.update(s, sw({ downhillSide: -1, fallAngle: -1.2 }), DT);
+        if (s.headYaw > 85) return i * DT;
+      }
+      return Infinity;
+    };
+    const took = timeToSwap();
+    assert.ok(took > 0.25 && took < 0.4, 'swapped in ' + took);
+  });
+  await t.test('no flip-flop for a heading wobbling 5 degrees around the fall line', () => {
+    const s = settleSw();
+    const side0 = s.fakieSide;
+    let flips = 0, last = side0;
+    run(s, (time) => {
+      if (s.fakieSide !== last) { flips++; last = s.fakieSide; }
+      const a = 5 * Math.PI / 180 * Math.sin(time * 12);
+      return sw({ fallAngle: a, downhillSide: a >= 0 ? 1 : -1 });
+    }, 3);
+    assert.equal(flips, 0);
+    assert.equal(s.fakieSide, side0);
+    // but a clear 20 degrees past the line swaps it
+    run(s, sw({ fallAngle: -0.35, downhillSide: -1 }), 0.1);
+    assert.equal(s.fakieSide, -1);
+  });
+  await t.test('not switch: head yaw as before; boards ignore it', () => {
+    const fwd = run(RA.create('ski'), snow({ downhillSide: 1, fallAngle: 1.2 }), 1.5);
+    assert.equal(fwd.headYaw, 0);
+    assert.equal(fwd.pose, 'ride');
+    const board = run(RA.create('board'), sw(), 1.5);
+    assert.equal(board.headYaw, 0);
+    assert.equal(board.pose, 'ride');
+    assert.equal(board.twist, 0);
+  });
+  await t.test('the head turn reaches the draw options (goggles follow)', () => {
+    const s = settleSw();
+    RA.project(s, 0, 0, 'regular');
+    assert.equal(s.opts.headYawDeg, s.headYaw);
+  });
+});
+
 test('in the game', async (t) => {
   const g = await load();
   // Advance physics and animation together, as the game loop does (two physics steps per frame).
