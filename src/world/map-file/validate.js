@@ -247,7 +247,9 @@ function surfaceStats(heights, { nx, ny, cellM }, min, max) {
   if (slope > NO_GO_SLOPE_DEG) noGo++;
   n++;
   let a = 0;
-  for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (di || dj) around[a++] = heights[k + dj * nx + di];
+  for (let dj = -1; dj <= 1; dj++) {
+   for (let di = -1; di <= 1; di++) if (di || dj) around[a++] = heights[k + dj * nx + di];
+  }
   const dev = heights[k] - median8(around);
   if (dev > limit) spikes++;
   if (dev < -limit) pits++;
@@ -265,7 +267,9 @@ function checkLines(f, key, bounds, at, report, name) {
  list.forEach((line, i) => {
   const field = key + '[' + i + ']';
   if (!isRecord(line)) return at(field, 'must be an object');
-  if (typeof line.id !== 'string' || line.id === '' || line.id.length > VALIDATE_LIMITS.text) at(field + '.id', 'needs an id');
+  if (typeof line.id !== 'string' || line.id === '' || line.id.length > VALIDATE_LIMITS.text) {
+   at(field + '.id', 'needs an id');
+  }
   if (!Number.isInteger(line.part) || line.part < 0) at(field + '.part', 'must be an integer >= 0');
   if (!Array.isArray(line.osm) || !line.osm.every((id) => typeof id === 'string' && OSM_ID.test(id))) {
    at(field + '.osm', 'must list OSM ids like "way/123"');
