@@ -24,3 +24,8 @@
  -webkit-tap-highlight-color:transparent;
 }
 #pz svg{display:block;width:100%;height:100%}
+/* The air hints (ui/air-hints.js): the flip and spin arrows, over the lower middle of the screen while airborne. */
+#air-hints{position:absolute;left:0;right:0;bottom:calc(22% + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:18px;color:var(--light);text-shadow:0 1px 5px var(--halo-strong);pointer-events:none}
+#air-hints[hidden]{display:none}
+.air-hint{font-size:15px;font-weight:700;white-space:nowrap}
+.air-hint b{font-size:24px;vertical-align:middle}

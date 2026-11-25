@@ -1,6 +1,7 @@
 // The Controls screen: Touch and Keyboard sections generated from the bindings table (input/bindings.js), with a small
 // diagram for each gesture, and the menu's Controls and Back buttons.
 import { BINDINGS, GESTURES, keyName } from '../input/bindings.js';
+import { airHintsHtml } from './air-hints.js';
 
 // How each gesture reads in words. Every GESTURES id needs an entry: controlsHtml throws on a missing one.
 const GESTURE_TEXT = Object.freeze({
@@ -9,6 +10,9 @@ const GESTURE_TEXT = Object.freeze({
  [GESTURES.HOLD_BOTH]: 'Hold both halves together',
  [GESTURES.SWIPE_DOWN]: 'Swipe down',
  [GESTURES.SWIPE_UP_HOLD]: 'Swipe up and keep your finger down',
+ [GESTURES.DRAG_UP_AIR]: 'Swipe up in the air and keep your finger down',
+ [GESTURES.DRAG_DOWN_AIR]: 'Swipe down in the air and keep your finger down',
+ [GESTURES.TAP_PAUSE]: 'Tap the pause button, top right',
 });
 
 // Gesture diagrams: a screen outline (48 x 64) with the touched area filled. Colours come from CSS classes (var(--…)).
@@ -19,12 +23,16 @@ const SWIPE = '<circle class="ctl-hit" cx="24" cy="18" r="6"/>' +
  '<path class="ctl-arrow" d="M24 26v22M17 41l7 8 7-8"/>';
 const SWIPE_UP = '<circle class="ctl-hit" cx="24" cy="46" r="6"/>' +
  '<path class="ctl-arrow" d="M24 38V16M17 23l7-8 7 8"/>';
+const PAUSE_BUTTON = '<rect class="ctl-hit" x="28" y="7" width="12" height="12" rx="3"/>';
 const DIAGRAMS = Object.freeze({
  [GESTURES.HOLD_LEFT]: SCREEN + LEFT_HALF,
  [GESTURES.HOLD_RIGHT]: SCREEN + RIGHT_HALF,
  [GESTURES.HOLD_BOTH]: SCREEN + LEFT_HALF + RIGHT_HALF,
  [GESTURES.SWIPE_DOWN]: SCREEN + SWIPE,
  [GESTURES.SWIPE_UP_HOLD]: SCREEN + SWIPE_UP,
+ [GESTURES.DRAG_UP_AIR]: SCREEN + SWIPE_UP,
+ [GESTURES.DRAG_DOWN_AIR]: SCREEN + SWIPE,
+ [GESTURES.TAP_PAUSE]: SCREEN + PAUSE_BUTTON,
 });
 
 const ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
@@ -61,11 +69,12 @@ function rowHtml(row) {
   '"><span class="ctl-label">' + escapeHtml(row.label) + '</span>' + how + '</li>';
 }
 
-/** The Controls screen's inner HTML, made from the bindings table: a Touch and a Keyboard section. */
+/** The Controls screen's inner HTML, made from the bindings table: a Touch and a Keyboard section, then the air hints. */
 export function controlsHtml(bindings = BINDINGS) {
  const section = (device, title) => '<section><h2>' + title + '</h2><ul class="ctl-list">' +
   bindingsOf(bindings, device).map(rowHtml).join('') + '</ul></section>';
- return '<h1>Controls</h1>' + section('touch', 'Touch') + section('keyboard', 'Keyboard');
+ return '<h1>Controls</h1>' + section('touch', 'Touch') + section('keyboard', 'Keyboard') +
+  '<p class="ctl-air">In the air: ' + airHintsHtml() + '</p>';
 }
 
 /**

@@ -19,6 +19,7 @@ export function getUi(doc) {
   scoreEl: $('score'),
   info: $('info'),   // speed and metres to go
   pop: $('pop'),     // trick popup
+  hints: $('air-hints'), // the flip and spin hint arrows, shown in the air
   dot: $('dot'),     // the rider on the minimap
   gl: $('gl'),       // left glove hint
   gr: $('gr'),       // right glove hint
