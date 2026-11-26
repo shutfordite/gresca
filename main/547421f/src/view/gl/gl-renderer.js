@@ -11,7 +11,8 @@ import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook, sunOnGrid } from './snow-material
 import { createTrackRibbon, ribbonLook } from './track-ribbon.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
-import { checkTextureBudget } from './gl-budget.js';
+import { createTreeMesh } from './tree-mesh.js';
+import { checkTextureBudget, addGpuBytes } from './gl-budget.js';
 import { FOV } from '../../core/config.js';
 
 const MAX_ANISOTROPY = 8; // the detail texture's anisotropic filtering, at most (grazing views of the ripples)
@@ -178,7 +179,8 @@ function addSky(THREE, glScene, look) {
 /**
  * The GPU terrain on canvas (with its WebGL2 context gl) for the built world: bakes the textures (about 40 MB on the
  * GPU for the procedural map, terrain-bake.js) and builds the meshes once. Returns {render(view, scene), bytes
- * (terrainTextureBytes)}; render draws the terrain and sky for the camera updateCamera() set, at the screen canvas's
+ * (terrainTextureBytes plus the trees' buffers), trees {drawCalls, trianglesPerTree, drawn, triangles: this frame's}};
+ * render draws the terrain, sky and trees for the camera updateCamera() set, at the screen canvas's
  * size (view.W × view.Hh px). Throws if the GPU cannot hold the map or the textures are over GL_TEXTURE_BUDGET_MB.
  * THREE: the three.js module (env.THREE).
  */
@@ -197,6 +199,8 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const levels = addLevels(THREE, glScene, shared);
  const s = snowLook(scene.look, view.mapFrame);
  const ribbon = createTrackRibbon(THREE, glScene, shared, view.trail, ribbonLook(s.shade, s.lit));
+ const trees = createTreeMesh(THREE, glScene, shared, scene.treeArr, scene.terrain, scene.look, view.mapFrame);
+ const treeStats = { drawCalls: trees.drawCalls, trianglesPerTree: trees.triangles, drawn: 0, triangles: 0 };
  const sky = addSky(THREE, glScene, scene.look);
  const unused = new THREE.Camera(); // three.js wants one; the shaders project for themselves
  const proj = createProjection();
@@ -226,7 +230,9 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   shared.uRiderShadow.value.set(ground.u + rs.du, ground.v + rs.dv, rs.strength, rs.soft);
   shared.uRiderAxes.value.set(rs.axisU, rs.axisV, rs.along, rs.across);
   ribbon.update(v.trail);
+  treeStats.drawn = trees.update(sc.camera);
+  treeStats.triangles = treeStats.drawn * trees.triangles;
   renderer.render(glScene, unused);
  }
- return { render, bytes };
+ return { render, bytes: addGpuBytes(bytes, trees.bytes), trees: treeStats };
 }

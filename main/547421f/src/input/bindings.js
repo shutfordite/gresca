@@ -15,6 +15,9 @@ export const GESTURES = Object.freeze({
  HOLD_BOTH: 'hold-both',   // fingers on both halves together
  SWIPE_DOWN: 'swipe-down', // a finger dragged down
  SWIPE_UP_HOLD: 'swipe-up-hold', // a finger dragged up and kept down
+ DRAG_UP_AIR: 'drag-up-air',     // the same drag, made in the air: a front flip
+ DRAG_DOWN_AIR: 'drag-down-air', // a finger dragged down in the air: a backflip
+ TAP_PAUSE: 'tap-pause',         // a tap on the pause button (top right)
 });
 
 // Input slots a key drives (input.keys in input.js): left, right, brake, jump, look back.
@@ -24,8 +27,15 @@ export const SLOTS = Object.freeze({ LEFT: 'L', RIGHT: 'R', BRAKE: 'B', JUMP: 'J
 // does not swing the camera round.
 const LOOK_SWIPE_PX = SWIPE_PX * 1.5;
 
+// CSS px a finger must move up or down in the air before a flip starts (a dead zone, as the brake swipe), and how far
+// for the full rate (InputState.flip of 1 or -1). The flip follows the finger, so holding it keeps rotating.
+const FLIP_DEAD_PX = SWIPE_PX;
+const FLIP_FULL_PX = SWIPE_PX * 3.5;
+
 /**
- * One control. device: 'touch' | 'keyboard'; action: what the rider does (the id other code uses); label: the short
+ * One control. The same drag or key can mean one thing on the ground and another in the air: input.js picks by
+ * context (swipe down brakes and swipe up and hold looks back on the ground; in the air they are a backflip and a
+ * front flip). device: 'touch' | 'keyboard'; action: what the rider does (the id other code uses); label: the short
  * text on the Controls screen; gesture (touch): a GESTURES id; slot (keyboard): the SLOTS entry its keys drive, or
  * null when the row is a combination of other rows; keys (keyboard): KeyboardEvent.key values; minPx (swipe): CSS px.
  */
@@ -38,6 +48,11 @@ export const BINDINGS = deepFreeze([
  { device: 'touch', action: 'brake', label: 'Brake', gesture: GESTURES.SWIPE_DOWN, minPx: SWIPE_PX },
  { device: 'touch', action: 'look-back', label: 'Look back uphill (hold)', gesture: GESTURES.SWIPE_UP_HOLD,
   minPx: LOOK_SWIPE_PX },
+ { device: 'touch', action: 'flip-front', label: 'Front flip in the air (hold to keep rotating)',
+  gesture: GESTURES.DRAG_UP_AIR, minPx: FLIP_DEAD_PX, fullPx: FLIP_FULL_PX },
+ { device: 'touch', action: 'flip-back', label: 'Backflip in the air (hold to keep rotating)',
+  gesture: GESTURES.DRAG_DOWN_AIR, minPx: FLIP_DEAD_PX, fullPx: FLIP_FULL_PX },
+ { device: 'touch', action: 'pause', label: 'Pause', gesture: GESTURES.TAP_PAUSE },
  { device: 'keyboard', action: 'steer-left', label: 'Turn left', slot: SLOTS.LEFT, keys: ['ArrowLeft', 'a'] },
  { device: 'keyboard', action: 'steer-right', label: 'Turn right', slot: SLOTS.RIGHT, keys: ['ArrowRight', 'd'] },
  { device: 'keyboard', action: 'brake', label: 'Brake', slot: SLOTS.BRAKE, keys: ['ArrowDown', 's'] },
@@ -45,6 +60,10 @@ export const BINDINGS = deepFreeze([
  { device: 'keyboard', action: 'look-back', label: 'Look back uphill (hold)', slot: SLOTS.LOOK, keys: ['b'] },
  { device: 'keyboard', action: 'spin-left', label: 'Spin left in the air', slot: null, keys: ['ArrowLeft', 'a'] },
  { device: 'keyboard', action: 'spin-right', label: 'Spin right in the air', slot: null, keys: ['ArrowRight', 'd'] },
+ // Flips: slot null, as the spins: Up, W and Down, S also jump and brake on the ground, and input.js reads them as
+ // flips only in the air (+1 front flip, -1 backflip).
+ { device: 'keyboard', action: 'flip-front', label: 'Front flip in the air', slot: null, keys: ['ArrowUp', 'w'] },
+ { device: 'keyboard', action: 'flip-back', label: 'Backflip in the air', slot: null, keys: ['ArrowDown', 's'] },
  // No slot: pause is not part of the InputState; bind-input.js hands these keys to the pause toggle (ui/pause.js).
  { device: 'keyboard', action: 'pause', label: 'Pause', keys: ['Escape', 'p'] },
 ]);
@@ -72,6 +91,16 @@ export const BRAKE_SWIPE_PX = binding('touch', 'brake').minPx;
 
 /** CSS px a finger must move up, and keep down, to look back (the touch look-back row). */
 export const LOOK_BACK_SWIPE_PX = binding('touch', 'look-back').minPx;
+
+/** KeyboardEvent.key -> flip direction (+1 front flip, -1 backflip) for the keys that flip in the air. */
+export const FLIP_KEYS = Object.freeze(Object.fromEntries([
+ ...binding('keyboard', 'flip-front').keys.map((k) => [k, 1]),
+ ...binding('keyboard', 'flip-back').keys.map((k) => [k, -1]),
+]));
+
+/** CSS px a finger must move in the air before a flip starts, and for the full rate (the touch flip rows). */
+export const FLIP_DEAD_ZONE_PX = binding('touch', 'flip-front').minPx;
+export const FLIP_FULL_RATE_PX = binding('touch', 'flip-front').fullPx;
 
 /** KeyboardEvent.key values that pause or resume the run (the keyboard pause row). */
 export const PAUSE_KEYS = binding('keyboard', 'pause').keys;
