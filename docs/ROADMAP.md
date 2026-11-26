@@ -93,3 +93,65 @@ S3 meet through `Look.rider.project`. All of these are fixed in B2b, B2c and P4.
    the air does nothing (one finger held still spins). Coordinator's call: on touch, flips and spins combine in
    sequence (two-finger flip, then one finger held to spin); on a keyboard they combine at once (Up/W, Down/S with
    Left/Right).
+2. **The snow park comes next** (after X1 and the open #66 and #67): ramps made of snow, rails and boxes with real
+   grind physics in many shapes (kinks, bends, boxes), jumps from small kickers to mega ramps, each with a landing.
+   It should feel like a real snow park. Planned below as **K**.
+
+## K: a real snow park (next to take, owner 26 Nov)
+Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
+the jump is a height above whatever snow is underneath, so there is no landing to aim for and landing on a slope
+feels the same as landing on the flat. A rail is a straight line at one height and a grind slides along it with a
+fixed drag. K replaces this with park features that are part of the snow and physics that come from their shape.
+
+**What "a real park" means here (acceptance for the whole of K, ridden on the iPad):**
+- **Jumps are snow.** Every jump is a takeoff, a table (or a gap) and a landing, shaped into the terrain's
+  `features` layer (`docs/REAL-WORLD-DATA.md`, layer stack) so the GPU terrain draws and lights it as snow, with
+  groomed sidewalls and the dyed lip and knuckle lines real parks use. Sizes, roughly as in real parks:
+
+  | Size | Lip height | Lip angle | Table or gap | Landing |
+  |---|---|---|---|---|
+  | XS / S kicker | 0.6–1.5 m | 15–25° | 3–6 m | 25–28°, 10–15 m |
+  | M | 1.5–2.5 m | 25–30° | 8–12 m | 28–30°, 15–20 m |
+  | L | 2.5–4 m | 28–32° | 14–20 m | 30–32°, 20–28 m |
+  | XL / mega ramp | 4–8 m, with a built drop-in | 30–35° | 20–30 m gap | 32–35°, 30–40 m |
+
+  Each jump is designed for a speed (from its run-in); the shape library sizes the landing so a rider at that speed
+  lands in the middle of the landing slope. Quarter pipes and hips are later, not part of K.
+- **Flight is over the real snow.** The rider flies in world height (not height above the ground), leaves the lip
+  because the snow falls away faster than the rider does, and lands where the trajectory meets the snow. Landing
+  impact is the speed into the snow's surface (normal to it): matching the landing slope is soft at any height;
+  knuckling, casing the table or hitting the flat bottom is hard, and too hard is a crash. Small speed is lost in the
+  landing, more in a hard one. No `launchGain` fudge: a bigger jump goes further because it is bigger.
+- **Rails and boxes have shapes.** A feature is a 3D polyline with a profile: round rail (tube, 5–10 cm) or box
+  (flat top, 0.3–0.6 m wide), on legs or a snow-buried base, with an on-ramp or a side-on entry. The shape library
+  has straight, down, flat-down, down-flat-down, flat-down-flat (kinks), rainbow, C-rail and S-rail (bends in plan),
+  and flat, down, kinked and rainbow boxes, at 0.3–1.5 m high and 6–20 m long.
+- **Grinds follow physics.** On a rail the rider moves along its tangent: gravity along the slope of the segment
+  speeds them up on a down rail; friction (rail and box differ) slows them on the flat. At a kink, speed carries
+  onto the new segment; going over a convex kink fast lifts the rider off for a moment and they must stay lined up
+  to land back on. A bend needs the rider to lean into it (steer): too fast for its radius, or too much lean, and
+  they slide off the outside. The board's angle to the rail picks the grind: lined up is a 50-50 (skis or board),
+  across it is a boardslide or lipslide (by the side they came from); a balance value drifts with misalignment and
+  steer corrects it, and losing balance drops the rider off, or crashes them if they are badly off. Getting on: ride
+  on from an on-ramp, or ollie onto it from beside it. Riding into a box side or a rail's legs is a crash.
+- **It is laid out as a park.** The play mountain gets a park: a jump line of 3–4 tables at steady speeds in S, M
+  and L lines, a jib section of 6–10 rails and boxes close together, and one mega ramp with its drop-in. The course
+  file's park layout (ADR 0010) holds the same features for real maps (El Tarter's park, owner 25 Nov). Scores and the
+  popup name the trick ("Boardslide to 50-50", "Kink 50-50") once trick names move to `src/ui/`.
+
+**Packages, in order** (one PR each; contracts first, then the streams in parallel where their files allow):
+
+| # | Package | Stream | What |
+|---|---|---|---|
+| K0 | park contract and format (ADR 0012) | Shared | `Course.features`: jumps `{s, d, size, designSpeed, takeoff, table, landing}` and rails `{points: [{s, d, h}], profile 'rail'│'box', width, legs, entry}` in `core/contracts.js`; the course file's park layout gains the same (an additive format version, old files still load); the jump gravity moves to `core/config.js` so `world/` can size landings with the sim's constant; `SimEvent` `grindStart`/`grindEnd` gain `style` and `kinks`; `RiderState.grind` gains `seg`, `style`, `balance`; `AnimInput` gains `grindStyle` |
+| K1 | park shape library | S5 | `src/world/park/`: pure functions from a feature to its snow height (takeoff curve to the lip angle, table, knuckle, landing sized for `designSpeed`, run-out, sidewalls) and its rail polylines; the `features` layer stamps the jumps into the terrain; the play mountain's park layout. The test slope is unchanged (AGENTS.md "Do not break"). Tests: every size's landing catches a rider at its design speed between knuckle and bottom (a pure trajectory check) |
+| K2 | flight and landing over the snow | S2 | `sim/jump.js`: world-height flight, takeoff from the lip's shape, landing impact normal to the snow, knuckle and flat-bottom crashes. One flight model for every map: the test slope's physics assertions still pass unchanged; the golden hash is re-recorded once, with the trace differences measured in the PR |
+| K3 | grind physics | S2 | `sim/grind.js` on polylines: gravity along the segment, rail and box friction, kinks (carry speed, lift off over convex kinks), bends (lean, slide off the outside), styles from the board angle, balance, ollie-on entry, side and leg crashes. Tests per shape at fixed speeds |
+| K4 | park features on screen | S4 | after E3b (#67): rails and boxes as GPU meshes from the polylines (tubes bent at kinks and bends, box tops and sides, legs into the snow); jumps drawn as snow with groomed sidewalls and the dyed lip and knuckle lines from the Look; CPU fallback stays simple |
+| K5 | grind poses | S3 | 50-50, boardslide and lipslide, and lean into bends from `AnimInput.grindStyle` and the balance (art spec version if poses are new) |
+| K6 | trick names for grinds | S1 | after the `trickName` move to `src/ui/`: the popup names grinds and combos from the `grindEnd` fields |
+
+K0 goes first and alone (a contract PR). Then K1, K2 and K3 in parallel (K2 and K3 both touch `src/sim/` but different
+files; K3 waits for K1 only for the play mountain layout, and tests on its own fixtures). K4 starts when K1 and #67 are
+in; K5 and K6 after K3. Acceptance for K: on the iPad, ride the play mountain's park top to bottom, land every jump
+size on its landing at the speed its run-in gives, and grind a down-flat-down rail and a C-rail without falling off.
