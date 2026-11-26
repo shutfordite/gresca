@@ -1,5 +1,5 @@
-// The menu: the Snowboard / Skis picker with its gresca-rig storage key, the stance key, the menu texts and the
-// finish screen (a SimEvent subscriber).
+// The menu: the Snowboard / Skis picker (gresca-rig), the Regular / Goofy picker (gresca-stance), the menu texts and
+// the finish screen (a SimEvent subscriber).
 import { on } from '../core/events.js';
 import { bindControls } from './controls.js';
 
@@ -20,6 +20,7 @@ export function setRig(ui, session, env, r) {
  ui.ps.classList.toggle('on', r === 'ski');
  ui.pb.setAttribute('aria-pressed', r === 'board');
  ui.ps.setAttribute('aria-pressed', r === 'ski');
+ ui.stance.hidden = r !== 'board'; // the stance only matters on a snowboard
  try {
   env.localStorage.setItem(RIG_KEY, r);
  } catch (_) {
@@ -27,10 +28,31 @@ export function setRig(ui, session, env, r) {
  }
 }
 
-/** Wires the picker's buttons and the Controls screen, then restores the rig saved last visit (the new key wins over the old one). */
-export function bindMenu(ui, session, env, hud) {
+/**
+ * Picks the snowboard stance ('regular' | 'goofy'): writes session.stance, shows it on the buttons and saves it under
+ * storageKey where the browser allows it. env: anything with a localStorage property (read at each call).
+ */
+export function setStance(ui, session, env, storageKey, stance) {
+ session.stance = stance;
+ showStance(ui, stance);
+ try {
+  env.localStorage.setItem(storageKey, stance);
+ } catch (_) {
+  // storage blocked (private browsing): the choice lasts this visit only
+ }
+}
+
+/**
+ * Wires the picker's buttons and the Controls screen, then restores the rig saved last visit (the new key wins over
+ * the old one) and shows session.stance (already loaded by loadStance) on the stance buttons. stanceKey: the Look's
+ * rider.stanceStorageKey.
+ */
+export function bindMenu(ui, session, env, hud, stanceKey) {
  ui.pb.addEventListener('click', () => setRig(ui, session, env, 'board'));
  ui.ps.addEventListener('click', () => setRig(ui, session, env, 'ski'));
+ ui.sr.addEventListener('click', () => setStance(ui, session, env, stanceKey, 'regular'));
+ ui.sg.addEventListener('click', () => setStance(ui, session, env, stanceKey, 'goofy'));
+ showStance(ui, session.stance);
  bindControls(ui, hud);
  try {
   const s = env.localStorage.getItem(RIG_KEY) || env.localStorage.getItem(OLD_RIG_KEY);
@@ -38,6 +60,14 @@ export function bindMenu(ui, session, env, hud) {
  } catch (_) {
   // storage blocked: keep the default rig
  }
+}
+
+// Marks the stance buttons for stance without saving anything (the saved stance was just read).
+function showStance(ui, stance) {
+ ui.sr.classList.toggle('on', stance === 'regular');
+ ui.sg.classList.toggle('on', stance === 'goofy');
+ ui.sr.setAttribute('aria-pressed', stance === 'regular');
+ ui.sg.setAttribute('aria-pressed', stance === 'goofy');
 }
 
 /**
