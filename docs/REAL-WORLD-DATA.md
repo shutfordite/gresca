@@ -116,7 +116,7 @@ rides well from a baked file, then decide with real frame-time and file-size num
 
 ## 4. Open questions for the owner
 0. D0 above: keep the no-runtime-fetch rule, or allow a hosted live build?
-1. Which run is the first real course (OSM id or name in El Tarter)?
+1. Which run is the first real course (OSM id or name in El Tarter)? *Answered 25 Nov: the snow park if mapped, otherwise Àliga.*
 2. Are checkpoints or run segments acceptable, or must a course be one continuous run?
 3. Is Mapterhorn acceptable as the default DEM source once its licence is verified?
 4. Licence of the IEA 5 m Andorran DEM, and whether canopy/WorldCover files can be read by the baker.
