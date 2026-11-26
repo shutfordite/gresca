@@ -159,7 +159,7 @@ src/
 art/             unchanged (HANGA, RiderAnim), UMD classic scripts
 styles/          base.css, hud.css, menu.css (index.html links them; no inline CSS)
 maps/            sources/<id>.json (compiler configs); later <id>.terrain.json (gresca-map-1, ADR 0006), <id>.course.json
-tools/           map-compiler/ (C3a: pure core.js, sources/terrarium.js and openskimap.js, validate.js, cli.mjs), bake page
+tools/           map-compiler/ (C3a: pure core.js, sources/terrarium.js and openskimap.js, cli.mjs; the format, validators and run code are in src/world/map-file/), bake page
 docs/adr/        one short decision record per choice below
 ```
 
@@ -242,6 +242,7 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - Load one map with `fetch` from `maps/` (or from a file the player picks). Build in chunks with progress, or in a Worker, so the menu never freezes (M2).
 - Keep the coarse baked grid (about 14 m) for the whole map, for the backdrop and far field. Upsample to 2 m (bicubic) **only within a corridor** (piste plus about 150 m each side), in tiles made on demand along s. Memory budget: under 60 MB total on El Tarter.
 - Accept when: El Tarter loads and is rideable start to finish with the autopilot, and the procedural map still passes everything.
+- **C4a (done, ADR 0011):** `src/world/map-loader.js` builds the world from the parsed pair in chunks, with the corridor tiles of `corridor-layer.js`. **C4b** fetches the files, runs the loader without freezing the menu, registers the map and wires `app.js`/`main.js`.
 
 ### Phase D: rendering to the spec
 
