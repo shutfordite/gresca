@@ -94,7 +94,9 @@ jobs:
             const sha = process.env.SHA.slice(0, 7);
             const body = context.payload.action === 'closed'
               ? `${marker}\nPreview removed now that this pull request is closed. The current game on main: ${base}/`
-              : `${marker}\n**▶ Play this version:** ${base}/pr/${pr.number}/${sha}/\n\n` +
+              : `${marker}\n**▶ Play this version:**\n` +
+                `- Play mountain (the default map): ${base}/pr/${pr.number}/${sha}/\n` +
+                `- Test slope (the older, gentler run): ${base}/pr/${pr.number}/${sha}/?map=test\n\n` +
                 `Built from ${sha}, merged with main as CI tests it. Updates on every push. ` +
                 `Each push gets its own address, so you never get a cached older build. Allow a minute after this comment changes for Pages to publish. ${base}/pr/${pr.number}/ always redirects to the newest build.`;
             const comments = await github.paginate(github.rest.issues.listComments,
