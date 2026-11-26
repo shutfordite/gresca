@@ -1,5 +1,6 @@
-// Flip input and air hints (S1/F3): in the air a drag up is a front flip, a drag down a backflip, Up/W and Down/S the
-// same on keys; on the ground flip is 0 and the same drag brakes or looks back. The hints teach it for 3 jumps.
+// Flip input and air hints (S1/F3): in the air a finger on each half dragged up is a front flip, both dragged down a
+// backflip, Up/W and Down/S the same on keys; one finger never flips; on the ground flip is 0 and a drag brakes or
+// looks back. The hints teach it for 3 jumps.
 // All through the façade and the page's real handlers.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -30,42 +31,103 @@ function land(g) {
 }
 
 const flip = (g) => g.state().input.flip;
-const finger = (g, type, y, id = 1) => g.el('c').fire(type, { pointerId: id, clientX: 100, clientY: y });
+const LEFT_X = 100;  // a finger on the left half (the harness canvas is 390 px wide)
+const RIGHT_X = 300; // and one on the right half
+const finger = (g, type, y, id = 1, x = LEFT_X) => g.el('c').fire(type, { pointerId: id, clientX: x, clientY: y });
+// Both thumbs: the left finger is pointer 1, the right one pointer 2.
+const both = (g, type, yLeft, yRight = yLeft) => {
+ finger(g, type, yLeft, 1, LEFT_X);
+ finger(g, type, yRight, 2, RIGHT_X);
+};
 const hintsShown = (g) => !g.el('air-hints').hidden;
 const saved = (g) => g.run("localStorage.getItem('gresca-hints')");
 
 describe('flip input', () => {
- it('a drag up in the air is a front flip, analog with the distance, and holding keeps it', async () => {
+ it('both fingers dragged up in the air are a front flip, analog with the distance, and holding keeps it', async () => {
   const g = await onSnow();
   jumpUp(g);
-  finger(g, 'pointerdown', 500);
-  finger(g, 'pointermove', 500 - DEAD);
+  both(g, 'pointerdown', 500);
+  both(g, 'pointermove', 500 - DEAD);
   assert.equal(flip(g), 0, 'inside the dead zone');
-  finger(g, 'pointermove', 500 - (DEAD + FULL) / 2);
+  both(g, 'pointermove', 500 - (DEAD + FULL) / 2);
   assert.ok(Math.abs(flip(g) - 0.5) < 1e-9, 'half way is half the rate: ' + flip(g));
-  finger(g, 'pointermove', 500 - 3 * FULL);
+  both(g, 'pointermove', 500 - 3 * FULL);
   g.step(0.05);
-  assert.equal(flip(g), 1, 'capped at 1, and kept while the finger is held and the rider flies');
+  assert.equal(flip(g), 1, 'capped at 1, and kept while the fingers are held and the rider flies');
   assert.equal(g.state().input.lookBack, 0, 'swipe up in the air does not look back');
-  finger(g, 'pointerup', 500 - 3 * FULL);
-  assert.equal(flip(g), 0, 'lifting the finger stops it');
+  finger(g, 'pointerup', 500 - 3 * FULL, 1, LEFT_X);
+  assert.equal(flip(g), 0, 'lifting one finger stops it');
  });
 
- it('a drag down in the air is a backflip and does not brake', async () => {
+ it('both fingers dragged down in the air are a backflip and do not brake', async () => {
   const g = await onSnow();
   jumpUp(g);
-  finger(g, 'pointerdown', 300);
-  finger(g, 'pointermove', 300 + 3 * FULL);
+  both(g, 'pointerdown', 300);
+  both(g, 'pointermove', 300 + 3 * FULL);
   assert.deepEqual([flip(g), g.state().input.brake], [-1, 0]);
  });
 
- it('flips combine with the spin', async () => {
+ it('the rate follows the smaller of the two drags, so both fingers must move', async () => {
   const g = await onSnow();
   jumpUp(g);
-  finger(g, 'pointerdown', 500);
-  finger(g, 'pointermove', 500 - FULL);
+  both(g, 'pointerdown', 500);
+  both(g, 'pointermove', 500 - 3 * FULL, 500);
+  assert.equal(flip(g), 0, 'right finger still');
+  both(g, 'pointermove', 500 - 3 * FULL, 500 - (DEAD + FULL) / 2);
+  assert.ok(Math.abs(flip(g) - 0.5) < 1e-9, 'the smaller drag sets the rate: ' + flip(g));
+ });
+
+ it('one finger dragged in the air does not flip, whichever way; held still it spins', async () => {
+  for (const [x, dir] of [[LEFT_X, -1], [LEFT_X, 1], [RIGHT_X, -1], [RIGHT_X, 1]]) {
+   const g = await onSnow();
+   jumpUp(g);
+   finger(g, 'pointerdown', 500, 1, x);
+   finger(g, 'pointermove', 500 + dir * 3 * FULL, 1, x);
+   const i = g.state().input;
+   assert.equal(flip(g), 0, 'x ' + x + ' dir ' + dir);
+   assert.deepEqual([i.left, i.right], x === LEFT_X ? [1, 0] : [0, 1], 'it still spins');
+  }
+ });
+
+ it('fingers dragged in opposite directions do not flip', async () => {
+  const g = await onSnow();
+  jumpUp(g);
+  both(g, 'pointerdown', 500);
+  both(g, 'pointermove', 500 - 3 * FULL, 500 + 3 * FULL);
+  assert.equal(flip(g), 0);
+  both(g, 'pointermove', 500 + 3 * FULL, 500 - 3 * FULL);
+  assert.equal(flip(g), 0);
+ });
+
+ it('two fingers on the same half do not flip', async () => {
+  const g = await onSnow();
+  jumpUp(g);
+  finger(g, 'pointerdown', 500, 1, LEFT_X);
+  finger(g, 'pointerdown', 500, 2, LEFT_X + 20);
+  finger(g, 'pointermove', 500 - 3 * FULL, 1, LEFT_X);
+  finger(g, 'pointermove', 500 - 3 * FULL, 2, LEFT_X + 20);
+  assert.equal(flip(g), 0);
+ });
+
+ it('while both fingers flip there is no spin and no jump request; one finger held afterwards spins', async () => {
+  const g = await onSnow();
+  jumpUp(g);
+  both(g, 'pointerdown', 500);
+  both(g, 'pointermove', 500 - FULL);
   const i = g.state().input;
-  assert.deepEqual([i.flip, i.left, i.right], [1, 1, 0]);
+  assert.deepEqual([i.flip, i.left, i.right, i.jump], [1, 0, 0, 0]);
+  finger(g, 'pointerup', 500 - FULL, 2, RIGHT_X);
+  const after = g.state().input;
+  assert.deepEqual([after.flip, after.left, after.right], [0, 1, 0], 'left finger held: spin, no flip');
+  land(g);
+  assert.equal(g.state().input.jump, 0, 'no jump request at landing');
+ });
+
+ it('both fingers held still in the air are not a flip', async () => {
+  const g = await onSnow();
+  jumpUp(g);
+  both(g, 'pointerdown', 500);
+  assert.equal(flip(g), 0);
  });
 
  it('on the ground flip is 0, a drag down brakes and a drag up looks back, as before', async () => {
@@ -87,6 +149,9 @@ describe('flip input', () => {
   jumpUp(g);
   assert.deepEqual([flip(g), g.state().input.brake], [0, 0], 'the brake swipe is not a backflip');
   finger(g, 'pointermove', 300 + 200 - 3 * FULL);
+  finger(g, 'pointerdown', 300 + 200, 2, RIGHT_X);
+  finger(g, 'pointermove', 300 + 200 - 3 * FULL, 2, RIGHT_X);
+  finger(g, 'pointermove', 300 + 200 - 3 * FULL, 1);
   assert.equal(flip(g), 1);
   land(g);
   assert.deepEqual([flip(g), g.state().input.lookBack, g.state().input.brake], [0, 0, 0]);
@@ -171,6 +236,8 @@ describe('Controls screen', () => {
   assert.deepEqual(row('keyboard', 'flip-front').keys, ['ArrowUp', 'w']);
   assert.deepEqual(row('keyboard', 'flip-back').keys, ['ArrowDown', 's']);
   assert.equal(row('touch', 'flip-front').minPx, SWIPE_PX);
+  assert.match(row('touch', 'flip-front').label, /both fingers drag up/);
+  assert.match(row('touch', 'flip-back').label, /both fingers drag down/);
   assert.ok(row('touch', 'flip-front').fullPx > SWIPE_PX);
  });
 });

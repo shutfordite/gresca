@@ -1,7 +1,7 @@
 // Input state from touch and keys (the controls are listed in bindings.js): hold the left or right half of the screen
 // to turn (or spin in the air), both halves together jump, swipe down to brake, swipe up and hold to look back;
-// arrows or A/D steer, Down or S brakes, B looks back. In the air (setAirborne) the vertical drag and Up/W, Down/S
-// are flips instead: input.flip, -1..1, + front flip; brake and look back are ground-only.
+// arrows or A/D steer, Down or S brakes, B looks back. In the air (setAirborne) a finger on each half dragged the same
+// way, and Up/W, Down/S, are flips instead: input.flip, -1..1, + front flip; brake and look back are ground-only.
 import {
  BRAKE_SWIPE_PX, LOOK_BACK_SWIPE_PX, KEY_SLOTS, FLIP_KEYS, FLIP_DEAD_ZONE_PX, FLIP_FULL_RATE_PX,
 } from './bindings.js';
@@ -22,13 +22,35 @@ export function createInput() {
  };
 }
 
-// The flip a vertical drag of dy CSS px (up is negative) asks for: 0 inside the dead zone, then growing to +-1 at
-// FLIP_FULL_RATE_PX, + for a drag up (front flip).
-function flipOfDrag(dy) {
+// The flip a vertical drag of dist CSS px (positive = past the dead zone in one direction) asks for, 0..1: 0 inside the
+// dead zone, then growing to 1 at FLIP_FULL_RATE_PX.
+function flipAmount(dist) {
  const span = FLIP_FULL_RATE_PX - FLIP_DEAD_ZONE_PX;
- const amount = (Math.abs(dy) - FLIP_DEAD_ZONE_PX) / span;
- if (!(amount > 0)) return 0;
- return (dy < 0 ? 1 : -1) * Math.min(1, amount);
+ const amount = (dist - FLIP_DEAD_ZONE_PX) / span;
+ return amount > 0 ? Math.min(1, amount) : 0;
+}
+
+// The two-finger flip: the furthest up drag and furthest down drag (CSS px, 0 if none) of the fingers on each half, then
+// + for both halves dragged up, - for both dragged down, 0 if only one half is touched or they disagree. The rate comes
+// from the smaller of the two drags, so both fingers must move. No allocation: this runs on every pointer event.
+function twoFingerFlip(input) {
+ let upLeft = 0;
+ let upRight = 0;
+ let downLeft = 0;
+ let downRight = 0;
+ for (const p of input.pointers.values()) {
+  const dy = p.y - p.y0;
+  if (p.side < 0) {
+   if (-dy > upLeft) upLeft = -dy;
+   if (dy > downLeft) downLeft = dy;
+  } else {
+   if (-dy > upRight) upRight = -dy;
+   if (dy > downRight) downRight = dy;
+  }
+ }
+ const up = flipAmount(Math.min(upLeft, upRight));
+ const down = flipAmount(Math.min(downLeft, downRight));
+ return up && down ? 0 : up - down; // extra fingers pulling both ways: no flip
 }
 
 // Asks for one jump (the sim clears input.jump when it uses it).
@@ -37,16 +59,13 @@ function requestJump(input) {
  input.jumpPressed = 1;
 }
 
-// The flip the held keys and fingers ask for: 0 on the ground; in the air the keys' +-1 or the finger drag with the
-// larger rate.
+// The flip the held keys and fingers ask for: 0 on the ground; in the air the keys' +-1 or the two-finger drag, whichever
+// is larger.
 function currentFlip(input) {
  if (!input.air) return 0;
- let flip = input.keys.U - input.keys.D;
- for (const p of input.pointers.values()) {
-  const dragFlip = flipOfDrag(p.y - p.y0);
-  if (Math.abs(dragFlip) > Math.abs(flip)) flip = dragFlip;
- }
- return flip;
+ const keys = input.keys.U - input.keys.D;
+ const fingers = twoFingerFlip(input);
+ return Math.abs(fingers) > Math.abs(keys) ? fingers : keys;
 }
 
 /**
@@ -71,12 +90,13 @@ export function applyInput(input) {
 }
  if (l && r && !input.both && !air) requestJump(input);
  input.both = !!(l && r);
- input.left = l;
- input.right = r;
- input.brake = b;
- input.steer = r - l;
- input.lookBack = k;
  input.flip = currentFlip(input);
+ const fingerFlip = air && twoFingerFlip(input) !== 0;
+ input.left = fingerFlip ? 0 : l;
+ input.right = fingerFlip ? 0 : r;
+ input.brake = b;
+ input.steer = fingerFlip ? 0 : r - l;
+ input.lookBack = k;
  input.jumpHeld = input.both || !!input.keys.J;
 }
 

@@ -1,4 +1,4 @@
-// The air hints: the arrows that teach the flips (up front flip, down backflip, left and right spin), shown over the
+// The air hints: the arrows that teach the flips (two fingers up front flip, two down backflip, one side held spins), shown over the
 // first few jumps of a profile and on the Controls screen; and the per-step link from the rider to the input.
 import { onStep } from '../core/events.js';
 import { setAirborne } from '../input/input.js';
@@ -8,9 +8,9 @@ const HINT_JUMPS = 3;             // the hints show for this many jumps, then st
 
 // Arrow and what it does, in the order shown.
 const HINTS = Object.freeze([
- { arrow: '↑', what: 'front flip' },
- { arrow: '↓', what: 'backflip' },
- { arrow: '◀ ▶', what: 'spin' },
+ { arrow: '↑↑', what: 'two fingers: front flip' },
+ { arrow: '↓↓', what: 'two fingers: backflip' },
+ { arrow: '◀ ▶', what: 'hold one side: spin' },
 ]);
 
 /** The hint arrows as HTML (constants only): one span per hint, used by the air overlay and the Controls screen. */
