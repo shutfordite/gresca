@@ -37,8 +37,9 @@ const FLIP_FULL_PX = SWIPE_PX * 3.5;
  * One control. The same drag or key can mean one thing on the ground and another in the air: input.js picks by
  * context (swipe down brakes and swipe up and hold looks back on the ground; in the air, two fingers dragged down are
  * a backflip and two dragged up a front flip). device: 'touch' | 'keyboard'; action: what the rider does (the id
- * other code uses); label: the short text on the Controls screen; gesture (touch): a GESTURES id; slot (keyboard): the SLOTS entry its keys drive, or
- * null when the row is a combination of other rows; keys (keyboard): KeyboardEvent.key values; minPx (swipe): CSS px.
+ * other code uses); label: the short text on the Controls screen; gesture (touch): a GESTURES id; slot (keyboard):
+ * the SLOTS entry its keys drive, or null when the row is a combination of other rows; keys (keyboard):
+ * KeyboardEvent.key values; minPx (swipe): CSS px.
  */
 export const BINDINGS = deepFreeze([
  { device: 'touch', action: 'steer-left', label: 'Turn left', gesture: GESTURES.HOLD_LEFT },
@@ -99,7 +100,7 @@ export const FLIP_KEYS = Object.freeze(Object.fromEntries([
  ...binding('keyboard', 'flip-back').keys.map((k) => [k, -1]),
 ]));
 
-/** CSS px each of the two fingers must move in the air before a flip starts, and for the full rate (touch flip rows). */
+/** CSS px each of the two fingers must move in the air before a flip starts (touch flip rows). */
 export const FLIP_DEAD_ZONE_PX = binding('touch', 'flip-front').minPx;
 export const FLIP_FULL_RATE_PX = binding('touch', 'flip-front').fullPx;
 
