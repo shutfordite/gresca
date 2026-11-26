@@ -232,10 +232,14 @@ export function docsAndStyleChecks({ added, changed, diffFiles, read }) {
 export function behaviourChecks(changed, diffFiles) {
  const findings = [];
  const goldenDiff = diffFiles['test/golden.test.js'] || { added: [] };
- const golden = goldenDiff.added.some((a) => /GOLDEN_\w*HASH\s*=/.test(a.text));
- findings.push(golden
-  ? [WARN, 'golden trace hash re-recorded: the PR must name the behaviour change']
-  : [INFO, 'golden trace hash unchanged (`npm test` checks the ride is the same, bit for bit)']);
+ const recorded = (re) => goldenDiff.added.some((a) => re.test(a.text));
+ const sim = recorded(/GOLDEN_(?:SIM_)?HASH\s*=/);
+ const anim = recorded(/GOLDEN_ANIM_HASH\s*=/);
+ if (sim) findings.push([WARN, 'golden sim hash re-recorded: the PR must name the behaviour change']);
+ if (anim) findings.push([WARN, 'golden anim hash re-recorded: the PR must name the animation change']);
+ if (!sim && !anim) {
+  findings.push([INFO, 'golden trace hashes unchanged (`npm test` checks the ride and the pose, bit for bit)']);
+ } else if (!sim) findings.push([INFO, 'golden sim hash unchanged: the ride is the same, bit for bit']);
  const fixtures = changed.filter((f) => f.startsWith('test/fixtures/'));
  if (fixtures.length) findings.push([WARN, `${fixtures.length} recorded fixture file(s) changed in test/fixtures/`]);
  const baseline = changed.some((f) => f.startsWith('tools/bench/baseline'));
