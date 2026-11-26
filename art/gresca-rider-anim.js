@@ -1,5 +1,5 @@
 /*
- * Gresca · rider animation  v0.2.0
+ * Gresca · rider animation  v0.4.0
  * Pure maths on top of the Hanga Dawn spec (HANGA). No canvas, no DOM.
  * Loads in the browser (window.RiderAnim) and in Node (require), like the spec module.
  *
@@ -7,8 +7,8 @@
  *  1. Pose state machine, as the spec describes it: HANGA.poseFor picks the pose, HANGA.blendTime says how
  *     fast to blend into it, landing holds for timing.hold.land and a wipeout snaps in.
  *  2. Body dynamics on top of the blended pose, so the rider reacts to real terrain nobody animated:
- *     a spring-damped compression driven by the ground under the feet and by landings, a physical lean
- *     into turns, angulation, arm counterbalance, and a deeper stance on steep or fast ground.
+ *     a spring-damped compression driven by the ground under the feet and by landings, a lean
+ *     into the edge (F6), unweighting between turns, angulation, arm counterbalance, and a deeper stance on steep or fast ground.
  *
  * All joint maths is in the spec's rider space (metres, x across, y up, z forward, regular stance).
  * Goofy is left to HANGA.projectRider, which mirrors z after the pose is built.
@@ -16,16 +16,27 @@
 (function (root) {
 'use strict';
 var HANGA = root.HANGA || (typeof require === 'function' ? require('./gresca-hanga-spec.js') : null);
-var D2R = Math.PI / 180, R2D = 180 / Math.PI, G = 9.81, LIVE = '__live';
+var D2R = Math.PI / 180, R2D = 180 / Math.PI, LIVE = '__live';
 
 var RA = {
- version: '0.3.0',
+ version: '0.4.0',
  /* Every number here is a starting point to tune on a phone. */
  tune: {
-  turnFull: 1.6,       // rad/s of path turn that counts as a full carve (turn = 1 for poseFor)
+  edgeFull: 0.6,       // rad of edge angle that counts as a full carve (turn = 1 for poseFor)
   turnSmooth: 0.08,    // s, low-pass on the turn signal, so ride and carve do not flicker
-  leanGain: 0.35,      // physical lean = leanGain × atan(v·ω / g), in degrees
+  edgeLean: 0.4,       // deg of body lean per deg of edge angle (the edge in rad is converted to deg first)
+  leanSpeedMin: 1,     // m/s, slower than this the body does not lean into the edge
+  leanSpeedFull: 4,    // m/s, from this speed the lean is the full edgeLean (smoothstep between)
   leanMax: 24,         // deg, a little past the spec's 18–20° carve poses
+  unweightHeight: 0.05, // m, how far the body rises as the edge passes through flat between two turns
+  unweightTime: 0.32,  // s, the whole rise and sink (a half sine: up, then back into the new turn)
+  unweightMinEdge: 0.2, // rad, the edge must have reached this far on one side before flipping counts as a turn change
+  skidFrom: 2, skidTo: 6, // m/s of sideways slip where the skid read starts and where it is full
+  skidSit: 0.04,       // m, extra crouch at a full skid
+  skidCounter: 0.25,   // share of the lean given up at a full skid (hips out, body counters the slide)
+  skidSmooth: 0.1,     // s, time constant of the skid read
+  boardLead: 0.04,     // m, snowboard: the leading shoulder, elbow and hand move this far into the turn at a full edge
+  skiLead: 0.07,       // m, skis: the inside ski runs this far ahead of the outside one at full lean
   brakeRoll: 10,       // deg, snowboard skids on its heel edge when braking
   rollHz: 1.8, rollZeta: 0.75,   // spring that takes the lean to its target
   compHz: 2.2, compZeta: 0.5,    // spring for the legs absorbing the ground (compression, metres)
@@ -81,7 +92,7 @@ RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regul
 RA.create = function (rig) {
  return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
           turn: 0, twist: 0, headYaw: 0, brakeW: 0, fakieW: 0, fakieSide: 0, fakieLook: 0, ahead: null, lookSide: 0,
-          brakeSide: null,
+          brakeSide: null, riderSide: 1, edgeSign: 0, unweightT: 1e9, rise: 0, skidW: 0,
           roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
           landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
 };
@@ -100,7 +111,8 @@ function spring(x, v, rest, hz, zeta, force, dt) {
  *   landed      true on the frame the rider touches down
  *   impact      landing speed, m/s (downwards, positive)
  *   speed       m/s along the snow
- *   pathTurn    rad/s the direction of travel is turning, + = to the right of travel
+ *   edge        rad, the sim's edge angle (AnimInput.edge): + tips the equipment onto its left-turn edge
+ *   skid        m/s, sideways slip (AnimInput.skid)
  *   riderSide   +1 if the rider's +x (right hand, or toe edge) is on the right of travel, else -1
  *   facing, travelDir   rad, optional: the equipment heading and the direction of travel (any angle convention, but
  *               the same for both). Without them there is no body twist
@@ -117,8 +129,11 @@ RA.update = function (s, inp, dt) {
  s.time += dt;
 
  // ---- 1. pose state machine (spec: rider.timing, HANGA.poseFor, HANGA.blendTime) ----
- var turnIn = clamp((inp.pathTurn || 0) / T.turnFull, -1, 1) * (inp.riderSide || 1);
+ // edge + is a left turn of the equipment (world, counter-clockwise), the pose's turn is - to the left in travel
+ var edge = inp.edge || 0, edgeN = clamp(edge / T.edgeFull, -1, 1);
+ var turnIn = -edgeN * (inp.riderSide || 1);
  s.turn += (turnIn - s.turn) * Math.min(1, dt / T.turnSmooth);
+ s.riderSide = inp.riderSide || 1;
  if (inp.landed && onSnow) { s.landedAgo = 0; s.compV += Math.min(inp.impact || 0, T.impactMax) * T.landKick; s.compPeak = 0; }
  else if (s.landedAgo != null) { s.landedAgo += dt; if (!onSnow || s.landedAgo > 2) s.landedAgo = null; }
  // F7: a skier riding switch looks over the downhill-side shoulder; the side keeps a hysteresis around the fall line
@@ -186,10 +201,25 @@ RA.update = function (s, inp, dt) {
  s.headYaw = (s.brakeW > 0 ? -clamp(raw - s.twist, -T.brakeHeadMax, T.brakeHeadMax) * s.brakeW : 0) * (1 - fw) + fh;
 
  // ---- 2. body dynamics ----
- // Lean: the angle a rider tilts to balance the turn, atan(v·ω/g), scaled for an arcade turn rate.
- var lean = onSnow ? clamp(T.leanGain * R2D * Math.atan((inp.speed || 0) * (inp.pathTurn || 0) / G), -T.leanMax, T.leanMax) : 0;
- // Positive roll leans toward the rider's -x, so leaning to the right of travel is -lean·riderSide.
- var rollT = -lean * (inp.riderSide || 1);
+ // Skid read: a low-passed 0..1 of how hard the equipment slides sideways; the body sits lower and gives up some lean.
+ var skidIn = onSnow ? clamp((Math.abs(inp.skid || 0) - T.skidFrom) / (T.skidTo - T.skidFrom), 0, 1) : 0;
+ s.skidW += (skidIn - s.skidW) * Math.min(1, dt / T.skidSmooth);
+ // Lean: the body tips into the turn by the edge angle (deg of lean per deg of edge, not at a crawl). + edge is a
+ // left turn, so the lean is toward the rider's -x (positive roll) when the rider's +x is on the right of travel.
+ var speedW = smooth(clamp(((inp.speed || 0) - T.leanSpeedMin) / (T.leanSpeedFull - T.leanSpeedMin), 0, 1));
+ var lean = onSnow ? clamp(T.edgeLean * R2D * edge * speedW * (1 - T.skidCounter * s.skidW), -T.leanMax, T.leanMax) : 0;
+ var rollT = lean * (inp.riderSide || 1);
+ // Unweighting: as the edge passes through flat from one turn to the other the body rises, a half sine over
+ // unweightTime, and sinks into the new turn. Counts only after the edge reached unweightMinEdge on one side.
+ if (onSnow && speedW > 0) {
+  if (s.edgeSign * edge < 0) {
+   if (s.unweightT >= T.unweightTime) s.unweightT = 0;
+   s.edgeSign = 0;
+  }
+  if (Math.abs(edge) >= T.unweightMinEdge) s.edgeSign = edge > 0 ? 1 : -1;
+ } else s.edgeSign = 0;
+ s.unweightT += dt;
+ s.rise = s.unweightT < T.unweightTime ? T.unweightHeight * Math.sin(Math.PI * s.unweightT / T.unweightTime) : 0;
  if (rig === 'board' && inp.braking && onSnow) rollT += T.brakeRoll;
  s.rollTarget = rollT;
  var sub = Math.max(1, Math.ceil(dt / T.maxStep)), h = dt / sub, i, r;
@@ -198,7 +228,7 @@ RA.update = function (s, inp, dt) {
   var rest = 0, force = 0;
   if (onSnow) {
    rest = clamp(T.steepPerDeg * ((inp.slopeDeg || 0) - (inp.meanSlopeDeg || 0)), T.steepMin, T.steepMax) +
-          T.tuckDepth * clamp(((inp.speed || 0) - T.tuckFrom) / (T.tuckTo - T.tuckFrom), 0, 1);
+          T.tuckDepth * clamp(((inp.speed || 0) - T.tuckFrom) / (T.tuckTo - T.tuckFrom), 0, 1) + T.skidSit * s.skidW;
    force = clamp(inp.feetAccelUp || 0, -T.feetAccelMax, T.feetAccelMax);
   }
   for (i = 0; i < sub; i++) {
@@ -215,7 +245,7 @@ RA.update = function (s, inp, dt) {
 
 /* Body dynamics as joint offsets on top of the blended pose. */
 RA.applyBody = function (s, inp, onSnow) {
- var T = RA.tune, g = RA.groups[s.rig], J = copyJ(s.poseJ), q = s.comp, f = g.fwd, k;
+ var T = RA.tune, g = RA.groups[s.rig], J = copyJ(s.poseJ), q = s.comp - (onSnow ? s.rise : 0), f = g.fwd, k;
  if (inp.wiped) return J;
  // Compression: hips drop, knees go forward, the upper body folds forward over the feet.
  g.hips.forEach(function (j) { J[j][1] -= q; J[j][2] -= g.hipsBack * q; });
@@ -229,6 +259,21 @@ RA.applyBody = function (s, inp, onSnow) {
  // Angulation: the legs take the lean, the upper body leans back toward upright.
  var sr = Math.sin(s.roll * D2R), hipY = J.hipC[1];
  g.upper.forEach(function (j) { J[j][0] += (J[j][1] - hipY) * sr * T.angulation; });
+ // Skis: the inside ski runs ahead (the L joints are on the rider's -x, where the body leans for a + roll).
+ if (s.rig === 'ski') {
+  var lead = clamp(s.roll / T.leanMax, -1, 1) * T.skiLead;
+  ['ankL', 'skiLt', 'skiLn'].forEach(function (j) { J[j][2] += Math.max(0, lead); });
+  ['ankR', 'skiRt', 'skiRn'].forEach(function (j) { J[j][2] += Math.max(0, -lead); });
+ }
+ // Board: the shoulders lead into the turn. The rider faces +x and travels along +z (riderSide 1) or -z (-1), so the
+ // leading side is F or B; s.turn is + toward the rider's +x, so the leading side moves with it and the other against.
+ if (s.rig === 'board') {
+  var fwdSide = (s.riderSide || 1) > 0, ld = T.boardLead * s.turn * (1 - s.brakeW);
+  [['shF', 'shB'], ['elbF', 'elbB'], ['hanF', 'hanB']].forEach(function (pair) {
+   J[pair[fwdSide ? 0 : 1]][0] += ld;
+   J[pair[fwdSide ? 1 : 0]][0] -= ld;
+  });
+ }
  // Arms: the outside hand rises and reaches out; all hands trail behind a change of lean.
  var out = clamp(s.roll / T.leanMax, -1, 1), lag = s.rollTarget - s.roll;
  for (k in g.hands) {

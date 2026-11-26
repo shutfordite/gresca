@@ -12,7 +12,7 @@ const RA = require('../art/gresca-rider-anim.js');
 const DT = 1 / 60;
 const D2R = Math.PI / 180;
 const snow = (o = {}) => Object.assign({ wiped: false, grinding: false, airborne: false, braking: false, approach: false,
-  landed: false, impact: 0, speed: 10, pathTurn: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
+  landed: false, impact: 0, speed: 10, edge: 0, skid: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
 const run = (s, inp, sec) => { for (let t = 0; t < sec - 1e-9; t += DT) RA.update(s, inp, DT); return s; };
 // equipment `off` degrees counter-clockwise (world frame) of the direction of travel
 const skid = (off, side = 1) => snow({ travelDir: 0.3, facing: 0.3 + off * D2R + (side < 0 ? Math.PI : 0), riderSide: side });
@@ -36,7 +36,7 @@ test('twist is zero when the equipment points along travel', async (t) => {
    const a = RA.create(rig);
    const b = RA.create(rig);
    for (let i = 0; i < 300; i++) {
-    const inp = snow({ speed: 12, pathTurn: Math.sin(i / 20) * 1.5, braking: i % 90 > 70, airborne: i % 150 > 130 });
+    const inp = snow({ speed: 12, edge: Math.sin(i / 20) * 0.9, braking: i % 90 > 70, airborne: i % 150 > 130 });
     RA.update(a, inp, DT);
     RA.update(b, { ...inp, facing: 0.7, travelDir: 0.7 }, DT);
     assert.equal(b.twist, 0);
@@ -100,7 +100,7 @@ test('no NaN for every pose and yaw', () => {
   for (const stance of ['regular', 'goofy']) {
    for (let yaw = -180; yaw <= 180; yaw += 30) {
     for (const flags of [{}, { braking: true }, { airborne: true }, { wiped: true }, { grinding: true }, { approach: true },
-     { pathTurn: 2 }, { pathTurn: -2 }]) {
+     { edge: 1.1 }, { edge: -1.1 }]) {
      for (const off of [-170, -60, 0, 60, 170]) {
       const s = run(RA.create(rig), { ...skid(off, off > 90 || off < -90 ? -1 : 1), ...flags }, 0.5);
       const bound = flags.braking ? RA.tune.brakeTwistMax : RA.tune.twistMax; // the brake widens the clamp

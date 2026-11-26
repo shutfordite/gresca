@@ -13,7 +13,7 @@ const DT = 1 / 60;
 
 // Snow input with sensible defaults; override per test.
 const snow = (o = {}) => Object.assign({ wiped: false, grinding: false, airborne: false, braking: false, approach: false,
-  landed: false, impact: 0, speed: 10, pathTurn: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
+  landed: false, impact: 0, speed: 10, edge: 0, skid: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
 function run(s, inp, sec) { for (let t = 0; t < sec - 1e-9; t += DT) RA.update(s, typeof inp === 'function' ? inp(t) : inp, DT); return s; }
 function settled(rig, inp = snow()) { return run(RA.create(rig), inp, 2); }
 
@@ -57,7 +57,7 @@ test('pose state machine follows the spec timing', async (t) => {
     });
   }
   await t.test('carve pose follows the turn in the rider frame', () => {
-    const turn = (rig, dir, side) => run(RA.create(rig), snow({ pathTurn: dir * 2, riderSide: side }), 0.5).pose;
+    const turn = (rig, dir, side) => run(RA.create(rig), snow({ edge: -dir * 0.7, riderSide: side }), 0.5).pose;
     assert.equal(turn('ski', -1, 1), 'carveL');
     assert.equal(turn('ski', 1, 1), 'carveR');
     assert.equal(turn('ski', 1, -1), 'carveL', 'riding switch, a right turn is on the rider\'s left');
@@ -67,23 +67,23 @@ test('pose state machine follows the spec timing', async (t) => {
   await t.test('a small wobble does not flicker into a carve', () => {
     const s = settled('ski');
     let changes = 0, last = s.pose;
-    run(s, (t) => snow({ pathTurn: 0.5 * Math.sin(t * 40) }), 2);
-    run(s, (t) => { if (s.pose !== last) { changes++; last = s.pose; } return snow({ pathTurn: 0.5 * Math.sin(t * 40) }); }, 2);
+    run(s, (t) => snow({ edge: 0.19 * Math.sin(t * 40) }), 2);
+    run(s, (t) => { if (s.pose !== last) { changes++; last = s.pose; } return snow({ edge: 0.19 * Math.sin(t * 40) }); }, 2);
     assert.equal(changes, 0);
   });
 });
 
 test('body dynamics', async (t) => {
   await t.test('lean goes into the turn, with the right sign forward and switch', () => {
-    const lean = (side, dir) => run(RA.create('ski'), snow({ speed: 12, pathTurn: dir * 1.5, riderSide: side }), 1.5).roll;
+    const lean = (side, dir) => run(RA.create('ski'), snow({ speed: 12, edge: -dir * 1.1, riderSide: side }), 1.5).roll;
     assert.ok(lean(1, 1) < -5, 'turning right, forward: lean toward +x (negative roll)');
     assert.ok(lean(1, -1) > 5);
     assert.ok(lean(-1, 1) > 5, 'riding switch flips it');
     assert.ok(Math.abs(lean(1, 1)) <= RA.tune.leanMax + 0.5, 'clamped to leanMax');
-    assert.ok(Math.abs(run(RA.create('ski'), snow({ speed: 0.2, pathTurn: 1.5 }), 1.5).roll) < 1, 'no lean when nearly stopped');
+    assert.ok(Math.abs(run(RA.create('ski'), snow({ speed: 0.2, edge: -1 }), 1.5).roll) < 1, 'no lean when nearly stopped');
   });
   await t.test('angulation keeps the shoulders more level than the legs', () => {
-    const s = run(RA.create('ski'), snow({ speed: 12, pathTurn: -1.5 }), 1.5); // leaning left, positive roll
+    const s = run(RA.create('ski'), snow({ speed: 12, edge: 0.8 }), 1.5); // leaning left, positive roll
     const base = HANGA.poseJoints('ski', s.pose, 'regular');
     assert.ok(s.J.neck[0] > base.neck[0] + 0.02, 'upper body moves toward the outside of the turn');
     assert.ok(s.J.hanR[1] > base.hanR[1] + 0.02, 'outside hand rises');
@@ -114,7 +114,7 @@ test('body dynamics', async (t) => {
       const s = RA.create(rig);
       for (let i = 0; i < 2000; i++) {
         RA.update(s, snow({ airborne: rnd() < 0.2, wiped: rnd() < 0.02, grinding: rnd() < 0.05, braking: rnd() < 0.2,
-          landed: rnd() < 0.05, impact: rnd() * 40, speed: rnd() * 40, pathTurn: (rnd() - 0.5) * 20, riderSide: rnd() < 0.5 ? 1 : -1,
+          landed: rnd() < 0.05, impact: rnd() * 40, speed: rnd() * 40, edge: (rnd() - 0.5) * 3, skid: rnd() * 12, riderSide: rnd() < 0.5 ? 1 : -1,
           feetAccelUp: (rnd() - 0.5) * 400, slopeDeg: rnd() * 50 }), rnd() < 0.05 ? 0.25 : DT);
         for (const k in s.J) assert.ok(s.J[k].every(Number.isFinite), `${rig} ${k} finite`);
         assert.ok(s.comp >= RA.tune.compMin - 1e-9 && s.comp <= RA.tune.compMax + 1e-9);
