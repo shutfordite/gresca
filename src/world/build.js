@@ -6,8 +6,8 @@ import { W0, H0, cx, TEST_LAYOUT, createGridCourse } from './course.js';
 import { PLAY_LAYOUT } from './play-slope.js';
 import { hash, vn, fbmRows } from './noise.js';
 
-const TREE_CELL_M = 6;      // m, one tree candidate per cell of this size
-const TREE_KEY_STRIDE = 10000; // the trees map key is gx * TREE_KEY_STRIDE + gy
+export const TREE_CELL_M = 6;      // m, one tree candidate per cell of this size
+export const TREE_KEY_STRIDE = 10000; // the trees map key is gx * TREE_KEY_STRIDE + gy
 
 const TREE_NEAR_MAX = 9;    // trees near() can return: one per cell of the 3 × 3 around the point
 
@@ -65,7 +65,7 @@ export const NO_TREES = Object.freeze({ near: () => 0, maxNear: 0 });
  * The trees lookup the sim uses (sim/step.js): near(x, y, out) writes the trees ({x, y}, world m) in the 3 × 3 tree
  * cells around world (x, y) into out (an array with room for TREE_NEAR_MAX) and returns how many. No allocation.
  */
-function createTreeLookup(treeCells, frame) {
+export function createTreeLookup(treeCells, frame) {
  const at = { u: 0, v: 0 };
  function near(x, y, out) {
   frame.toGrid(x, y, at);
