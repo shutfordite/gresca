@@ -61,19 +61,21 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Building the world (grids, trees) | `src/world/build.js` | `build`, `terrain` |
 | Riding physics: steer, grip, trees, finish, events | `src/sim/step.js` | `physics`, `sim`, `events` |
 | The brake (yaw across the fall line, skid friction) and its tunables | `src/sim/brake.js`, `src/sim/tuning.js` | `brake`, `physics`, `golden` |
+| The edge and carve (steer sets an edge angle, carve radius from the rig's sidecut, skid past the edge's grip) and its tunables; rig data in `RIGS` | `src/sim/edge.js`, `src/sim/tuning.js`, `src/core/config.js` | `edge`, `physics`, `park`, `golden` |
 | Jumps, air, landing, crash, air scoring | `src/sim/jump.js` | `physics`, `park`, `sim` |
 | Rails and boxes | `src/sim/grind.js` | `park`, `sim` |
 | Snow spray | `src/sim/particles.js` | `features`, `sim` |
 | Fixed timestep and interpolation | `src/sim/timestep.js` | `timestep`, `facade` |
 | Rider and session state fields | `src/sim/state.js` (+ `src/sim/fields.js` to expose them) | `facade`, `sim` |
 | Which keys and gestures do what (the one table; also read by the Controls screen) | `src/input/bindings.js` | `bindings`, `controls` |
-| Touch and key controls | `src/input/input.js` (logic, reads the table), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings` |
+| Touch and key controls; flips in the air (`InputState.flip`, `setAirborne`) | `src/input/input.js` (logic, reads the table), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings`, `air-controls` |
+| Air hints (flip and spin arrows for the first 3 jumps, `gresca-hints`), the rider-to-input air link | `src/ui/air-hints.js`, `styles/hud.css`, `index.html` (`#air-hints`) | `air-controls` |
 | Pause: the button, the pause panel, the hidden-page auto-pause (`hud.paused`; the loop in `app.js` honours it) | `src/ui/pause.js`, `styles/hud.css`, `index.html` | `pause` |
 | The Controls screen (generated from the table; gesture diagrams) | `src/ui/controls.js`, `styles/menu.css`, `index.html` | `controls` |
 | Camera follow, tilt, compass, the swing to look back (`InputState.lookBack`) | `src/view/camera.js` | `camera`, `look` |
 | Terrain render, trees, rider placement | `src/view/draw.js` | `features`, `look` |
 | Which renderer draws the terrain (the GPU by default, the CPU raycaster with `?renderer=cpu`) and the fallback; the `?fps=1` readout | `src/view/renderer.js`, `src/view/fps-meter.js` (ADR 0008) | `gl-terrain`, `timer` |
-| The GPU terrain (E0, three.js in `vendor/three/`): projection matching the sprites, clipmap mesh, baked textures, snow and sky shaders and their Look uniforms, the trees' horizon | `src/view/gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `sun-shadow.js` the baked ridge and tree shadows (aux alpha) and `rider-shadow.js` the rider's soft shadow (E2), `gl-budget.js` texture memory and its budget, `context-loss.js` lost WebGL context, `track-ribbon.js` the ski track's ribbon mesh and groove shader) | `gl-terrain`, `gl-shadow`, `gl-resilience`, `track-trail` (CI cannot run WebGL: check the preview) |
+| The GPU terrain (E0, three.js in `vendor/three/`): projection matching the sprites, clipmap mesh, baked textures, snow and sky shaders and their Look uniforms, the trees' horizon | `src/view/gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `sun-shadow.js` the baked ridge and tree shadows (aux alpha) and `rider-shadow.js` the rider's soft shadow (E2), `gl-budget.js` texture memory and its budget, `tree-mesh.js` the trees as one instanced mesh (E3a), `context-loss.js` lost WebGL context, `track-ribbon.js` the ski track's ribbon mesh and groove shader) | `gl-terrain`, `gl-shadow`, `gl-resilience`, `gl-trees`, `track-trail` (CI cannot run WebGL: check the preview) |
 | Ski tracks: what the board or skis cut (T1: a ring of samples per contact line, from `boardHeading`, `travelHeading`, `skid`, braking, the rig) | `src/view/track-trail.js` (pure model); `src/view/ski-tracks.js` (the per-step hook; the CPU raycaster's colour-map track); `src/view/gl/track-ribbon.js` (the GPU ribbon) | `track-trail`, `features`, `games` |
 | Every colour, terrain tone, sky and fog value, sprite colour, camera framing value, CSS token, rider projection (the Look) | `src/view/look/look.js` (interface), `src/view/look/hanga.js` (from the spec; the only reader of `HANGA`'s fields) | `look-contract`, `look-lint`, `look` |
 | The look lab (every pose, yaw, pitch, tone, sprite and role) | `lab.html`, `src/view/look/lab.js` | `lab` |
@@ -92,12 +94,14 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Screenshots of every scene, board and skis, 820x1180 (`npm run shot` -> `shots/`; Playwright is dev-only, ADR 0003) | `tools/shot.mjs`, `.github/workflows/test.yml` | none (CI `shots` job on `src/view/`, `art/`, `styles/` PRs) |
 | Frame time by stage (`npm run bench`, `-- --chrome` for headless Chrome), the recorded baseline, the CI regression check, pixel digests of every scene | `tools/bench/` (`core.mjs` path and stats, `baseline.json`, `compare.mjs`, `digest.mjs`); the stage timer is `view.timer` (`src/view/draw.js`) | `bench`, `timer` (CI `bench` job on PRs) |
 | The mechanical PR check (asserts, golden hash, ownership, template, docs and style on new lines, smoke test; `npm run review`, `npm run smoke`); the ownership list mirrors "Who owns what" below | `tools/review/` (`checks.mjs` pure, `run.mjs`, `smoke.mjs`), `.github/workflows/pr-check.yml` | `review` (CI `PR check` job comments on every PR) |
-| The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `tools/map-compiler/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
+| The baked map file `gresca-map-1` (`maps/<id>.terrain.json`): fields, height encoding, limits | `src/world/map-file/format.js`, ADR 0006 | `map-compiler`, `map-validate` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the file | `tools/map-compiler/core.js` (pure) | `map-compiler` |
 | DEM and piste sources (Terrarium PNG tiles; OpenSkiMap, Overpass) | `tools/map-compiler/sources/` | `map-compiler` |
-| Map validators (pure; the game reuses them in C4): terrain `validateTerrain`, course `validateCourse` | `tools/map-compiler/validate.js` | `map-validate`, `map-course` |
-| The course file `gresca-map-1` kind `course` (`maps/<id>.course.json`): constants and limits; the run behind it (piste selection, `Course.fromRun`, mean slope, horizon); `compileCourse` | `tools/map-compiler/course-format.js`, `course-run.js`, `core.js`, ADR 0010 | `map-course` |
+| Map validators (pure; the game reuses them in C4): terrain `validateTerrain`, course `validateCourse` | `src/world/map-file/validate.js` | `map-validate`, `map-course` |
+| The course file `gresca-map-1` kind `course` (`maps/<id>.course.json`): constants and limits; the run behind it (piste selection, `Course.fromRun`, mean slope, horizon); `compileCourse` | `src/world/map-file/course-format.js`, `course-run.js`, `tools/map-compiler/core.js`, ADR 0010 | `map-course` |
 | Baking a map: download cache, `--fetch` (run by the owner); `--course` writes the course file offline | `tools/map-compiler/cli.mjs`, `maps/sources/<id>.json` | `map-compiler`, `map-course` |
+| Loading a real map (C4a): a terrain file and a course file become the world (layer stack, frame, Course, trees, sun, horizon, credits); `loadMapSteps` yields progress per chunk, `loadMap` runs it whole; no fetch (ADR 0011) | `src/world/map-loader.js`, `src/world/map-trees.js` | `map-loader` |
+| The corridor detail layer: 2 m tiles of the composed refinements made on demand within 150 m of the piste, an LRU cache (60 MB budget: about 2 MB used) | `src/world/corridor-layer.js` | `map-loader` |
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
 
 Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.

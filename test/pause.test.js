@@ -67,10 +67,12 @@ describe('pause', () => {
   const g = await load();
   const row = g.state().bindings.find((b) => b.device === 'keyboard' && b.action === 'pause');
   assert.deepEqual(row.keys, ['Escape', 'p']);
-  const li = g.el('ctl-body').innerHTML.match(/data-action="pause">(.*?)<\/li>/)[1];
+  const li = g.el('ctl-body').innerHTML.match(/data-device="keyboard" data-action="pause">(.*?)<\/li>/)[1];
   assert.match(li, /Pause/);
   assert.match(li, /<kbd>Esc<\/kbd>/);
   assert.match(li, /<kbd>P<\/kbd>/);
+  const touch = g.el('ctl-body').innerHTML.match(/data-device="touch" data-action="pause">(.*?)<\/li>/)[1];
+  assert.match(touch, /Tap the pause button/);
  });
 
  it('a hidden page pauses the run; coming back leaves it paused', async () => {

@@ -48,3 +48,5 @@ kbd{min-width:22px;padding:4px 8px;border:2px solid var(--mini-edge);border-radi
  color:var(--ink);
  font:700 15px "Trebuchet MS",system-ui,sans-serif;
 }
+/* The air hints on the Controls screen (the same arrows as in the air). */
+.ctl-air{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 18px;margin:14px 0 4px;color:var(--light)}

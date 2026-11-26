@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 22 Nov 2026, main after PR #49.
+Updated 25 Nov 2026, main after PR #54.
 
 ## Done
 | Package | PR |
@@ -42,25 +42,42 @@ Updated 22 Nov 2026, main after PR #49.
 | T1 ski tracks cut by the equipment (`track-trail.js`, the GPU ribbon) | #46 |
 | M1 the play mountain (steep, big kickers), the map the game opens on; `?map=test` for the test slope (ADR 0009) | #48 |
 | L1 hold to look back: `InputState.lookBack` (L1a), swipe up and hold or `B`, the camera swings uphill (L1b) | #47, #49 |
+| F5-anim brake counter-rotation: the upper body stays on the fall line | #51 |
+| F4b pause button, pause panel, hidden-page auto-pause, the Controls screen in game | #52 |
+| C3b the course file `<id>.course.json` (ADR 0010) and `validateCourse` | #53 |
+| E2 soft sun shadows from the terrain, rider and tree shadows on the GPU | #54 |
 
 ## In progress (phase 3, the five streams; parallel, each in its own folders)
 | Stream | Package | Branch |
 |---|---|---|
-| Shared | This file after #49 | `docs/status-after-49` |
-| S1 controls and UI | **F4b** pause button and the Controls screen in game | `ui/f4b-pause` |
-| S2 sim feel | **F6** edge and carve model, no heading clamp, yaw counter-clockwise | `sim/f6-edge-carve` |
-| S3 rider animation | **F5-anim** brake counter-rotation: the upper body stays on the fall line | `anim/f5-counter-rotation` |
-| S4 look, camera, render | **E2** soft sun shadows from the terrain; rider and tree shadows on the GPU | `view/e2-shadows` |
-| S5 maps | **C3b** the course file `<id>.course.json` and its validator | `maps/c3b-course-file` |
+| Shared | This file after #54 | `docs/status-after-54` |
+| S1 controls and UI | **F3-input** flip input in the air (drag up/down, `W`/`S`), air hints for the first jumps, the flip and Pause rows on the Controls screen | `ui/f3-flip-input` |
+| S2 sim feel | **F6** edge and carve model, no heading clamp, yaw counter-clockwise (new golden hash) | `sim/f6-edge-carve` |
+| S3 rider animation | **F7** ski fakie: the head looks over the downhill-side shoulder, with hysteresis | `anim/f7-fakie-look` |
+| S4 look, camera, render | **E3a** trees as instanced GPU objects | `view/e3a-gpu-trees` |
+| S5 maps | **C4a** the map loader in `world/`: a baked terrain and course file to a world, corridor-only 2 m detail, memory budget; tested on a synthetic map (no fetch, no UI) | `maps/c4a-map-loader` |
 
 ## Next, in order
-- S1: F3 flip input and air hints → stance picker.
+- S1: stance picker → C4b menu entry for real maps.
 - S2: F3 flip physics and scoring (ollie preload if F6 leaves it out).
-- S3: F6 edge-driven lean → F7 fakie look → F3 flip tuck.
-- S4: E3 GPU trees and park objects → E4 tilt-shift and haze (`docs/ROADMAP.md`). The camera framing on the play
-  mountain's 30° slopes (looks flat, #48) folds into E3 or its own small package.
+- S3: F6 edge-driven lean (after S2's F6) → F3 flip tuck. F7 moved ahead of F6-lean because it needs only
+  `isSwitch` and `downhillSide`, which exist; F6-lean needs the edge the sim gets in F6.
+- S4: E3b rails, flags and kickers as GPU objects → E4 tilt-shift and haze. The camera framing on the play
+  mountain's 30° slopes (looks flat, #48) folds into E3b or its own small package.
 - Ski tracks: T1 is done; pressing them into the snow, lit edges and fading are the later tracks workstream.
-- S5: C4 map loading (needs D0).
+- S5: **C4b** loading a map in the game: `fetch` from `maps/` (same origin), a file the player picks, chunked
+  build with progress, the course's sun from the Look's dawn setting (S4 confirms, #53). Needs the owner's bake of
+  El Tarter (below) for its acceptance ride.
+
+## Owner to do
+- **Bake El Tarter** (the agents' sandbox blocks the tile and piste hosts): `node tools/map-compiler/cli.mjs --config
+  maps/sources/el-tarter.json --fetch`, then list the piste names the file holds with
+  `node -e "const t=require('./maps/el-tarter.terrain.json');console.log([...new Set(t.pistes.map(p=>p.name))].join('\n'))"`,
+  and write the course with `--course --terrain maps/el-tarter.terrain.json --run-name "<name>"` (the name must match
+  exactly, accents included). Commit `maps/el-tarter.terrain.json` and `maps/el-tarter.course.json`. C4b's acceptance
+  (El Tarter rideable start to finish) waits on it.
+- **The first real course (owner, 25 Nov):** El Tarter's snow park if OpenSkiMap maps it as a piste; otherwise Àliga.
+  The snow park's kickers and rails go in the course file's park layout (ADR 0010) until real park features are mapped.
 
 ## Known issues (not yet fixed)
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
@@ -77,8 +94,10 @@ Updated 22 Nov 2026, main after PR #49.
   board's toe-side brake looks like kneeling at yaw 90.
 
 ## Decisions on record
-In `docs/ROADMAP.md` ("Decisions"), ADRs 0001, 0002, 0004 and 0005 (0003 is reserved for Playwright), and `docs/REAL-WORLD-DATA.md` (R1–R6). Still open:
-**D0** (may the game fetch map data at runtime; matters from C4).
+In `docs/ROADMAP.md` ("Decisions"), ADRs 0001, 0002, 0004 and 0005 (0003 is reserved for Playwright), and `docs/REAL-WORLD-DATA.md` (R1–R6). **D0**
+(runtime fetching) stays open; until the owner decides, C4 follows the recommendation in `docs/REAL-WORLD-DATA.md`:
+nothing third-party is fetched at runtime, and the game loads only baked files from its own `maps/` folder or a file
+the player picks. Decide with El Tarter's real file size and frame times once it rides.
 
 ## How the work is run
 The coordinator skill (`.claude/skills/gresca-architect/SKILL.md`) holds the method: briefing agents, reviewing PRs,
