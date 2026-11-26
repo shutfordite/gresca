@@ -56,6 +56,27 @@ The freeze is about four PRs (B2a, B2b, B2c and C2), plus the P1 docs PR between
 S2 and S3 meet only through `RiderState`, `AnimInput` and `SimEvent`. S1 and S2 meet only through `InputState`. S4 and
 S3 meet through `Look.rider.project`. All of these are fixed in B2b, B2c and P4.
 
+### X1: conflict-proofing (Shared, owner asked 26 Nov; a short freeze)
+On 26 Nov ten PR conflicts needed hand merges. Nine came from one cause, one from the next two:
+1. **Hand-kept test lists.** Each per-area script in `package.json` lists its files on one line, so every PR that adds
+   a test conflicts with every other one. Fix: each test file names its areas in its first line
+   (`// @areas sim view`); `tools/test-area.mjs <area>` runs the files tagged with that area; the scripts in
+   `package.json` list no files; a test fails when a test file has no tag or an unknown area. Adding a test never
+   touches a shared file again.
+2. **One golden hash for sim and animation.** Any animation change re-records the line every sim PR also guards.
+   Fix: two hashes on two lines (sim fields, anim fields), plus a carving scene in `src/scenes.js` (#66 review).
+3. **Long one-line literals at stream seams.** Two PRs adding a field each to the same line conflict
+   (`riderAnimInput` in `src/view/rider-animation.js`, the anim state and the `poseFor` call in
+   `art/gresca-rider-anim.js`, `animInput` in `src/sim/anim-input.js`). Fix: one property per line there, and a rule
+   in `docs/STYLE.md`: object literals and calls that several streams extend put one property per line.
+4. **Process (no code):** no stacked PRs unless a package needs one that is still open; when the base merges, the
+   coordinator merges main into the dependent branch at once. The coordinator's merge-order list is posted with every
+   review round, and after each merge the coordinator updates the open branches (`update-branch`, or a merge of main
+   where it conflicts) before the owner merges the next.
+One PR, by the coordinator, behaviour change none (the anim hash is recorded fresh from the same rides; the sim hash
+must equal today's sim fields). **Freeze:** merge #66 and #67 first, then no other code PR opens or merges until X1
+is in (a few hours). Stream work restarts on top of it.
+
 ## Where this differs from the feedback plan, and why
 - **The `Course` seam and the ENU frame (C2) move into the freeze.** In the feedback plan they sat in S5. F5, F6 and F7
   need the fall line and headings independent of +y, and flipping the frame later would rewrite stream code.
