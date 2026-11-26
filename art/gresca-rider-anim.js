@@ -140,8 +140,8 @@ RA.update = function (s, inp, dt) {
  s.bodyPitch = flipRot / D2R;
  s.flipping = Math.abs(flipRot) > T.flipMin;
  // turn is already in the rider's frame (riderSide), so poseFor gets goofy: false and toe stays the +x edge
- var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne, flipping: s.flipping,
-                            landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide,
+ var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne,
+                            flipping: s.flipping, landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide,
                             approach: inp.approach && onSnow, isSwitch: fakie,
                             lookSide: s.fakieSide > 0 ? 'left' : 'right',
                             turn: s.turn, goofy: false });
