@@ -89,15 +89,18 @@ export function draw(view, scene, dt) {
 /**
  * Everything over the terrain, on the screen canvas: trees (hidden behind ridges by view.occ, filled by the raycast
  * or, with the GPU terrain, by gl/horizon.js), rails, flags, spray and the rider. Same scene and dt as draw().
- * treesOnGpu: the GPU draws the trees (gl/tree-mesh.js): skip them here.
+ * objectsOnGpu: the GPU draws the trees (gl/tree-mesh.js) and the park, rails, flags and kickers (gl/park-mesh.js):
+ * skip them here.
  */
-export function drawSprites(view, scene, dt, treesOnGpu = false) {
+export function drawSprites(view, scene, dt, objectsOnGpu = false) {
  const { ctx, camera, terrain, look } = scene;
  const timer = view.timer;
- if (!treesOnGpu) drawTrees(ctx, view, camera, terrain, look, scene.treeArr, view.lo.width);
+ if (!objectsOnGpu) drawTrees(ctx, view, camera, terrain, look, scene.treeArr, view.lo.width);
  if (timer !== null) timer.lap(STAGE.TREES);
- view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
- view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
+ if (!objectsOnGpu) {
+  view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
+  view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
+ }
  drawSpray(ctx, camera, terrain, view, scene.particles, look.sprites.spray);
  if (timer !== null) timer.lap(STAGE.SPRITES);
  drawRiderOnSnow(ctx, view, scene, view.groundM, dt);

@@ -20,8 +20,8 @@ function placeUnder(canvas, screen) {
  screen.parentNode.insertBefore(canvas, screen);
 }
 
-// One frame with the GPU terrain: terrain, sky and trees on the GL canvas (the trees are depth-tested against the
-// terrain: no horizon pass), then the sprites and rider on the cleared screen canvas (as draw() draws them).
+// One frame with the GPU terrain: terrain, sky, trees and park on the GL canvas (depth-tested against the terrain:
+// no horizon pass), then the spray and rider on the cleared screen canvas (as draw() draws them).
 function drawWithGl(gpu, view, scene, dt) {
  const timer = view.timer;
  gpu.render(view, scene);
@@ -41,6 +41,7 @@ function drawWithGl(gpu, view, scene, dt) {
 export function chooseRenderer(opts, view, scene) {
  view.renderer = { name: 'cpu', fallback: null };
  view.treeGpu = null;
+ view.parkGpu = null;
  if (opts.want !== 'gl') return draw;
  try {
   if (!opts.THREE) throw new Error('three.js did not load');
@@ -52,10 +53,12 @@ export function chooseRenderer(opts, view, scene) {
   const gpu = createGlTerrain(opts.THREE, gl, canvas, view, scene);
   placeUnder(canvas, opts.screen);
   view.treeGpu = gpu.trees;
+  view.parkGpu = gpu.park;
   return guardContext(canvas, view, gpu.bytes, (v, s, dt) => drawWithGl(gpu, v, s, dt), draw);
  } catch (e) {
   view.renderer = { name: 'cpu', fallback: e.message };
   view.treeGpu = null;
+  view.parkGpu = null;
   opts.warn('Gresca: the GPU terrain could not start (' + e.message + '); drawing on the CPU');
   return draw;
  }

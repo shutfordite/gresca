@@ -57,6 +57,7 @@ export function viewDebug(g) {
   screen: () => ({ width: view.W, height: view.Hh }), // canvas pixels
   renderer: () => ({ ...view.renderer }), // {name: 'cpu' | 'gl', fallback: null or why the GPU terrain is off}
   // the GPU trees' {drawCalls, trianglesPerTree, drawn, triangles} of the last frame, or null with the CPU raycaster
+  parkGpu: () => (view.parkGpu ? { ...view.parkGpu } : null),
   treesGpu: () => (view.treeGpu ? { ...view.treeGpu } : null),
   // the terrain horizon the trees hide behind (render px per column and sample) from the last frame, and the same
   // computed again by the GPU terrain's horizon pass (gl/horizon.js) for the current camera
