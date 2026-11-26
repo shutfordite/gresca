@@ -14,6 +14,7 @@
     "bench": "node tools/bench/run.mjs",
     "review": "node tools/review/run.mjs",
     "smoke": "node tools/review/smoke.mjs",
+    "smoke:gl": "node tools/gl-smoke.mjs",
     "test:sim": "node tools/test-area.mjs sim",
     "test:view": "node tools/test-area.mjs view",
     "test:input": "node tools/test-area.mjs input",
