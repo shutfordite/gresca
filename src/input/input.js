@@ -30,9 +30,9 @@ function flipAmount(dist) {
  return amount > 0 ? Math.min(1, amount) : 0;
 }
 
-// The two-finger flip: the furthest up drag and furthest down drag (CSS px, 0 if none) of the fingers on each half, then
-// + for both halves dragged up, - for both dragged down, 0 if only one half is touched or they disagree. The rate comes
-// from the smaller of the two drags, so both fingers must move. No allocation: this runs on every pointer event.
+// The two-finger flip: the furthest up drag and furthest down drag (CSS px, 0 if none) of the fingers on each half,
+// then + for both halves dragged up, - for both dragged down, 0 if only one half is touched or they disagree. The
+// rate comes from the smaller of the two drags, so both fingers must move. No allocation: runs on every pointer event.
 function twoFingerFlip(input) {
  let upLeft = 0;
  let upRight = 0;
@@ -59,8 +59,8 @@ function requestJump(input) {
  input.jumpPressed = 1;
 }
 
-// The flip the held keys and fingers ask for: 0 on the ground; in the air the keys' +-1 or the two-finger drag, whichever
-// is larger.
+// The flip the held keys and fingers ask for: 0 on the ground; in the air the keys' +-1 or the two-finger drag,
+// whichever is larger.
 function currentFlip(input) {
  if (!input.air) return 0;
  const keys = input.keys.U - input.keys.D;
