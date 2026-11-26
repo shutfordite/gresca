@@ -38,7 +38,8 @@ const FLIP_FULL_PX = SWIPE_PX * 3.5;
  * context (swipe down brakes and swipe up and hold looks back on the ground; in the air, two fingers dragged down are
  * a backflip and two dragged up a front flip). device: 'touch' | 'keyboard'; action: what the rider does (the id
  * other code uses); label: the short text on the Controls screen; gesture (touch): a GESTURES id; slot (keyboard):
- * the SLOTS entry its keys drive, or null when the row is a combination of other rows; keys (keyboard): KeyboardEvent.key values; minPx (swipe): CSS px.
+ * the SLOTS entry its keys drive, or null when the row is a combination of other rows; keys (keyboard):
+ * KeyboardEvent.key values; minPx (swipe): CSS px.
  */
 export const BINDINGS = deepFreeze([
  { device: 'touch', action: 'steer-left', label: 'Turn left', gesture: GESTURES.HOLD_LEFT },
