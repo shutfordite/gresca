@@ -95,5 +95,6 @@ function endGrind(rider, input, session, course, jump) {
  input.jump = 0;
  rider.airTime = jump ? 0 : GRIND_DROP_AIR;
  rider.rotation = 0;
+ rider.flipRot = 0;
  rider.fromKicker = false;
 }
