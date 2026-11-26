@@ -19,7 +19,7 @@ export const PARK_FAR_M = 300;
 
 /** Tunables of the park objects. Lengths are metres. */
 export const PARK = Object.freeze({
- LIFT_M: 0.1,             // m, the ramp surface and the bars above the snow (the coarse terrain levels lie a little off)
+ LIFT_M: 0.1,             // m, the ramp surface and the bars above the snow (coarse terrain levels lie a little off)
  PAD_ALONG: 10,           // cells along a kicker's ramp
  PAD_ACROSS: 6,           // cells across it
  LIP_HALF_ALONG_M: 0.35,  // m, half the lip bar's width along the piste

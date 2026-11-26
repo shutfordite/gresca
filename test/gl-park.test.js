@@ -4,9 +4,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { PARK, KICKER_FLAG_D, KICKER_RAMP_M, FEATURE_KIND, FEATURE_STRIDE, PARK_FAR_M, buildParkMesh, flagPlacements, cullPark, parkLook,
- parkMeshBytes, createParkMesh } from '../src/view/gl/park-mesh.js';
-import { SUN_VISIBILITY_GLSL, SUN_LIGHT_GLSL, sunVisibilityUv, sunVisibilityGrid } from '../src/view/gl/sun-visibility.js';
+import { PARK, KICKER_FLAG_D, KICKER_RAMP_M, FEATURE_KIND, FEATURE_STRIDE, PARK_FAR_M, buildParkMesh, flagPlacements,
+ cullPark, parkLook, parkMeshBytes, createParkMesh } from '../src/view/gl/park-mesh.js';
+import { SUN_VISIBILITY_GLSL, SUN_LIGHT_GLSL, sunVisibilityUv, sunVisibilityGrid }
+ from '../src/view/gl/sun-visibility.js';
 import { addGpuBytes, terrainTextureBytes } from '../src/view/gl/gl-budget.js';
 import { createHangaLook } from '../src/view/look/hanga.js';
 import { TREE_MESH } from '../src/view/gl/tree-mesh.js';
@@ -87,7 +88,7 @@ for (const [name, g] of Object.entries(maps)) {
    for (const f of flags) near(Math.hypot(f.dirX, f.dirY), 1, 0.1, 'the pennant has a direction');
   });
 
-  it('covers the sim\'s launch zone: the ramp runs from the run-up to the launch depth, across the launch width', () => {
+  it('covers the sim\'s launch zone: run-up to launch depth, across the launch width', () => {
    const where = { s: 0, d: 0, tx: 0, ty: 0 };
    const kickerFeatures = features(FEATURE_KIND.KICKER);
    kickerFeatures.forEach((f, n) => {
@@ -250,7 +251,6 @@ describe('park mesh on the GPU', () => {
   const { THREE } = fakeThree();
   const scene = { add: () => {} };
   const park = createParkMesh(THREE, scene, shared, course, terrain, look, frame);
-  const geo = scene.mesh ?? null;
   assert.equal(park.drawCalls, 1);
   assert.deepEqual(park.counts, { kickers: course.kickers.length, rails: course.rails.length,
    flags: flagPlacements(course, frame).length });
@@ -261,14 +261,14 @@ describe('park mesh on the GPU', () => {
   const indexArray = mesh.geometry.index.array;
   const p = { x: 0, y: 0 };
   course.point(course.kickers[2].s - 50, 0, p);
-  const camera = { x: p.x, y: p.y, dirX: frame.vecToWorld(0, 1, { x: 0, y: 0 }).x, dirY: frame.vecToWorld(0, 1, { x: 0, y: 0 }).y };
+  const down = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the piste
+  const camera = { x: p.x, y: p.y, dirX: down.x, dirY: down.y };
   const first = again.update(camera);
   for (let i = 0; i < 20; i++) again.update({ ...camera, x: camera.x + i });
   assert.ok(first > 0);
   assert.equal(mesh.geometry.index.array, indexArray, 'the index buffer is the same');
   for (const [n, a] of Object.entries(attrs)) assert.equal(mesh.geometry.attributes[n], a, n + ' is the same');
   assert.equal(mesh.geometry.drawRange.count % 3, 0);
-  assert.ok(geo === null);
  });
 
  it('draws nothing when nothing is in view', () => {
