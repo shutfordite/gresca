@@ -6,12 +6,12 @@ const FOV_MARGIN = 0.08;   // rad, project() keeps points this far outside the f
 const DRAW_AHEAD_M = 260;  // m down the piste (along s) past the camera that flags and rails are drawn
 const RAIL_SEGMENT_M = 1.5; // m, rails are drawn as segments this long, so the near end can run off screen
 const RAIL_POST_EVERY_M = 6; // m between the posts under a rail
-const KICKER_FLAG_D = 11;  // m across from a kicker's centre to its flags
-const RAMP_FLAG_BACK_M = 8; // m up the ramp from the lip to a big kicker's second pair of flags
-const KICKER_RAMP_M = 11;  // m, a kicker's ramp runs this far up from the lip (along s)
-const KICKER_DROP_M = 5;   // m, and its drop this far past it
+export const KICKER_FLAG_D = 11;  // m across from a kicker's centre to its flags
+export const RAMP_FLAG_BACK_M = 8; // m up the ramp from the lip to a big kicker's second pair of flags
+export const KICKER_RAMP_M = 11;  // m, a kicker's ramp runs this far up from the lip (along s)
+export const KICKER_DROP_M = 5;   // m, and its drop this far past it
 const RAIL_BEHIND_M = 5;   // m up the piste behind the camera that rails are still drawn
-const RAIL_FLAG_D = 3;     // m further out than a rail's start, its flag
+export const RAIL_FLAG_D = 3;     // m further out than a rail's start, its flag
 
 /** A new scratch result for projectInto(): {X, Y, s, f, z}, all zero. */
 export const createProjection = () => ({ X: 0, Y: 0, s: 0, f: 0, z: 0 });

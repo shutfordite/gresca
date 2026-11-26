@@ -13,6 +13,9 @@ const UNSPECIFIED = Object.freeze({
  bigKickerFlag: '#ffd23d',
  railBar: '#c9372c',
  boxBar: '#6fcfa0',
+ kickerPad: '#c4cdea',
+ kickerLip: '#8fa4c8',
+ bigKickerLip: '#ffb23d',
  treeCrown: '#1f4a3a',
  sprayPuff: '#f6f8ff',
  // the colour map (view/colour-map.js, until D2)
@@ -102,6 +105,9 @@ function sprites(colour) {
   pole: Object.freeze({ colour: colour('poleShaft') }),
   rail: Object.freeze({ colour: colour('railBar') }),
   box: Object.freeze({ colour: colour('boxBar') }),
+  kickerRamp: Object.freeze({
+   pad: colour('kickerPad'), lip: colour('kickerLip'), bigLip: colour('bigKickerLip'),
+  }),
   spray: Object.freeze({ rgb: Object.freeze(hexRgb(colour('sprayPuff'))), maxAlpha: SPRAY_MAX_ALPHA }),
  });
 }
