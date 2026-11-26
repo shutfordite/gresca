@@ -9,7 +9,7 @@ const GROUND_SMOOTH_S = 0.05; // s, low-pass on the ground's vertical speed and 
 const wrap = (d) => Math.atan2(Math.sin(d), Math.cos(d));
 
 // RiderAnim's input: the sim's AnimInput (sim/anim-input.js) plus what the view measures once per drawn frame at the
-// drawn pose (ground motion under the feet, path turn rate, slope, landing). Updates view.animPrev, view.riderYaw.
+// drawn pose (ground motion under the feet, slope, landing). Updates view.animPrev, view.riderYaw.
 function riderAnimInput(view, game, dt) {
  const { rider, session, course, camera, terrain, look } = game;
  const a = animInput(rider, session, course, view.animIn);
@@ -23,7 +23,7 @@ function riderAnimInput(view, game, dt) {
  let p = view.animPrev;
  if (!p || Math.hypot(x - p.x, y - p.y) > RESTART_JUMP_M) {
   // first frame, or the run restarted
-  p = view.animPrev = { x, y, dir, g, gv: 0, ga: 0, n: a.landings, air: true };
+  p = view.animPrev = { x, y, g, gv: 0, ga: 0, n: a.landings, air: true };
  }
  const k = dt > 0 ? Math.min(1, dt / GROUND_SMOOTH_S) : 0;
  // Vertical speed and acceleration of the ground under the feet, low-passed over about 50 ms.
@@ -38,15 +38,14 @@ function riderAnimInput(view, game, dt) {
    ga = p.ga + ((gv - p.gv) / dt - p.ga) * k;
   }
  }
- // rad/s, + turning right (clockwise in the world frame, where headings grow counter-clockwise)
- const turn = dt > 0 && s > 1 && !air ? wrap(p.dir - dir) / dt : 0;
  const landed = a.landings !== p.n && !air && !a.wiped;
- view.animPrev = { x, y, dir, g, gv, ga, n: a.landings, air: air || a.grinding };
+ view.animPrev = { x, y, g, gv, ga, n: a.landings, air: air || a.grinding };
  // deg, + with the rider turned to the right of the camera's view (clockwise)
  view.riderYaw = wrap(camera.heading - a.facing) * 180 / Math.PI;
  return {
   wiped: a.wiped, grinding: a.grinding, airborne: air, braking: a.braking, landed,
-  flipRot: a.flipRot, impact: a.impact, speed: s, pathTurn: turn, riderSide: a.riderSide, approach: !air && a.approach,
+  flipRot: a.flipRot, impact: a.impact, speed: s, edge: a.edge, skid: a.skid, riderSide: a.riderSide,
+  approach: !air && a.approach,
   // F7: the switch look reads RiderState (the fall line's angle from the equipment gives the animation its hysteresis)
   isSwitch: rider.isSwitch, downhillSide: rider.downhillSide, fallAngle: wrap(rider.fallLine - rider.boardHeading),
   feetAccelUp: ga, facing: a.facing, travelDir: dir, slopeDeg: terrain.slopeDeg(x, y), meanSlopeDeg: look.rider.meanSlopeDeg,

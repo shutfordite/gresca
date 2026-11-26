@@ -5,6 +5,8 @@
 // metre (crossed a few steps later) and the rides differ by at most 0.02 m; every ride takes the same kickers and rails.
 // F6 re-recorded it: the edge and carve model replaced the turn rate and the heading clamp, so every turn of the pilot
 // follows a new line (the same number of events per ride; the second ride finishes 131 steps sooner).
+// F6-lean re-recorded it: the rider's lean comes from the edge now, so only the animation field of the rows changed
+// (roll, comp: 304 rows; every sim field is bit for bit the same).
 // The same rides with the map rotated (docs/adr/0005-enu-frame.md) must match it step for step, within ROTATED_TOL:
 // not bit for bit, because turning every position, velocity and gradient through cos and sin of an angle that is not a
 // multiple of 90 degrees rounds in the last bits, and those differences carry along the ride. Since F6 they grow
@@ -16,7 +18,7 @@ import assert from 'node:assert/strict';
 import { goldenTrace } from '../tools/golden-trace.mjs';
 import { MAP_ROTATION_DEG } from './harness.js';
 
-const GOLDEN_HASH = '958814d04f76acaf9f9503bd686c7d727ffb1af260c3289c94d1d6ae87434091';
+const GOLDEN_HASH = '9a6e6c144f7266626832205c88bed22dcc86ee9b5dd7b7aee686fd8ab752d139';
 const ROTATED_DEG = MAP_ROTATION_DEG || 37; // deg, the placement the rotated rides use (npm run test:rotated sets it)
 const ROTATED_TOL = 1e-7; // m, m/s, rad, points, px: the most any number in the rotated trace may differ (was 1e-9)
 
