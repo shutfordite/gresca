@@ -47,6 +47,8 @@ function riderAnimInput(view, game, dt) {
  return {
   wiped: a.wiped, grinding: a.grinding, airborne: air, braking: a.braking, landed,
   impact: a.impact, speed: s, pathTurn: turn, riderSide: a.riderSide, approach: !air && a.approach,
+  // F7: the switch look reads RiderState (the fall line's angle from the equipment gives the animation its hysteresis)
+  isSwitch: rider.isSwitch, downhillSide: rider.downhillSide, fallAngle: wrap(rider.fallLine - rider.boardHeading),
   feetAccelUp: ga, facing: a.facing, travelDir: dir, slopeDeg: terrain.slopeDeg(x, y), meanSlopeDeg: look.rider.meanSlopeDeg,
  };
 }
