@@ -45,8 +45,8 @@ export function simFields(r, s, spray, course) {
   // RiderState fields derived after each step, read only (core/contracts.js)
   travelHeading: field(() => r.travelHeading), // rad, direction of travel
   boardHeading: field(() => r.boardHeading),   // rad, direction the board points
-  edge: field(() => r.edge),         // rad, pre-added (0)
-  skid: field(() => r.skid),         // m/s, sideways slip on the snow
+  edge: field(() => r.edge),         // rad, edge angle: + on the edge that turns left (counter-clockwise), sim/edge.js
+  skid: field(() => r.skid),         // m/s, sideways slip on the snow (0 in a clean carve, > 0 in a skid or brake)
   flipRot: field(() => r.flipRot),   // rad, pre-added (0)
   spinRot: field(() => r.spinRot),   // rad, spin this jump
   isSwitch: field(() => r.isSwitch), // riding tail first

@@ -3,11 +3,15 @@
 export const TAU = Math.PI * 2; // rad, one full turn
 
 // ---- equipment ----
-// Both are twin tip. Skis carve a little quicker and grip better; the board spins a little slower.
-// turn: dimensionless gain on the carve rate; grip: 1/s, how fast sideways slip dies; spin: rad/s in the air.
+// Both are twin tip. Skis grip better and go edge to edge quicker (so they turn in a little quicker) but carve a
+// longer radius; the board spins a little slower. turn: dimensionless gain on the low-speed pivot rate
+// (sim/tuning.js EDGE.PIVOT_RATE); grip: 1/s, how fast sideways slip dies in a skid; spin: rad/s in the air.
+// The edge and carve (F6, sim/edge.js): sidecut: m, the carve radius at 90 degrees of edge (R = sidecut / sin(edge)),
+// shorter than real gear (about 7 m for a board, 13-16 m for skis) for an arcade turn; edgeRate: rad/s, how fast
+// the edge angle follows the steer; edgeGrip: m/s², the most sideways acceleration the edge holds before it skids.
 export const RIGS = Object.freeze({
- board: Object.freeze({ turn: 1, grip: 5, spin: 7 }),
- ski: Object.freeze({ turn: 1.12, grip: 6.5, spin: 8 }),
+ board: Object.freeze({ turn: 1, grip: 5, spin: 7, sidecut: 5, edgeRate: 5, edgeGrip: 28 }),
+ ski: Object.freeze({ turn: 1.12, grip: 6.5, spin: 8, sidecut: 5.8, edgeRate: 12, edgeGrip: 32 }),
 });
 
 // ---- fixed timestep ----
