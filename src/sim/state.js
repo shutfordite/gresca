@@ -7,7 +7,8 @@
  * vz (m/s, + up), airTime (s), rotation (rad turned in the air this jump), fromKicker, crashTimer (s of wipeout left),
  * wipeoutSpin (rad), grind (null or {r: rail, t: m along it}), grindDist (m ground this grind), landings (count),
  * landingSpeed (m/s); derived after each step: travelHeading, boardHeading (rad), skid (m/s), spinRot (rad), isSwitch,
- * isBraking, fallLine (rad), downhillSide (+1, -1, 0); pre-added for S2 (0): edge, flipRot (rad).
+ * isBraking, fallLine (rad), downhillSide (+1, -1, 0); edge (rad, + turns left, sim/edge.js); pre-added for S2 (0):
+ * flipRot (rad).
  * Values before the first run are placeholders (0); the boot and start() set them.
  */
 export function createRider() {

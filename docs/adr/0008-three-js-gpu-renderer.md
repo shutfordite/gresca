@@ -50,9 +50,11 @@ iPad's 3.9 million pixels a frame.
   previous sample, so a segment break needs no flag) that the GPU reads as an instanced buffer (512 KiB of GPU memory too) and draws draped on the height texture. Only samples added since the
   last frame are uploaded. The aux texture's track channel is no longer shaded.
 - Two canvases are composited each frame; the GL one has no alpha and no MSAA (2x device pixels instead).
-- Trees still need the terrain's horizon (`view.occ`): a CPU pass computes it as the raycaster did, without pixels
-  (`gl/horizon.js`). It follows the raycaster's heights, so a far ridge drawn by a coarse mesh level can differ from it
-  by a little.
+- Trees (E3a) are one instanced mesh on the GL canvas (`gl/tree-mesh.js`: one draw call, 44 triangles a tree, the
+  trees in view copied to the front of a preallocated instance buffer each frame), depth-tested against the terrain,
+  so no horizon pass runs and the 2D canvas draws no trees. About 0.4 MiB of GPU buffers for 8600 trees, counted in
+  `gpuBytes` and the same budget. The CPU raycaster keeps the sprite trees and `view.occ`; `gl/horizon.js` is now only
+  `Gresca.debug.horizonPass()`, which checks the CPU horizon.
 - Headless Chrome has no GPU here: CI and the bench draw WebGL in software (SwiftShader), so their GL frame times
   bound the CPU side only. Real numbers come from the iPad (`?renderer=gl&fps=1`).
 - If E0 is rejected, `src/view/gl/`, `src/view/renderer.js`, `vendor/` and this ADR go; nothing else depends on them.

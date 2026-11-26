@@ -448,15 +448,21 @@ describe('twin-tip riding (spins and switch)', () => {
     assert.ok(st().x < x0 - 1, 'right should still move the rider right on screen');
     g.sim(5);
     const a = st().heading;
-    assert.ok(a > Math.PI + 0.14 && a <= 2 * Math.PI - 0.15 + 1e-9, `a=${a}`);
+    assert.ok(a > 2 * Math.PI, `a=${a}: a held turn goes on round, past across the slope (F6: no heading clamp)`);
   });
 
-  it('cannot spin round on the ground, only in the air', () => {
+  it('turns slower on the ground (the carve) than it spins in the air', () => {
     clear();
     g.place({ vy: 10 });
     g.input({ right: 1 });
-    g.sim(8);
-    assert.ok(st().heading <= Math.PI - 0.15 + 1e-9);
+    g.sim(0.5);
+    const ground = st().heading - Math.PI / 2;
+    g.place({ vy: 10 });
+    g.set({ z: 5, vz: 20 });
+    g.input({ right: 1 });
+    g.sim(0.5);
+    const air = st().heading - Math.PI / 2;
+    assert.ok(ground > 0.3 && ground < air / 2, `ground ${ground.toFixed(2)} rad, air ${air.toFixed(2)} rad`);
   });
 
   it('keeps the camera facing down the slope while riding switch', () => {
