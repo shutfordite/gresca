@@ -150,7 +150,8 @@ test('a re-recorded golden hash and changed fixtures are called out', () => {
  const out = behaviourChecks(['test/golden.test.js', 'test/fixtures/traces/carve.json'], d);
  assert.deepEqual(severities(out), [WARN, WARN]);
  assert.deepEqual(severities(behaviourChecks(['src/sim/step.js'], {})), [INFO]);
- const anim = parseDiff(diffOf('test/golden.test.js', ["const GOLDEN_ANIM_HASH = 'aa';"], ["const GOLDEN_ANIM_HASH = 'bb';"]));
+ const animLines = (h) => [`const GOLDEN_ANIM_HASH = '${h}';`];
+ const anim = parseDiff(diffOf('test/golden.test.js', animLines('aa'), animLines('bb')));
  const animOut = texts(behaviourChecks(['test/golden.test.js'], anim));
  assert.match(animOut, /anim hash re-recorded/);
  assert.match(animOut, /sim hash unchanged/);
