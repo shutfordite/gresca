@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gresca look lab</title>
+<!-- The look lab (P4): every rider pose, rig, yaw and pitch, terrain tones, sprites and palette, drawn through the
+     Look (src/view/look/). Colours come from the Look's ui tokens, set by createLab(). -->
+<style>
+body{margin:16px;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS",system-ui,sans-serif}
+h1{font-size:22px;margin:0 0 8px}
+h2{font-size:15px;margin:18px 0 6px}
+canvas{display:block;max-width:none}
+</style>
+</head><body>
+<script src="art/gresca-hanga-spec.js"></script>
+<script src="art/gresca-rider-anim.js"></script>
+<script type="module">
+import { createLab } from './src/view/look/lab.js';
+createLab({ document, devicePixelRatio: window.devicePixelRatio, HANGA: window.HANGA, RiderAnim: window.RiderAnim });
+</script>
+</body></html>
