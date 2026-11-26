@@ -185,16 +185,35 @@ export function templateChecks(title, body, template, changed) {
 }
 
 /**
+ * The files that may hold a file's code-map row: the root AGENTS.md, docs/ARCHITECTURE.md and the AGENTS.md of each
+ * folder above the file, nearest last. Each stream keeps its rows in its own folder's AGENTS.md (X2).
+ */
+export function codeMapFiles(file) {
+ const parts = file.split('/').slice(0, -1);
+ const folders = parts.map((_, i) => parts.slice(0, i + 1).join('/') + '/AGENTS.md');
+ return ['AGENTS.md', 'docs/ARCHITECTURE.md', ...folders];
+}
+
+/** Stream PRs report in their body and leave docs/STATUS.md to the coordinator (X2): a warning when one edits it. */
+export function statusCheck(changed) {
+ const streams = [...new Set(changed.map(ownerOf).filter((o) => o && o !== 'Shared'))];
+ if (!changed.includes('docs/STATUS.md') || !streams.length) return [];
+ return [[WARN, `\`docs/STATUS.md\` is the coordinator's: a ${streams.join('/')} PR reports in its body instead`]];
+}
+
+/**
  * Docs and style on what the PR adds: new src files missing from the code map, new tests without an `@areas` tag, an
  * art spec change without a version and its notes, tunables without a unit comment, long lines, missing headers.
  * added: files new in this PR. read(file): head source or null. diffFiles: from parseDiff.
  */
 export function docsAndStyleChecks({ added, changed, diffFiles, read }) {
- const findings = [];
- const codeMap = (read('AGENTS.md') || '') + (read('docs/ARCHITECTURE.md') || '');
+ const findings = [...statusCheck(changed)];
  for (const f of added.filter((x) => /^src\/.*\.js$/.test(x))) {
   const base = f.split('/').pop();
-  if (!codeMap.includes(base)) findings.push([WARN, `new \`${f}\` is not in the AGENTS.md code map`]);
+  const maps = codeMapFiles(f);
+  if (!maps.some((m) => (read(m) || '').includes(base))) {
+   findings.push([WARN, `new \`${f}\` is not in the AGENTS.md code map (add a row to \`${maps.at(-1)}\`)`]);
+  }
   const first = (read(f) || '').split('\n')[0];
   if (!first.startsWith('//')) findings.push([WARN, `new \`${f}\` has no one-line header comment`]);
  }
