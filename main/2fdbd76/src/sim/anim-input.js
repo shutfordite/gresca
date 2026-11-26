@@ -7,7 +7,7 @@ const APPROACH_M = 14;      // m before a kicker lip (along s) the rider crouche
 export function createAnimInput() {
  return {
   wiped: false, grinding: false, braking: false, approach: false,
-  speed: 0, travelDir: 0, facing: 0, riderSide: 1, impact: 0, landings: 0,
+  speed: 0, travelDir: 0, facing: 0, riderSide: 1, impact: 0, landings: 0, edge: 0, skid: 0, flipRot: 0,
   where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the rider projected on the course
  };
 }
@@ -38,6 +38,9 @@ export function animInput(rider, session, course, out) {
  out.riderSide = Math.cos(out.facing - out.travelDir) >= 0 ? 1 : -1;
  out.impact = rider.landingSpeed;
  out.landings = rider.landings;
+ out.edge = rider.edge;
+ out.skid = rider.skid;
+ out.flipRot = rider.flipRot;
  const p = course.project(rider.x, rider.y, out.where);
  out.approach = speed > APPROACH_SPEED && isApproaching(course, p.s, p.d); // the view adds "on the snow"
  return out;
