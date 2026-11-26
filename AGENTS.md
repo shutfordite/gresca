@@ -68,7 +68,8 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Fixed timestep and interpolation | `src/sim/timestep.js` | `timestep`, `facade` |
 | Rider and session state fields | `src/sim/state.js` (+ `src/sim/fields.js` to expose them) | `facade`, `sim` |
 | Which keys and gestures do what (the one table; also read by the Controls screen) | `src/input/bindings.js` | `bindings`, `controls` |
-| Touch and key controls | `src/input/input.js` (logic, reads the table), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings` |
+| Touch and key controls; flips in the air (`InputState.flip`, `setAirborne`) | `src/input/input.js` (logic, reads the table), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings`, `air-controls` |
+| Air hints (flip and spin arrows for the first 3 jumps, `gresca-hints`), the rider-to-input air link | `src/ui/air-hints.js`, `styles/hud.css`, `index.html` (`#air-hints`) | `air-controls` |
 | Pause: the button, the pause panel, the hidden-page auto-pause (`hud.paused`; the loop in `app.js` honours it) | `src/ui/pause.js`, `styles/hud.css`, `index.html` | `pause` |
 | The Controls screen (generated from the table; gesture diagrams) | `src/ui/controls.js`, `styles/menu.css`, `index.html` | `controls` |
 | Camera follow, tilt, compass, the swing to look back (`InputState.lookBack`) | `src/view/camera.js` | `camera`, `look` |

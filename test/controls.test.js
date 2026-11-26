@@ -45,7 +45,7 @@ describe('Controls screen', () => {
   for (const row of table.filter((b) => b.device === 'touch')) {
    const li = html.match(new RegExp('data-device="touch" data-action="' + row.action + '">(.*?)</li>'))[1];
    assert.ok(li.includes('<svg class="ctl-fig"'), row.action + ' has a diagram');
-   assert.ok(/Hold|Swipe/.test(text(li)), row.action + ' says what to do');
+   assert.ok(/Hold|Swipe|Tap/.test(text(li)), row.action + ' says what to do');
   }
  });
 

@@ -17,6 +17,7 @@ import { chooseRenderer } from './view/renderer.js';
 import { createFpsMeter, tickFps, drawFps } from './view/fps-meter.js';
 import { markTrack, clearTracks } from './view/ski-tracks.js';
 import { getUi, applyUiTokens } from './ui/dom.js';
+import { bindAirControls } from './ui/air-hints.js';
 import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
 import { bindPause, updatePauseButton } from './ui/pause.js';
 import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
@@ -77,6 +78,7 @@ export function createGame(env) {
  };
  subscribeHud(bus, hud);
  subscribeFinish(bus, ui);
+ bindAirControls(bus, ui, input, rider, env); // flips are an air control; the hints teach them
  onStep(bus, () => markTrack(view, rider, session.rig));
  // What draw() reads (view/draw.js).
  const scene = {
