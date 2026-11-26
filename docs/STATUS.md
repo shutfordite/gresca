@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 26 Nov 2026, main after PR #69.
+Updated 27 Nov 2026, main after PR #71, with X1 open.
 
 ## Done
 | Package | PR |
@@ -58,19 +58,22 @@ Updated 26 Nov 2026, main after PR #69.
 | S2/F3 flip physics and scoring (±40° landing window) | #65 |
 | S3/F3-draw the flip: `bodyPitchDeg` and the `tuck` pose | #69 |
 | S1/F3-touch two-finger flips (owner, 26 Nov) | #68 |
+| S3/F6-lean edge-driven lean and unweighting, from `AnimInput.edge` and `skid` | #66 |
+| S4/E3b rails, flags and kickers as GPU objects; every GPU object lit by the baked sun visibility | #67 |
+| STATUS after #69, X1 in the roadmap; K, a real snow park, planned in the roadmap | #70, #71 |
 
-## In progress (phase 3, the five streams; parallel, each in its own folders)
+## In progress
+**Freeze for X1:** no other code PR opens or merges until X1 is in.
+
 | Stream | Package | Branch |
 |---|---|---|
-| Shared | This file after #69 | `docs/status-after-69` |
-| S3 rider animation | **F6-lean** edge-driven lean and unweighting, from `AnimInput.edge` and `skid` | `anim/f6-lean` (#66) |
-| S4 look, camera, render | **E3b** rails, flags and kickers as GPU objects; every GPU object (trees too) lit by the baked sun visibility | `view/e3b-gpu-features` (#67) |
+| Shared | **X1** conflict-proofing: test areas from `// @areas` tags, the golden split into sim and anim hashes, carve scenes, one property per line at the seams (behaviour change none) | `shared/x1-conflict-proofing` |
 | S5 maps | **C4b** waits for the owner's El Tarter bake (below) | none |
 
 ## Next, in order
-- **X1 conflict-proofing (`docs/ROADMAP.md`, phase 3), first, with a short freeze:** test areas from tags in each
-  test file instead of lists in `package.json`, the golden split into sim and anim hashes, one property per line at
-  stream seams. After #66 and #67 merge; no other code PR until it is in.
+- **K0 park contract and format (ADR 0012), Shared, alone, right after X1** (`docs/ROADMAP.md`, "K: a real snow
+  park"). Then K1 (S5 shape library), K2 (S2 flight over the snow) and K3 (S2 grinds) in parallel; K4 (S4) once K1
+  is in; K5 (S3) and K6 (S1) after K3.
 - Shared: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the
   HUD popup ("Backflip 360"), moving `trickName` from `sim/jump.js` to `src/ui/` (#65 review).
 - S1: C4b menu entry for real maps (with S5's C4b).
@@ -107,6 +110,9 @@ Updated 26 Nov 2026, main after PR #69.
   procedural map rotated (debug). (F6 removed `CARVE_LIMIT` and made the sim's yaw counter-clockwise.)
 - **The design canvas copy of the art spec** (claude.ai design "Gresca Rider Style Prototypes",
   `project/data/gresca-hanga-spec.js`) is synced from the repo; re-sync it after every spec version.
+- **Scenes `ride-board` and `ride-ski` never ride straight:** scene inputs merge step to step, so the "straight"
+  0.3 s after the carve still holds the turn (found in X1). Fixing it changes their screenshots: a small S4 or Shared
+  PR, with the shots.
 - **Pose tuning for S3:** the ski tuck reads as a blob from straight behind, the ski brake legs look short, and the
   board's toe-side brake looks like kneeling at yaw 90.
 

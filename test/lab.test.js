@@ -1,3 +1,4 @@
+// @areas view
 // The look lab (lab.html, P4): the page loads the art modules and then one module that imports createLab(), and
 // createLab() draws every sheet through the Look with no errors, setting only real colours.
 import { test } from 'node:test';

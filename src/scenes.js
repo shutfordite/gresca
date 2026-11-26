@@ -16,13 +16,20 @@ const BIG_KICKER = 0;   // index into the big kickers (course.kickers filtered b
  * Every scene: {note, rig 'board' | 'ski', at, speed (m/s along the piste), turn (rad the board is turned from the
  * direction of travel; PI rides switch), run: [{input, seconds, untilZ (m: stop early once this high), atPeak (stop only when also falling)}]}.
  * at is {s, d} or {kicker: index, back: m before the lip} or {rail: index, t: m along it} or {bigKicker, back}.
- * The input of the last run step stays held while the scene is paused (a held brake shows the brake pose).
+ * Inputs merge from step to step (a key stays held until a later step sets it to 0), and the input of the last run
+ * step stays held while the scene is paused (a held brake shows the brake pose).
  */
 export const SCENES = Object.freeze({
  'ride-board': scene('board', { s: PRACTICE_S, d: 0 }, 12, 0, [step({ right: 1 }, 0.8), step({}, 0.3)],
   'Snowboard carving right on the empty practice stretch.'),
  'ride-ski': scene('ski', { s: PRACTICE_S, d: 0 }, 12, 0, [step({ left: 1 }, 0.8), step({}, 0.3)],
   'Skis carving left on the empty practice stretch.'),
+ 'carve-board': scene('board', { s: PRACTICE_S, d: 0 }, 14, 0,
+  [step({ left: 1, right: 0 }, 0.5), step({ left: 0, right: 1 }, 0.7)],
+  'Snowboard mid-carve: one turn left linked into a right turn, the edge held (lean and edge screenshots).'),
+ 'carve-ski': scene('ski', { s: PRACTICE_S, d: 0 }, 14, 0,
+  [step({ left: 0, right: 1 }, 0.5), step({ left: 1, right: 0 }, 0.7)],
+  'Skis mid-carve: one turn right linked into a left turn, the edge held (lean and edge screenshots).'),
  'brake': scene('board', { s: PRACTICE_S, d: 0 }, 14, 0, [step({ brake: 1 }, 0.4)],
   'Brake held, still sliding at about 8 m/s: the skid and brake pose.'),
  'switch-ski-left': scene('ski', { s: PRACTICE_S, d: 0 }, 10, Math.PI, [step({ left: 1 }, 0.6), step({}, 0.2)],

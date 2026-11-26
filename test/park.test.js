@@ -1,3 +1,4 @@
+// @areas sim
 // The terrain park: kickers, rails and boxes, and the Snowboard / Skis picker.
 // NOTE: y 460 to 740 is deliberately kept free of features. Many physics tests drop the rider at
 // y=500 and ride a few seconds, expecting empty snow. A test below guards that stretch.

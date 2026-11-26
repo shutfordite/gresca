@@ -1,3 +1,4 @@
+// @areas sim
 // F5: the brake yaws the skis or board across the fall line (a hockey stop) and slows the rider by sideways skid
 // friction. Measured on the procedural map's empty stretch (s 460 to 740), from 15 m/s, through the façade at a fixed
 // dt; the numbers are the same on a rotated map (npm run test:rotated runs this file at 37 and 300 degrees too).

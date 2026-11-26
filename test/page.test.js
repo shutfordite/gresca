@@ -1,3 +1,4 @@
+// @areas shared
 // The page: index.html is only HTML and CSS. It loads the art modules as classic <script src> tags, then the game as
 // one native ES module entry, src/main.js, which reaches every other file in src/ through static imports
 // (ADR 0001, ADR 0002).

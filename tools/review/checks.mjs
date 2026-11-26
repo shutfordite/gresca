@@ -1,6 +1,7 @@
 // The mechanical half of a PR review (.claude/skills/gresca-architect, "Reviewing a PR"), pure: given the PR's
 // title, body, changed files, diff and the test files on both sides, the findings a reviewer would otherwise look
 // up by hand. tools/review/run.mjs gathers the inputs with git; CI posts the report as one PR comment.
+import { tagProblem } from '../test-area.mjs';
 
 /** Severity of a finding: a likely rule break the PR must explain, something to look at, or a plain fact. */
 export const FAIL = 'fail';
@@ -184,11 +185,11 @@ export function templateChecks(title, body, template, changed) {
 }
 
 /**
- * Docs and style on what the PR adds: new src files missing from the code map, new tests in no area script, an
+ * Docs and style on what the PR adds: new src files missing from the code map, new tests without an `@areas` tag, an
  * art spec change without a version and its notes, tunables without a unit comment, long lines, missing headers.
  * added: files new in this PR. read(file): head source or null. diffFiles: from parseDiff.
  */
-export function docsAndStyleChecks({ added, changed, diffFiles, read, packageJson }) {
+export function docsAndStyleChecks({ added, changed, diffFiles, read }) {
  const findings = [];
  const codeMap = (read('AGENTS.md') || '') + (read('docs/ARCHITECTURE.md') || '');
  for (const f of added.filter((x) => /^src\/.*\.js$/.test(x))) {
@@ -197,10 +198,9 @@ export function docsAndStyleChecks({ added, changed, diffFiles, read, packageJso
   const first = (read(f) || '').split('\n')[0];
   if (!first.startsWith('//')) findings.push([WARN, `new \`${f}\` has no one-line header comment`]);
  }
- const scripts = JSON.parse(packageJson || '{}').scripts || {};
- const areas = Object.entries(scripts).filter(([k]) => /^test:(sim|view|input|world)$/.test(k));
  for (const f of added.filter(isTestFile)) {
-  if (!areas.some(([, v]) => v.includes(f))) findings.push([INFO, `new \`${f}\` is in no \`test:<area>\` script`]);
+  const problem = tagProblem(read(f) || '');
+  if (problem) findings.push([WARN, `new \`${f}\` has no valid area tag: ${problem}`]);
  }
  if (changed.includes('art/gresca-hanga-spec.js')) {
   const d = diffFiles['art/gresca-hanga-spec.js'] || { added: [] };
@@ -232,10 +232,14 @@ export function docsAndStyleChecks({ added, changed, diffFiles, read, packageJso
 export function behaviourChecks(changed, diffFiles) {
  const findings = [];
  const goldenDiff = diffFiles['test/golden.test.js'] || { added: [] };
- const golden = goldenDiff.added.some((a) => /GOLDEN_HASH\s*=/.test(a.text));
- findings.push(golden
-  ? [WARN, 'golden trace hash re-recorded: the PR must name the behaviour change']
-  : [INFO, 'golden trace hash unchanged (`npm test` checks the ride is the same, bit for bit)']);
+ const recorded = (re) => goldenDiff.added.some((a) => re.test(a.text));
+ const sim = recorded(/GOLDEN_(?:SIM_)?HASH\s*=/);
+ const anim = recorded(/GOLDEN_ANIM_HASH\s*=/);
+ if (sim) findings.push([WARN, 'golden sim hash re-recorded: the PR must name the behaviour change']);
+ if (anim) findings.push([WARN, 'golden anim hash re-recorded: the PR must name the animation change']);
+ if (!sim && !anim) {
+  findings.push([INFO, 'golden trace hashes unchanged (`npm test` checks the ride and the pose, bit for bit)']);
+ } else if (!sim) findings.push([INFO, 'golden sim hash unchanged: the ride is the same, bit for bit']);
  const fixtures = changed.filter((f) => f.startsWith('test/fixtures/'));
  if (fixtures.length) findings.push([WARN, `${fixtures.length} recorded fixture file(s) changed in test/fixtures/`]);
  const baseline = changed.some((f) => f.startsWith('tools/bench/baseline'));

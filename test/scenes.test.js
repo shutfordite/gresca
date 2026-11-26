@@ -1,16 +1,20 @@
+// @areas sim
 // Named scenes (src/scenes.js): every one loads through the façade at any map placement, lands in its state, is
 // paused and deterministic.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './harness.js';
 
-const NAMES = ['ride-board', 'ride-ski', 'brake', 'switch-ski-left', 'switch-ski-right', 'kicker-air', 'flip', 'grind'];
+const NAMES = ['ride-board', 'ride-ski', 'carve-board', 'carve-ski', 'brake',
+ 'switch-ski-left', 'switch-ski-right', 'kicker-air', 'flip', 'grind'];
 const ROTATIONS = [0, 37]; // deg: the default placement and an arbitrary one (always checked, with npm test alone)
 
 // What each scene must show, as a check of the façade's state().
 const EXPECT = {
  'ride-board': (s) => s.rig === 'board' && s.speed > 3 && s.z === 0,
  'ride-ski': (s) => s.rig === 'ski' && s.speed > 3 && s.z === 0,
+ 'carve-board': (s) => s.rig === 'board' && s.edge < -0.8 && s.skid === 0 && s.speed > 5 && s.z === 0,
+ 'carve-ski': (s) => s.rig === 'ski' && s.edge > 0.8 && s.skid === 0 && s.speed > 5 && s.z === 0,
  'brake': (s) => s.isBraking && s.speed > 3,
  'switch-ski-left': (s) => s.rig === 'ski' && s.isSwitch,
  'switch-ski-right': (s) => s.rig === 'ski' && s.isSwitch,

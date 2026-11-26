@@ -1,3 +1,4 @@
+// @areas input shared
 // The contracts in core/contracts.js (InputState, RiderState, SimEvent), the event bus and the input log, on plain
 // objects in Node.
 import { describe, it } from 'node:test';

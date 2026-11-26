@@ -1,3 +1,4 @@
+// @areas view
 // The equipment's track trail (view/track-trail.js): what the snow shows of the board or skis, sample by sample.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';

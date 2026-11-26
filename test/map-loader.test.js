@@ -1,3 +1,4 @@
+// @areas world
 // The map loader (C4a, world/map-loader.js): a validated terrain file and course file become the world the game uses.
 // The pair is synthetic and built here through the map compiler: an inclined plane with a bump, and a curving piste.
 import { describe, it } from 'node:test';

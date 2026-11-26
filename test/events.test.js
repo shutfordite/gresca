@@ -1,3 +1,4 @@
+// @areas sim
 // SimEvents through the façade (Gresca.events) on a fixed-seed, fixed-dt run, and input recorded per sim step
 // (Gresca.record, recording, replay) replaying to the same rider trace.
 import { describe, it } from 'node:test';

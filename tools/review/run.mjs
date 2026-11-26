@@ -67,8 +67,7 @@ export function buildReport(base) {
   const found = templateChecks(pr.title, pr.body, template, changed);
   sections.push(['Title and template', found.length ? found : [[INFO, 'title and every template section filled in']]]);
  }
- const packageJson = read('package.json');
- sections.push(['Docs and style', docsAndStyleChecks({ added, changed, diffFiles, read, packageJson })]);
+ sections.push(['Docs and style', docsAndStyleChecks({ added, changed, diffFiles, read })]);
  const smoke = arg('smoke');
  if (smoke) {
   const result = fs.existsSync(smoke) ? JSON.parse(fs.readFileSync(smoke, 'utf8')) : null;

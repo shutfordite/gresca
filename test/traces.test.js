@@ -1,3 +1,4 @@
+// @areas sim
 // The recorded RiderState traces (test/fixtures/traces): they load, hold every RiderState field, are small, and
 // recording again reproduces them bit for bit (the sim is deterministic at a fixed dt and seed).
 import { describe, it } from 'node:test';

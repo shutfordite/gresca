@@ -1,3 +1,4 @@
+// @areas world
 // The polyline Course (world/polyline-course.js), the run geometry behind Course.fromRun (world/run-geometry.js), and a
 // ride along a course that runs north-east and then turns back west, which cx(y) could not describe (C1).
 import { describe, it } from 'node:test';

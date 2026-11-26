@@ -1,3 +1,4 @@
+// @areas world tools
 // The map compiler (tools/map-compiler, docs/adr/0006-map-terrain-format.md): Terrarium decoding, tile maths, the
 // ENU projection, resampling against analytic surfaces, piste clipping, determinism and the CLI with its cache.
 // All offline: tiles and GeoJSON are synthesised in memory (test/map-fixtures.js).

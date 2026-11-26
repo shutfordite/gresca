@@ -1,3 +1,4 @@
+// @areas view input
 // GMA2-style experience: touch controls, camera framing, snow look, spray, score, plus full-run integration.
 import fs from 'node:fs';
 import { describe, it } from 'node:test';

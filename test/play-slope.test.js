@@ -1,3 +1,4 @@
+// @areas world
 // The play mountain (world/play-slope.js): a steep procedural map with big kickers, beside the unchanged test slope.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';

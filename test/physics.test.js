@@ -1,3 +1,4 @@
+// @areas sim
 // Baseline behaviour: terrain, riding physics, braking, jumping, kickers, trees, finish.
 // These must keep passing through every later change to the game.
 import { describe, it } from 'node:test';

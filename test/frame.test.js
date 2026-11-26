@@ -1,3 +1,4 @@
+// @areas world
 // Lint for the course seam (B2c) and the world frame (C2): nothing outside the procedural map knows cx(y), the park
 // constants, the height array, "+y is downhill" or which way the map lies in the world. Everything else asks the
 // Course (core/contracts.js), the Terrain and the map frame (world/map-frame.js, docs/adr/0005-enu-frame.md).

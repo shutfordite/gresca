@@ -1,3 +1,4 @@
+// @areas view
 // The GPU terrain's hardening (E1b): the lost-context state machine, driven with fake drawers and a fake canvas
 // (Node has no WebGL), the texture memory budget, and the softer corduroy's constants.
 import { describe, it } from 'node:test';

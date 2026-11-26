@@ -1,3 +1,4 @@
+// @areas view
 // Hanga Dawn look, step D1: fog and sky (spec terrain.fog, sky, maps[id].sun).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';

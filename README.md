@@ -86,7 +86,8 @@ rails, spray, fixed timestep), `input/`, `view/` (camera, raycaster, sprites, ri
 npm test
 ```
 
-Per area: `npm run test:sim`, `test:view`, `test:input`, `test:world`. To see the game: `npm run shot` writes a PNG of
+Per area: `npm run test:sim`, `test:view`, `test:input`, `test:ui`, `test:world`, `test:shared`, `test:tools` (each
+test file names its areas on its first line, `// @areas sim view`). To see the game: `npm run shot` writes a PNG of
 every named scene (`src/scenes.js`) for board and skis to `shots/` (needs `npm ci`; dev-only Playwright, ADR 0003; set
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an installed Chrome). `?scene=kicker-air` opens a scene, paused, in the browser.
 

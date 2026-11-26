@@ -79,7 +79,26 @@ function ride(g, seed, placeOpts, start) {
  return rows;
 }
 
-/** The golden trace: {rides: [{name, rows}]} from three fixed rides, and its sha256 hex. opts.rotationDeg: see load(). */
+// The fields of a row each hash covers (X1): the sim hash the ride, its events and what the HUD shows of it; the anim
+// hash what the view makes of it on drawn frames (rider yaw, pose, draw counts), keyed by the step. An animation
+// change re-records only the anim hash, so the sim hash keeps proving the ride is the same.
+const SIM_FIELDS = Object.freeze(['r', 'e', 'hud', 'dot']);
+const ANIM_FIELDS = Object.freeze(['drawn', 'yaw', 'anim']);
+
+function pick(row, fields) {
+ const out = {};
+ for (const f of fields) if (f in row) out[f] = row[f];
+ return out;
+}
+
+function sha256(text) {
+ return crypto.createHash('sha256').update(text).digest('hex');
+}
+
+/**
+ * The golden trace from three fixed rides: {rides: [{name, rows}], text, hash (sha256 hex of the whole trace), simHash,
+ * animHash (of SIM_FIELDS and ANIM_FIELDS of every row)}. opts.rotationDeg: see load().
+ */
 export async function goldenTrace(opts = {}) {
  const g = await load({ rotationDeg: opts.rotationDeg ?? 0 });
  const rides = [
@@ -88,7 +107,15 @@ export async function goldenTrace(opts = {}) {
   { name: 'park from y 740', rows: ride(g, 11, { y: 740, vy: 12 }, false) },
  ];
  const text = JSON.stringify(rides);
- return { rides, text, hash: crypto.createHash('sha256').update(text).digest('hex') };
+ const sim = rides.map((r) => r.rows.map((x) => pick(x, SIM_FIELDS)));
+ const anim = rides.map((r) => r.rows.filter((x) => 'drawn' in x).map((x) => ({ n: x.r[0], ...pick(x, ANIM_FIELDS) })));
+ return {
+  rides,
+  text,
+  hash: sha256(text),
+  simHash: sha256(JSON.stringify(sim)),
+  animHash: sha256(JSON.stringify(anim)),
+ };
 }
 
 if (import.meta.url === 'file://' + process.argv[1]) {
@@ -96,5 +123,5 @@ if (import.meta.url === 'file://' + process.argv[1]) {
  if (process.argv[2]) fs.writeFileSync(process.argv[2], t.text);
  const steps = t.rides.map((r) => r.name + ': ' + r.rows.length + ' steps, ' +
   r.rows.filter((x) => x.e).flatMap((x) => x.e).length + ' events, last ' + JSON.stringify(r.rows.at(-1).r));
- console.log(steps.join('\n') + '\n' + t.hash);
+ console.log(steps.join('\n') + '\nsim  ' + t.simHash + '\nanim ' + t.animHash + '\nall  ' + t.hash);
 }

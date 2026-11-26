@@ -1,3 +1,4 @@
+// @areas view
 // Edge-driven lean (F6): the body tips by the sim's edge angle, rises as the edge flips between turns, reads a skid.
 import test from 'node:test';
 import assert from 'node:assert/strict';

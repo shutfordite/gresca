@@ -1,3 +1,4 @@
+// @areas world
 // The same seeded ride on the procedural map at two placements (docs/adr/0005-enu-frame.md), read through the façade
 // in world metres (g.raw) and compared on the course: s, d, speed, heading relative to the map, score and events.
 // Not bit for bit: rotating every position, velocity and gradient through cos and sin of an angle that is not a

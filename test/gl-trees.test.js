@@ -1,3 +1,4 @@
+// @areas view
 // E3a: the GPU trees' pure parts in Node: instance placement from the tree data, culling, the model, the Look's
 // colours and the memory. (CI cannot run WebGL: the drawing is checked in the preview.)
 import { describe, it } from 'node:test';

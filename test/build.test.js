@@ -1,3 +1,4 @@
+// @areas world
 // The world that build() makes, pinned bit for bit. Speed-ups to build() (M2, A2) must not change a single value.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';

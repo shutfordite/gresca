@@ -1,3 +1,4 @@
+// @areas tools
 // Tests for tools/outline.mjs, the line-range outline agents use instead of reading the art spec whole.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

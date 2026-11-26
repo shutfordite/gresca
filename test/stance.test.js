@@ -1,3 +1,4 @@
+// @areas input ui
 // The Regular / Goofy stance picker in the menu: shown for the snowboard only, saved under gresca-stance.
 import fs from 'node:fs';
 import { describe, it } from 'node:test';

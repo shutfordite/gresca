@@ -1,3 +1,4 @@
+// @areas view
 // Lint for the Look seam (P4): colours live in src/view/look/ only. No hex or rgb() literal and no HANGA in src/
 // outside it (main.js and app.js only hand HANGA to the look), and no colour in styles/ outside the :root token
 // defaults in styles/base.css, which must equal the Look's ui tokens.

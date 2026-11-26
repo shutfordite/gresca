@@ -1,3 +1,4 @@
+// @areas view
 // F3-draw: the sim's flip angle reaches the projection as bodyPitchDeg, and the rider tucks while flipping.
 import test from 'node:test';
 import assert from 'node:assert/strict';

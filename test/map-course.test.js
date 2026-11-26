@@ -1,3 +1,4 @@
+// @areas world
 // The gresca-map-1 course file (docs/adr/0010-map-course-format.md): compileCourse() makes it from a baked terrain
 // file, validateCourse() accepts it and rejects each broken rule with a message naming the field, and the CLI writes
 // it offline. Fixtures: test/fixtures/maps/ (the synthetic map of test/map-fixtures.js; no network).
