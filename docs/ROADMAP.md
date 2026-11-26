@@ -77,6 +77,22 @@ One PR, by the coordinator, behaviour change none (the anim hash is recorded fre
 must equal today's sim fields). **Freeze:** merge #66 and #67 first, then no other code PR opens or merges until X1
 is in (a few hours). Stream work restarts on top of it.
 
+### X2: retrospective changes (Shared, owner asked 27 Nov)
+From the retrospective of 18–27 Nov (`docs/RETROSPECTIVES.md`), all accepted by the owner. One PR, by the
+coordinator, behaviour change none:
+1. **Bake map workflow** (`.github/workflows/bake-map.yml`): real maps bake on a GitHub runner and arrive as a PR,
+   started with one tap; El Tarter stops waiting on a terminal step.
+2. **GPU smoke test** (`tools/gl-smoke.mjs`, CI `gl-smoke`): two scenes on `?renderer=gl` in software WebGL must draw a
+   real frame with no page error or lost context. Until now CI only ever saw the CPU renderer.
+3. **Code map split**: each folder's `AGENTS.md` holds its rows; the root `AGENTS.md` keeps the core rules and an index
+   (20 KB to 8 KB, loaded in every agent session). The PR check looks for a new file in the AGENTS.md files above it.
+4. **STATUS is the coordinator's**: stream PRs report in their body (template: "Owner verdict needed", "Debt"); the
+   PR check warns when a stream PR edits it.
+5. **Method** (`.claude/skills/gresca-architect/SKILL.md`): feel spikes before feel packages, the X1 merge rules, a
+   daily try list and merge batch for the owner, a Debt table in STATUS cleared one row per stream package, owner
+   chores become workflows, lessons go into the skill or AGENTS.md.
+6. **Order**: C4b runs alongside K instead of after it; F1 rider scale returns as an S4 package after a framing spike.
+
 ## Where this differs from the feedback plan, and why
 - **The `Course` seam and the ENU frame (C2) move into the freeze.** In the feedback plan they sat in S5. F5, F6 and F7
   need the fall line and headings independent of +y, and flipping the frame later would rewrite stream code.
@@ -117,6 +133,11 @@ is in (a few hours). Stream work restarts on top of it.
 2. **The snow park comes next** (after X1 and the open #66 and #67): ramps made of snow, rails and boxes with real
    grind physics in many shapes (kinks, bends, boxes), jumps from small kickers to mega ramps, each with a landing.
    It should feel like a real snow park. Planned below as **K**.
+
+## Decisions (owner, 27 Nov)
+1. **The retrospective's changes are all accepted** (X2 above).
+2. **Real mountains don't wait behind K:** C4b (loading El Tarter in the game) runs alongside K0–K3, as soon as the
+   Bake map workflow has produced the files.
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
