@@ -27,12 +27,12 @@ export const STAGE = Object.freeze({
 
 /**
  * The stages of a frame with the GPU terrain (?renderer=gl, renderer.js), in the order they run: STAGE's camera,
- * then gl and horizon in place of the raycast, sky and blit, then STAGE's trees, sprites and rider.
+ * then gl (terrain, sky and the GPU trees) in place of the raycast, sky and blit, then STAGE's trees (empty: the
+ * trees are on the GPU), sprites and rider.
  */
 export const GL_STAGE = Object.freeze({
  CAMERA: STAGE.CAMERA,
  GL: 'gl',           // the GPU terrain and sky submitted (the GPU's own time is not in it: a flush measures that)
- HORIZON: 'horizon', // the terrain horizon the trees hide behind (gl/horizon.js)
  TREES: STAGE.TREES,
  SPRITES: STAGE.SPRITES,
  RIDER: STAGE.RIDER,
@@ -95,6 +95,7 @@ export function createView(doc, look) {
   sun: { X: 0, Y: 0, r: 0, on: false }, // scratch: the sun disc (sky.js)
   trackRows: { v0: 0, v1: -1 }, // colour map rows (grid v) the ski tracks changed since the GPU terrain last read them
   trail: createTrail(), // the equipment's track (track-trail.js), drawn as a ribbon by the GPU terrain
+  treeGpu: null, // the GPU trees' counts this frame (gl/gl-renderer.js), null with the CPU raycaster
   renderer: { name: 'cpu', fallback: null }, // which terrain renderer draws, and why the GPU one did not (renderer.js)
   timer: null,
  };
