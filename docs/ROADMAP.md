@@ -86,3 +86,10 @@ S3 meet through `Look.rider.project`. All of these are fixed in B2b, B2c and P4.
    one renderer the look work builds on (E1 to E4 above).
 3. **Ski tracks** (the line left in the snow) need a lot of work: a later workstream of their own, on the GPU renderer
    (tracks pressed into the snow, lit at their edges, fading with time and new snow). Not part of E1 to E4.
+
+## Decisions (owner, 26 Nov)
+1. **Flips on touch use both fingers** (replaces 20 Nov item 1 for touch): in the air, a finger on each half of the
+   screen, both dragged up = front flip, both dragged down = backflip; holding keeps rotating. A one-finger drag in
+   the air does nothing (one finger held still spins). Coordinator's call: on touch, flips and spins combine in
+   sequence (two-finger flip, then one finger held to spin); on a keyboard they combine at once (Up/W, Down/S with
+   Left/Right).
