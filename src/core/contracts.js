@@ -143,11 +143,15 @@ export const COURSE_FIELDS = Object.freeze({
  * @property {number} impact m/s downward at the last touchdown
  * @property {number} landings count of touchdowns
  * @property {boolean} approach fast, lined up with a kicker and within its approach run (the view adds "on the snow")
+ * @property {number} edge rad, the edge angle (RiderState.edge): + tips the equipment onto its left-turn edge
+ * @property {number} skid m/s, sideways slip on the snow this step (RiderState.skid)
+ * @property {number} flipRot rad, flip rotation this jump (RiderState.flipRot), + is a front flip
  */
 
 /** Every AnimInput field, by the type its value has. */
 export const ANIM_INPUT_FIELDS = Object.freeze({
- number: Object.freeze(['speed', 'travelDir', 'facing', 'riderSide', 'impact', 'landings']),
+ number: Object.freeze(['speed', 'travelDir', 'facing', 'riderSide', 'impact', 'landings', 'edge', 'skid',
+  'flipRot']),
  boolean: Object.freeze(['wiped', 'grinding', 'braking', 'approach']),
 });
 
