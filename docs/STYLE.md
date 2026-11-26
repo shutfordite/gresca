@@ -28,6 +28,9 @@ change, not as a reason to add layers: in a hot loop, a plain function beats an 
   functions you touch, or do it in its own "no behaviour change" PR.
 - **Formatting:** 1-space indent as the existing code, single quotes, a semicolon at the end of each statement,
   lines under 120 characters. `const` by default, `let` when reassigned, never `var`.
+- **One property per line at stream seams:** an object literal or call that several streams extend (an `AnimInput`,
+  the animation's input and state, the `poseFor` call, a contract's fields) puts one property per line with a
+  trailing comma, so two PRs that each add a field touch different lines and merge without a conflict (X1).
 - **Naming:** `camelCase` for functions and variables, `PascalCase` for constructors and interfaces,
   `UPPER_SNAKE` for tunables and constants. File names in `kebab-case`. Booleans read as questions (`isAirborne`).
 - **Comments** say why and give units, not what the next line does. Every exported or cross-file function gets a
