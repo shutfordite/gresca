@@ -71,11 +71,22 @@ function makeEl(id, w, h) {
     width: w || 300, height: h || 150,
     clientWidth: w || 390, clientHeight: h || 844,
     _l: {}, _pix: null, _calls: null, // set to [] to record drawing calls (see RECORDED)
-    classList: { toggle() {}, add() {}, remove() {} },
+    // the classes and attributes are kept so a test can read what the menu shows
+    classes: new Set(),
+    classList: {
+      toggle(name, on) {
+        const isOn = on === undefined ? !el.classes.has(name) : on;
+        if (isOn) el.classes.add(name); else el.classes.delete(name);
+      },
+      add(name) { el.classes.add(name); },
+      remove(name) { el.classes.delete(name); },
+      contains(name) { return el.classes.has(name); },
+    },
+    attrs: {},
     addEventListener(t, fn) { (el._l[t] = el._l[t] || []).push(fn); },
     fire(t, ev) { (el._l[t] || []).forEach((fn) => fn(Object.assign({ preventDefault() {}, pointerId: 1 }, ev))); },
     setPointerCapture() {},
-    setAttribute() {},
+    setAttribute(name, value) { el.attrs[name] = String(value); },
   };
   el._ctx = makeCtx(el);
   el.getContext = () => el._ctx;
@@ -112,10 +123,13 @@ export async function load(opts = {}) {
     documentElement: { style: { props: {}, setProperty(k, v) { this.props[k] = v; } } },
   };
   const store = Object.assign({}, opts.store);
-  const localStorage = {
-    getItem: (k) => (k in store ? store[k] : null),
-    setItem: (k, v) => { store[k] = String(v); },
-  };
+  const blocked = () => { throw new Error('storage is blocked'); };
+  const localStorage = opts.blockedStorage // private browsing: every access throws
+    ? { getItem: blocked, setItem: blocked }
+    : {
+      getItem: (k) => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); },
+    };
   const art = loadArt();
   const env = {
     document,

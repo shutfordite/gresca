@@ -186,8 +186,8 @@ export function createGame(env) {
  const pause = bindPause(ui, hud, session, input, env, showMenu);
  bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right), pause.toggle);
  ui.go.addEventListener('click', startRun);
- bindMenu(ui, session, env, hud);
  loadStance(session, env, look.rider.stanceStorageKey);
+ bindMenu(ui, session, env, hud, look.rider.stanceStorageKey);
  env.setTimeout(boot, BOOT_DELAY_MS);
  env.requestAnimationFrame(loop);
 
