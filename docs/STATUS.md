@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 26 Nov 2026, main after PR #61.
+Updated 26 Nov 2026, main after PR #69.
 
 ## Done
 | Package | PR |
@@ -52,29 +52,30 @@ Updated 26 Nov 2026, main after PR #61.
 | E3a trees as one instanced GPU mesh | #59 |
 | F3-input flip input in the air (drag up/down, `W`/`S`), air hints for the first 3 jumps | #60 |
 | CI: the preview comment links both maps | #61 |
+| STATUS after #61, the area test scripts | #63 |
+| `AnimInput` gains `edge`, `skid`, `flipRot` | #62 |
+| S1 stance picker (Regular / Goofy, `gresca-stance`) | #64 |
+| S2/F3 flip physics and scoring (±40° landing window) | #65 |
+| S3/F3-draw the flip: `bodyPitchDeg` and the `tuck` pose | #69 |
+| S1/F3-touch two-finger flips (owner, 26 Nov) | #68 |
 
 ## In progress (phase 3, the five streams; parallel, each in its own folders)
 | Stream | Package | Branch |
 |---|---|---|
-| Shared | `AnimInput` gains `edge`, `skid`, `flipRot` (for F6-lean and the F3 tuck) | `core/anim-input-edge` (#62) |
-| Shared | This file after #61; `edge`, `map-loader`, `gl-trees`, `air-controls`, `track-trail` in the per-area test scripts | `docs/status-after-61` |
-| S1 controls and UI | **Stance picker**: regular / goofy for the snowboard, on the menu, saved under `gresca-stance` | `ui/s1-stance-picker` |
-| S1 controls and UI | **F3-touch** two-finger flips (owner, 26 Nov): both fingers drag up = front flip, down = backflip; air hints and Controls screen follow | `ui/f3-two-finger-flip` |
-| S2 sim feel | **F3** flip physics and scoring: `InputState.flip` turns `flipRot`, the `flip` event, landing a flip, flip and spin combos in the score | `sim/f3-flip-physics` |
-| S3 rider animation | **F6-lean** edge-driven lean and unweighting, from `AnimInput.edge` and `skid` (draft on #62) | `anim/f6-lean` |
-| S4 look, camera, render | **E3b** rails, flags and kickers as GPU objects; every GPU object (trees too) lit by the baked sun visibility | `view/e3b-gpu-features` |
+| Shared | This file after #69 | `docs/status-after-69` |
+| S3 rider animation | **F6-lean** edge-driven lean and unweighting, from `AnimInput.edge` and `skid` | `anim/f6-lean` (#66) |
+| S4 look, camera, render | **E3b** rails, flags and kickers as GPU objects; every GPU object (trees too) lit by the baked sun visibility | `view/e3b-gpu-features` (#67) |
 | S5 maps | **C4b** waits for the owner's El Tarter bake (below) | none |
 
 ## Next, in order
 - Shared: **split the golden trace** into a sim hash and an anim hash (an animation change re-records only the anim
   one), plus a carving scene in `src/scenes.js` (#66 review).
-- Shared, after #65: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the
+- Shared: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the
   HUD popup ("Backflip 360"), moving `trickName` from `sim/jump.js` to `src/ui/` (#65 review).
 - S1: C4b menu entry for real maps (with S5's C4b).
 - S2: **ollie preload** (moved out of F6, #58, and out of F3 to keep F3 small): pop on jump release needs S1 to request
   the jump on release, and the crouch needs an `AnimInput` field (a Shared contract PR first). Then (optional) the
   gravity slope-law A/B.
-- S3: F3 flip tuck (after S2's F3; `AnimInput.flipRot` is ready from #62).
 - S4: E4 tilt-shift and haze. The camera framing on the play mountain's 30° slopes (looks flat, #48) is its own
   small package after E3b.
 - Ski tracks: T1 is done; pressing them into the snow, lit edges and fading are the later tracks workstream.
