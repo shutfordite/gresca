@@ -52,6 +52,7 @@ var RA = {
   fakieHyst: 10,       // deg, the fall line must pass this far beyond the board's line before the look swaps shoulders
   fakieSmooth: 0.1,    // s, time constant of the fakie look easing in and out (entering and leaving switch)
   sideHold: 0.26,      // cos of the angle from travel the equipment must pass before the upper body's side flips
+  flipMin: 0.15,       // rad, the flip angle past which the rider counts as flipping (tuck pose), about 9 deg
   maxStep: 1 / 60      // s, springs are sub-stepped so a slow frame cannot blow them up
  },
  groups: {
@@ -81,7 +82,7 @@ RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regul
 RA.create = function (rig) {
  return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
           turn: 0, twist: 0, headYaw: 0, brakeW: 0, fakieW: 0, fakieSide: 0, fakieLook: 0, ahead: null, lookSide: 0,
-          brakeSide: null,
+          brakeSide: null, bodyPitch: 0, flipping: false,
           roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
           landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
 };
@@ -97,6 +98,8 @@ function spring(x, v, rest, hz, zeta, force, dt) {
  * Advance the animation by dt seconds.
  * inp: {
  *   wiped, grinding, airborne, braking, approach   booleans from the game
+ *   flipRot     rad, optional: the sim's flip angle this jump, + front flip (0 on the snow). Drives s.bodyPitch (deg,
+ *               never smoothed) and, past tune.flipMin in the air, the tuck pose (s.flipping)
  *   landed      true on the frame the rider touches down
  *   impact      landing speed, m/s (downwards, positive)
  *   speed       m/s along the snow
@@ -132,8 +135,12 @@ RA.update = function (s, inp, dt) {
  } else if (s.fakieW === 0) s.fakieSide = 0;
  if (s.fakieW === 0) s.fakieLook = s.fakieSide;
  s.fakieLook += clamp(s.fakieSide - s.fakieLook, -2 * dt / T.fakieSwap, 2 * dt / T.fakieSwap);
+ // F3: the flip angle goes to the projection as it is, every frame; the tuck follows the sim's angle in the air
+ var flipRot = inp.airborne && !inp.wiped && !inp.grinding ? inp.flipRot || 0 : 0;
+ s.bodyPitch = flipRot / D2R;
+ s.flipping = Math.abs(flipRot) > T.flipMin;
  // turn is already in the rider's frame (riderSide), so poseFor gets goofy: false and toe stays the +x edge
- var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne,
+ var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne, flipping: s.flipping,
                             landedAgo: s.landedAgo, braking: inp.braking && onSnow, brakeSide: s.brakeSide,
                             approach: inp.approach && onSnow, isSwitch: fakie,
                             lookSide: s.fakieSide > 0 ? 'left' : 'right',
@@ -256,6 +263,14 @@ RA.livePose = function (s) {
  */
 RA.project = function (s, yawDeg, pitchDeg, stance, options) {
  HANGA.rider.poses[s.rig][LIVE] = RA.livePose(s);
+ if (s.bodyPitch !== 0 && !(options && options.bodyPitchDeg != null)) {
+  var f = s.flipOpts || (s.flipOpts = {});
+  f.cameraPitchDeg = options ? options.cameraPitchDeg : undefined;
+  f.twistDeg = options ? options.twistDeg : undefined;
+  f.headYawDeg = options ? options.headYawDeg : undefined;
+  f.bodyPitchDeg = s.bodyPitch;
+  options = f;
+ }
  if ((s.twist !== 0 || s.headYaw !== 0) && !(options && options.twistDeg != null)) {
   var o = s.opts || (s.opts = {}), mirror = s.rig === 'board' && stance === 'goofy' ? -1 : 1;
   o.cameraPitchDeg = options ? options.cameraPitchDeg : undefined;
