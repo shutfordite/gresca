@@ -1,19 +1,16 @@
 // One physics step: steering, gravity, grip, friction, braking, jumps, rails, trees, spray and the finish; its events.
-import { TAU, RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
+import { RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
 import { DEFAULT_COURSE } from '../world/course.js';
-import { DEFAULT_FRAME } from '../world/map-frame.js';
 import { emit } from './particles.js';
 import { jumpStep } from './jump.js';
 import { railCheck, grindStep } from './grind.js';
 import { pushEvent } from './state.js';
 import { brakeStrength, brakeYaw, skidKept } from './brake.js';
+import { steerOf, followEdge, yawRate, slipLeft } from './edge.js';
+import { EDGE } from './tuning.js';
 
 const AIRBORNE_Z = 0.05;     // m above the snow, higher counts as in the air
 const WIPEOUT_SPIN_RATE = 14; // rad/s, tumble while crashed
-const CARVE_RATE = 2.7;      // rad/s, turn rate when standing still
-const CARVE_SPEED_LOSS = 0.045; // rad/s less turn rate per m/s of speed (up to 30 m/s)
-const CARVE_SPEED_CAP = 30;  // m/s, faster doesn't turn any slower
-const CARVE_LIMIT = 0.15;    // rad, the board stays this far from straight across the slope
 const AIR_GRIP = 0.4;        // 1/s, how fast sideways slip dies in the air
 const DRAG_PER_SPEED = 0.0035; // 1/m, air drag: fraction of speed lost per second per m/s
 const SNOW_FRICTION = 0.02;  // 1/s, fraction of speed lost per second on any snow
@@ -31,10 +28,9 @@ const FLAT_SLOPE = 1e-9;     // m/m, flatter than this the rider has no downhill
  * every step, copy what you keep). state: {rider, session, spray, gradient (a {gx,gy} scratch object, also the fall
  * line's), where (a {s,d,tx,ty} scratch object), near (an array, scratch for the trees near the rider)}; input: the
  * InputState; world: {terrain, trees ({near(x, y, out) -> count}, world/build.js), course (Course,
- * core/contracts.js), frame (the MapFrame, world/map-frame.js)}. Everything is in world metres (east, north) and
- * radians counter-clockwise from east (docs/adr/0005-enu-frame.md). Mutates rider, input.jump (and jumpPressed),
- * session and spray, nothing else. Without a course, frame, where or near (direct unit calls), DEFAULT_COURSE,
- * DEFAULT_FRAME and new scratch objects are used.
+ * core/contracts.js)}. Everything is in world metres (east, north) and radians counter-clockwise from east
+ * (docs/adr/0005-enu-frame.md). Mutates rider, input.jump (and jumpPressed), session and spray, nothing else. Without a
+ * course, where or near (direct unit calls), DEFAULT_COURSE and new scratch objects are used.
  */
 export function step(state, input, world, dt) {
  const rider = state.rider;
@@ -47,6 +43,7 @@ export function step(state, input, world, dt) {
  if (rider.grind) {
   grindStep(rider, input, session, state.spray, dt, course);
   rider.skid = 0;
+  rider.edge = 0;
  } else {
   ride(state, input, world, dt, course, where);
  }
@@ -65,9 +62,8 @@ function ride(state, input, world, dt, course, where) {
  if (brake > 0) {
   rider.wipeoutSpin = 0;
   brakeYaw(rider, brake, course.fallLine(rider.x, rider.y, state.gradient).heading, dt);
- } else {
-  steer(rider, input, RIGS[session.rig], s, dt, (world.frame || DEFAULT_FRAME).rotation);
  }
+ steer(rider, input, RIGS[session.rig], brake, dt);
  const slip = rider.crashTimer > 0 ? 0 : glide(state, brake, world.terrain, s, dt);
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
@@ -110,28 +106,27 @@ function deriveRider(rider, fall) {
  rider.downhillSide = fall.slope > FLAT_SLOPE ? (cross >= 0 ? 1 : -1) : 0;
 }
 
-// The wipeout tumble, spinning in the air, or carving on the snow (within forward or switch). Right turns clockwise
-// (heading down), left counter-clockwise; rotation counts + to the right. across: rad, the world heading of the map
-// frame's across axis (grid +u): the carve limit keeps the board CARVE_LIMIT from it, measured on the map's grid as
-// r = across - heading (F6 replaces it with the fall line).
-function steer(rider, input, rig, s, dt, across) {
- const turn = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+// The wipeout tumble, spinning in the air, or the edge and carve on the snow (edge.js); while braking (brake: 0..1)
+// the brake turns the equipment and the edge goes flat. Yaw is counter-clockwise +: left turns counter-clockwise,
+// right clockwise; rider.rotation counts + to the right (core/contracts.js), so it takes the yaw with a minus.
+function steer(rider, input, rig, brake, dt) {
+ const turn = steerOf(input);
  if (rider.crashTimer > 0) {
   rider.crashTimer -= dt;
   rider.wipeoutSpin += dt * WIPEOUT_SPIN_RATE;
- } else if (rider.z > AIRBORNE_Z) {
+  rider.edge = 0;
+  return;
+ }
+ rider.wipeoutSpin = 0;
+ const onSnow = rider.z <= AIRBORNE_Z;
+ followEdge(rider, onSnow && brake <= 0 ? turn : 0, rig, dt);
+ if (!onSnow) {
   // in the air, left and right spin the board
-  rider.wipeoutSpin = 0;
-  const da = turn * dt * rig.spin;
-  rider.heading -= da;
-  rider.rotation += da;
- } else {
-  rider.wipeoutSpin = 0;
-  const rate = CARVE_RATE - Math.min(s, CARVE_SPEED_CAP) * CARVE_SPEED_LOSS; // rad/s before the rig's factor
-  let a = across - rider.heading + turn * dt * rate * rig.turn;
-  a = ((a % TAU) + TAU) % TAU;
-  const bs = a >= Math.PI ? Math.PI : 0;
-  rider.heading = across - (bs + Math.max(CARVE_LIMIT, Math.min(Math.PI - CARVE_LIMIT, a - bs)));
+  const yaw = -turn * dt * rig.spin; // rad, counter-clockwise +
+  rider.heading += yaw;
+  rider.rotation -= yaw;
+ } else if (brake <= 0) {
+  rider.heading += yawRate(rider, turn, rig) * dt;
  }
 }
 
@@ -150,13 +145,19 @@ function glide(state, brake, terrain, s, dt) {
  const dy = Math.sin(rider.heading);
  let slip;
  if (brake <= 0) {
-  const al = vx * dx + vy * dy;
-  const sx = vx - al * dx;
-  const sy = vy - al * dy;
+  let al = vx * dx + vy * dy; // m/s along the equipment
+  let side = vy * dx - vx * dy; // m/s across it, + to its left
+  if (!air) {
+   // the edge holds up to edgeGrip of sideways acceleration, or washes out into a skid (edge.js)
+   const left = slipLeft(side, rig.edgeGrip * dt);
+   if (left === 0) al = (al < 0 ? -1 : 1) * Math.sqrt(al * al + side * side); // held: a carve keeps its speed
+   side = left;
+  }
+  // the rest is a skid, worn off as speed by the sideways friction
   const k = Math.exp(-(air ? AIR_GRIP : rig.grip) * dt);
-  slip = Math.hypot(sx, sy);
-  vx = dx * al + sx * k;
-  vy = dy * al + sy * k;
+  slip = Math.abs(side);
+  vx = dx * al - dy * side * k;
+  vy = dy * al + dx * side * k;
  } else {
   // a skid: the equipment is yawed across the motion and the slip is lost as speed, not as a turn (brake.js)
   slip = Math.abs(vx * dy - vy * dx);
@@ -212,10 +213,10 @@ function hitTrees(rider, session, trees, near, s) {
  }
 }
 
-// On the snow: spray when carving hard or braking (slip: sideways slip, m/s). The ski tracks are the view's
-// (view/ski-tracks.js), drawn from rider.skid and rider.isBraking after each step.
+// On the snow: spray when skidding or braking (slip: sideways slip, m/s; a clean carve has none). The ski tracks are
+// the view's (view/ski-tracks.js), drawn from rider.skid, rider.edge and rider.isBraking after each step.
 function spraySnow(rider, input, spray, slip) {
  const sn = Math.hypot(rider.vx, rider.vy);
  if (input.brake && sn > 3) emit(spray, 1, rider.x, rider.y, 0.15, 2.2, 1.6, -rider.vx * 0.15, -rider.vy * 0.15);
- else if (slip > 4) emit(spray, 1, rider.x, rider.y, 0.15, 2.2, 1.4, 0, 0);
+ else if (slip > EDGE.SPRAY_SKID) emit(spray, 1, rider.x, rider.y, 0.15, 2.2, 1.4, 0, 0);
 }
