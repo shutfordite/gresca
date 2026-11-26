@@ -66,6 +66,10 @@ Updated 26 Nov 2026, main after PR #61.
 | S5 maps | **C4b** waits for the owner's El Tarter bake (below) | none |
 
 ## Next, in order
+- Shared: **split the golden trace** into a sim hash and an anim hash (an animation change re-records only the anim
+  one), plus a carving scene in `src/scenes.js` (#66 review).
+- Shared, after #65: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the
+  HUD popup ("Backflip 360"), moving `trickName` from `sim/jump.js` to `src/ui/` (#65 review).
 - S1: C4b menu entry for real maps (with S5's C4b).
 - S2: **ollie preload** (moved out of F6, #58, and out of F3 to keep F3 small): pop on jump release needs S1 to request
   the jump on release, and the crouch needs an `AnimInput` field (a Shared contract PR first). Then (optional) the
