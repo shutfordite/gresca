@@ -25,6 +25,9 @@ export function getUi(doc) {
   gr: $('gr'),       // right glove hint
   pb: $('pb'),       // Snowboard button
   ps: $('ps'),       // Skis button
+  stance: $('stance'), // the Regular / Goofy picker (shown with Snowboard)
+  sr: $('sr'),       // Regular button
+  sg: $('sg'),       // Goofy button
   menuMain: $('menu'), // the menu's own content (title, text, picker, buttons)
   cb: $('cb'),       // Controls button
   ctl: $('ctl'),     // the Controls screen
