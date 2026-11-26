@@ -89,7 +89,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Menu, rig and stance picker, finish screen | `src/ui/menu.js`, `styles/menu.css`, `index.html` | `park`, `page`, `events` |
 | State wiring, boot, frame loop | `src/app.js` | `games`, `facade`, `timestep` |
 | What tests can read and set | each area's `fields.js` (`sim/`, `view/`, `ui/`, `input/`, `world/`); `src/debug.js` composes them | `facade` |
-| Named scenes (`Gresca.scene(name)`, `?scene=<name>`): fixed paused states for screenshots | `src/scenes.js` (data), `src/debug.js` | `scenes` |
+| The golden trace: three fixed rides, a sim hash (ride, events, HUD) and an anim hash (rider yaw, pose, draw counts); an animation change re-records only the anim one | `tools/golden-trace.mjs`, `test/golden.test.js` | `golden` |
+| Test areas from the `// @areas` tag on each test file's first line (`npm run test:<area>`) | `tools/test-area.mjs` | `test-area` |
+| Named scenes (`Gresca.scene(name)`, `?scene=<name>`): fixed paused states for screenshots (`carve-board`, `carve-ski` for lean and edge) | `src/scenes.js` (data), `src/debug.js` | `scenes` |
 | Recorded RiderState traces (`node tools/record-trace.mjs` rewrites them) | `tools/record-trace.mjs`, `test/fixtures/traces/`, loader `test/traces.js` | `traces` |
 | Screenshots of every scene, board and skis, 820x1180 (`npm run shot` -> `shots/`; Playwright is dev-only, ADR 0003) | `tools/shot.mjs`, `.github/workflows/test.yml` | none (CI `shots` job on `src/view/`, `art/`, `styles/` PRs) |
 | Frame time by stage (`npm run bench`, `-- --chrome` for headless Chrome), the recorded baseline, the CI regression check, pixel digests of every scene | `tools/bench/` (`core.mjs` path and stats, `baseline.json`, `compare.mjs`, `digest.mjs`); the stage timer is `view.timer` (`src/view/draw.js`) | `bench`, `timer` (CI `bench` job on PRs) |
@@ -105,7 +107,9 @@ To change X, edit Y; the tests that cover it are Z. Folders with their own `AGEN
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
 
 Test names are `test/<name>.test.js`. Run one with `node --test test/<name>.test.js`; the whole suite is the gate.
-Per area while working: `npm run test:sim`, `test:view`, `test:input`, `test:world`. To see the game, `npm run shot`
+Per area while working: `npm run test:<area>` (`sim`, `view`, `input`, `ui`, `world`, `shared`, `tools`). Each test file
+names its areas on its first line (`// @areas sim view`; `tools/test-area.mjs` runs them, `test-area` fails on a
+missing or unknown tag), so a new test touches no shared list. To see the game, `npm run shot`
 (set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an installed Chrome), then open one or two PNGs from `shots/`; or append
 `?scene=<name>` to a preview link (names: `Gresca.scenes()`).
 
