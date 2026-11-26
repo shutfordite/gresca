@@ -92,12 +92,40 @@ function copyJ(J) { var o = {}, k; for (k in J) o[k] = [J[k][0], J[k][1], J[k][2
 RA.poseTarget = function (rig, pose) { return HANGA.poseJoints(rig, pose, 'regular'); };
 
 RA.create = function (rig) {
- return { rig: rig, pose: 'ride', from: null, t: 0, dur: 0, poseJ: RA.poseTarget(rig, 'ride'),
-          turn: 0, twist: 0, headYaw: 0, brakeW: 0, fakieW: 0, fakieSide: 0, fakieLook: 0, ahead: null, lookSide: 0,
-          brakeSide: null, riderSide: 1, edgeSign: 0, unweightT: 1e9, rise: 0, skidW: 0,
-          bodyPitch: 0, flipping: false,
-          roll: 0, rollV: 0, rollTarget: 0, comp: 0, compV: 0, compPeak: 0,
-          landedAgo: null, time: 0, J: RA.poseTarget(rig, 'ride') };
+ return {
+  rig: rig,
+  pose: 'ride',
+  from: null,
+  t: 0,
+  dur: 0,
+  poseJ: RA.poseTarget(rig, 'ride'),
+  turn: 0,
+  twist: 0,
+  headYaw: 0,
+  brakeW: 0,
+  fakieW: 0,
+  fakieSide: 0,
+  fakieLook: 0,
+  ahead: null,
+  lookSide: 0,
+  brakeSide: null,
+  riderSide: 1,
+  edgeSign: 0,
+  unweightT: 1e9,
+  rise: 0,
+  skidW: 0,
+  bodyPitch: 0,
+  flipping: false,
+  roll: 0,
+  rollV: 0,
+  rollTarget: 0,
+  comp: 0,
+  compV: 0,
+  compPeak: 0,
+  landedAgo: null,
+  time: 0,
+  J: RA.poseTarget(rig, 'ride'),
+ };
 };
 
 /* One damped spring step: x'' = -w²(x - rest) - 2ζw x' + force. */
@@ -157,12 +185,21 @@ RA.update = function (s, inp, dt) {
  s.bodyPitch = flipRot / D2R;
  s.flipping = Math.abs(flipRot) > T.flipMin;
  // turn is already in the rider's frame (riderSide), so poseFor gets goofy: false and toe stays the +x edge
- var name = HANGA.poseFor({ rig: rig, wiped: inp.wiped, grinding: inp.grinding, airborne: inp.airborne,
-                            flipping: s.flipping, landedAgo: s.landedAgo, braking: inp.braking && onSnow,
-                            brakeSide: s.brakeSide,
-                            approach: inp.approach && onSnow, isSwitch: fakie,
-                            lookSide: s.fakieSide > 0 ? 'left' : 'right',
-                            turn: s.turn, goofy: false });
+ var name = HANGA.poseFor({
+  rig: rig,
+  wiped: inp.wiped,
+  grinding: inp.grinding,
+  airborne: inp.airborne,
+  flipping: s.flipping,
+  landedAgo: s.landedAgo,
+  braking: inp.braking && onSnow,
+  brakeSide: s.brakeSide,
+  approach: inp.approach && onSnow,
+  isSwitch: fakie,
+  lookSide: s.fakieSide > 0 ? 'left' : 'right',
+  turn: s.turn,
+  goofy: false,
+ });
  if (name !== s.pose) { s.from = copyJ(s.poseJ); s.pose = name; s.t = 0; s.dur = HANGA.blendTime(name); }
  s.t += dt;
  var tgt = RA.poseTarget(rig, name), w = s.dur > 0 ? smooth(Math.min(1, s.t / s.dur)) : 1;
