@@ -1,3 +1,4 @@
+// @areas sim world
 // The golden trace (tools/golden-trace.mjs): three fixed-seed, fixed-dt rides through the park, per step, bitwise.
 // The hash was recorded on main before B2c moved the game onto the Course interface; a refactor must not change it.
 // A deliberate feel change updates GOLDEN_HASH in the same PR and says so. C1 re-recorded it on top of F5 and F5-cam:

@@ -1,3 +1,4 @@
+// @areas view
 // Body twist (S3a): the lower body and equipment keep the equipment heading while the upper body leads toward travel.
 import test from 'node:test';
 import assert from 'node:assert/strict';

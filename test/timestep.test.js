@@ -1,3 +1,4 @@
+// @areas sim
 // The real game loop (requestAnimationFrame) runs the simulation at a fixed 120 Hz whatever the frame rate, caps the
 // steps per frame, draws the rider interpolated between steps, and takes all its randomness from a seeded RNG (A3).
 import { describe, it } from 'node:test';

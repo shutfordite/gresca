@@ -1,3 +1,4 @@
+// @areas input ui
 // The Controls screen is generated from the bindings table (src/input/bindings.js), so every control is on it and the
 // help cannot drift from the code. Also: the menu still starts on tap, and the rig and stance storage is untouched.
 import fs from 'node:fs';

@@ -1,3 +1,4 @@
+// @areas world
 // The terrain interface (src/terrain.js, B3): a layer stack sampled as one smooth surface, the gradient physics reads,
 // the renderer's fast path, and the rule that nothing else indexes the height arrays.
 import fs from 'node:fs';

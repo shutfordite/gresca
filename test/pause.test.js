@@ -1,3 +1,4 @@
+// @areas input ui
 // Pause (S1/F4b): the button, the Escape and P keys, the page-hidden auto-pause, the frozen simulation and camera,
 // the pause panel with the Controls screen, and Back to menu. All through the façade and the page's handlers.
 import { describe, it } from 'node:test';

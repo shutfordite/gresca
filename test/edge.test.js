@@ -1,3 +1,4 @@
+// @areas sim
 // F6: steering sets an edge angle, the sidecut sets the carve radius (R = sidecut / sin(edge)), a turn that asks more
 // than the edge's grip skids, and there is no heading clamp: a held turn goes through the fall line and uphill to a
 // stop. Measured on the procedural map's empty stretch (s 460 to 760) through the façade at a fixed dt; radii, speeds

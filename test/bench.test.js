@@ -1,3 +1,4 @@
+// @areas tools
 // The frame-time bench (tools/bench): its statistics, its fixed rider path, and one short run through the real game.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';

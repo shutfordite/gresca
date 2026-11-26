@@ -1,3 +1,4 @@
+// @areas sim
 // Named scenes (src/scenes.js): every one loads through the façade at any map placement, lands in its state, is
 // paused and deterministic.
 import { describe, it } from 'node:test';

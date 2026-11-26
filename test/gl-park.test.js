@@ -1,3 +1,4 @@
+// @areas view
 // E3b: the GPU park's pure parts in Node: the kickers, rails and flags the mesh is built from (counts and positions on
 // the test slope and the play mountain, any map rotation), that it sits on the snow, the culling, the memory, and the
 // sun-visibility lookup every GPU object shares. (CI cannot run WebGL: the drawing is checked in the preview.)

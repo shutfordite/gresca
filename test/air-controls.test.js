@@ -1,3 +1,4 @@
+// @areas input ui
 // Flip input and air hints (S1/F3): in the air a finger on each half dragged up is a front flip, both dragged down a
 // backflip, Up/W and Down/S the same on keys; one finger never flips; on the ground flip is 0 and a drag brakes or
 // looks back. The hints teach it for 3 jumps.

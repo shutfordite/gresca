@@ -1,3 +1,4 @@
+// @areas view
 // The Look contract (P4, src/view/look/look.js): the Hanga look resolves every role, projects every rig, pose, yaw
 // and pitch to finite points, keeps the colour map's tone, reads the camera framing live, and validateLook() rejects
 // a broken look. The S3/S4 seam: S4 draws only what Look.rider.project returns.

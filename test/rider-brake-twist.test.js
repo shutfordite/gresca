@@ -1,3 +1,4 @@
+// @areas view
 // F5 brake counter-rotation: along the recorded brake trace the upper body and head stay facing down the fall line.
 import test from 'node:test';
 import assert from 'node:assert/strict';

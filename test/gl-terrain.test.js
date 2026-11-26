@@ -1,3 +1,4 @@
+// @areas view
 // The GPU terrain (E0, ?renderer=gl): its pure parts in Node (projection, mesh layout, baking, the Look's uniforms,
 // the trees' horizon) and, through the façade, its choice and fallback (Node has no WebGL: it always falls back).
 import { describe, it } from 'node:test';

@@ -1,3 +1,4 @@
+// @areas world
 // The Course interface (core/contracts.js) and the procedural course (world/course.js), the fall line and downhillSide
 // in RiderState, and AnimInput (sim/anim-input.js): pure modules in Node, plus the course through the façade.
 import { describe, it } from 'node:test';

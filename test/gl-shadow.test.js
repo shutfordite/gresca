@@ -1,3 +1,4 @@
+// @areas view
 // E2: the GPU terrain's soft sun shadows, in Node: the baked ridge and tree shadows, the rider's shadow, the texture
 // budget and the painted shadows the GPU path leaves out. (CI cannot run WebGL: the shader is checked in the preview.)
 import { describe, it } from 'node:test';

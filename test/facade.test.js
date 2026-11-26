@@ -1,3 +1,4 @@
+// @areas shared
 // The test and debug façade, window.Gresca. Tests read and drive the game only through it, so the game's state can
 // move into objects or modules without touching them. This file checks that rule and the façade itself.
 import fs from 'node:fs';

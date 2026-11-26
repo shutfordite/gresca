@@ -1,3 +1,4 @@
+// @areas sim
 // Flips (S2/F3): the rotation about the across axis, the landing window, the scoring and the trick names, through
 // jumpStep and trickName on their own. Deterministic: fixed dt, no randomness beyond a seeded spray.
 import { describe, it } from 'node:test';

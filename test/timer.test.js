@@ -1,3 +1,4 @@
+// @areas view
 // The frame timer hook (view.timer, Gresca.debug.setTimer): each stage of a frame reports once, in order, and a timer
 // changes nothing that is drawn.
 import { describe, it } from 'node:test';

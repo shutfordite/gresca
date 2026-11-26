@@ -1,3 +1,4 @@
+// @areas world
 // The gresca-map-1 terrain validator (tools/map-compiler/validate.js): it accepts what the compiler writes, rejects
 // broken or hostile files with a message naming the field, warns about DEM defects (R5), and is pure enough for the
 // game to import. Also: every terrain file committed under maps/ validates.

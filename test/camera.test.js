@@ -1,3 +1,4 @@
+// @areas view
 // Hanga Dawn look, step D2: the camera follows the slope only partly (spec camera.slopeFollow, HANGA.cameraPitch).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';

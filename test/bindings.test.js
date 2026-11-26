@@ -1,3 +1,4 @@
+// @areas input
 // The bindings table (src/input/bindings.js) is the one source of the controls: the keys input.js reacts to and the
 // swipe distance it uses are the table's, so the Controls screen's help cannot drift from the code.
 import { describe, it } from 'node:test';

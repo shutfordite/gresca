@@ -1,3 +1,4 @@
+// @areas shared
 // Several games in one process: the game's modules hold no state (ADR 0002), so each load() (each createGame(env))
 // is a game of its own, and driving one changes nothing in another.
 import { describe, it } from 'node:test';

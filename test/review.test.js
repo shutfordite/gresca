@@ -1,3 +1,4 @@
+// @areas tools
 // The mechanical PR checks (tools/review/): each rule on small made-up inputs, and the ownership list against the
 // "Who owns what" table in AGENTS.md, so the two can't drift.
 import assert from 'node:assert/strict';
@@ -115,14 +116,15 @@ test('the real PR template has the sections the check expects', () => {
  }
 });
 
-test('docs and style: code map, header, area scripts, spec version, tunable units, long lines', () => {
+test('docs and style: code map, header, area tags, spec version, tunable units, long lines', () => {
  const files = {
   'AGENTS.md': '| Brake | `src/sim/brake.js` |',
   'src/sim/brake.js': '// The brake.\n',
   'src/sim/flip.js': 'export const x = 1;\n',
+  'test/brake.test.js': '// @areas sim\n// The brake.\n',
+  'test/flip.test.js': '// Flips, untagged.\n',
  };
  const read = (f) => files[f] ?? null;
- const packageJson = JSON.stringify({ scripts: { 'test:sim': 'node --test test/brake.test.js' } });
  const diffFiles = parseDiff([
   diffOf('src/core/config.js', [], ['export const BRAKE_MAX = 3;', 'export const BRAKE_MIN = 1; // m/s²']),
   diffOf('src/sim/flip.js', [], ['x'.repeat(121)]),
@@ -131,11 +133,11 @@ test('docs and style: code map, header, area scripts, spec version, tunable unit
  const changed = ['src/core/config.js', 'src/sim/flip.js', 'src/sim/brake.js', 'art/gresca-hanga-spec.js',
   'test/brake.test.js', 'test/flip.test.js'];
  const added = ['src/sim/brake.js', 'src/sim/flip.js', 'test/brake.test.js', 'test/flip.test.js'];
- const out = texts(docsAndStyleChecks({ added, changed, diffFiles, read, packageJson }));
+ const out = texts(docsAndStyleChecks({ added, changed, diffFiles, read }));
  assert.match(out, /new `src\/sim\/flip\.js` is not in the AGENTS\.md code map/);
  assert.match(out, /new `src\/sim\/flip\.js` has no one-line header comment/);
  assert.doesNotMatch(out, /brake\.js` (is not|has no)/);
- assert.match(out, /new `test\/flip\.test\.js` is in no/);
+ assert.match(out, /new `test\/flip\.test\.js` has no valid area tag/);
  assert.doesNotMatch(out, /brake\.test\.js/);
  assert.match(out, /spec v1\.5\.0 has no `docs\/art\/HANGA-v1\.5\.0\.md`/);
  assert.match(out, /config\.js:10` tunable without a unit comment/);

@@ -1,3 +1,4 @@
+// @areas view
 // Rider animation: the spec module's version, the pose state machine follows the spec's timing,
 // and the body dynamics react to the ground, landings and turns. Pure-module tests first, then the real game.
 import test from 'node:test';

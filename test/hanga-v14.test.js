@@ -1,3 +1,4 @@
+// @areas view
 // Art spec v1.4: the new projectRider options (camera pitch, twist, head yaw, body pitch), the brake, switch and tuck
 // poses and poseFor's new state fields. Calls that use none of them must give exactly the v1.3 result.
 import test from 'node:test';

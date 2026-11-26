@@ -1,3 +1,4 @@
+// @areas sim input
 // The pure layers on their own (core/, world/, sim/): imported straight into Node with no stubs, no DOM, no art
 // modules and no createGame. Plain objects in, plain objects out.
 import { describe, it } from 'node:test';
