@@ -8,6 +8,7 @@ import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
 import { cssRgba } from './look/look.js';
 import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
+import { TREE_FAR_M, TREE_HEIGHT_M } from './gl/tree-mesh.js'; // m: the sprites and the GPU trees share them
 
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
@@ -15,8 +16,6 @@ const CSS_PX_PER_RENDER_PX = 1.6; // CSS px of screen per render column
 const BLEND_NEAR_M = 80;      // m, nearer samples blend the four colour-map cells around them (bilinear)
 const BLEND_MAX_STEP = 140;   // 0..765, summed RGB step between two samples: smaller steps are shaded smooth, more so
                               // the smaller; from this step up the span stays flat (a painted edge)
-const TREE_FAR_M = 300;       // m along the view, further trees are not drawn
-const TREE_HEIGHT_M = 9;      // m, drawn height of a tree
 const SNAP_M = 8;             // m, a jump no step could make: show the current state as it is
 const SHADOW_ALPHA = 0.55;    // opacity of the rider's shadow
 const TREE_NEAR_M = 3;        // m along the view, nearer trees are not drawn (sprites.js drops them too)
@@ -90,11 +89,12 @@ export function draw(view, scene, dt) {
 /**
  * Everything over the terrain, on the screen canvas: trees (hidden behind ridges by view.occ, filled by the raycast
  * or, with the GPU terrain, by gl/horizon.js), rails, flags, spray and the rider. Same scene and dt as draw().
+ * treesOnGpu: the GPU draws the trees (gl/tree-mesh.js): skip them here.
  */
-export function drawSprites(view, scene, dt) {
+export function drawSprites(view, scene, dt, treesOnGpu = false) {
  const { ctx, camera, terrain, look } = scene;
  const timer = view.timer;
- drawTrees(ctx, view, camera, terrain, look, scene.treeArr, view.lo.width);
+ if (!treesOnGpu) drawTrees(ctx, view, camera, terrain, look, scene.treeArr, view.lo.width);
  if (timer !== null) timer.lap(STAGE.TREES);
  view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
  view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);

@@ -50,3 +50,16 @@ export function checkTextureBudget(nx, ny) {
  }
  return bytes;
 }
+
+/**
+ * The sum of two byte reports {gpuBytes, cpuBytes} (the terrain's textures and the trees' buffers). Throws if the GPU
+ * total is over GL_TEXTURE_BUDGET_MB: the trees' buffers count against the same budget.
+ */
+export function addGpuBytes(a, b) {
+ const sum = { gpuBytes: a.gpuBytes + b.gpuBytes, cpuBytes: a.cpuBytes + b.cpuBytes };
+ if (sum.gpuBytes > GL_TEXTURE_BUDGET_BYTES) {
+  throw new Error('GL terrain: textures and trees need ' + Math.ceil(sum.gpuBytes / MIB) + ' MiB, over the ' +
+   GL_TEXTURE_BUDGET_MB + ' MiB budget');
+ }
+ return sum;
+}
