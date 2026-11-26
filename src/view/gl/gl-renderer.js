@@ -11,7 +11,9 @@ import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook, sunOnGrid } from './snow-material
 import { createTrackRibbon, ribbonLook } from './track-ribbon.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
-import { createTreeMesh } from './tree-mesh.js';
+import { createTreeMesh, treeLook } from './tree-mesh.js';
+import { createParkMesh } from './park-mesh.js';
+import { sunVisibilityGrid } from './sun-visibility.js';
 import { checkTextureBudget, addGpuBytes } from './gl-budget.js';
 import { FOV } from '../../core/config.js';
 
@@ -85,6 +87,8 @@ function sharedUniforms(THREE, tex, view, look) {
  const s = snowLook(look, view.mapFrame);
  const v3 = (a) => ({ value: new THREE.Vector3(a[0], a[1], a[2]) });
  const f = view.mapFrame;
+ const grid = sunVisibilityGrid(f);
+ const object = treeLook(look, f); // the light on every GPU object (trees, park): sun-visibility.js
  return {
   uCam: { value: new THREE.Vector3() },
   uDir: { value: new THREE.Vector2() },
@@ -93,6 +97,9 @@ function sharedUniforms(THREE, tex, view, look) {
   uCamGrid: { value: new THREE.Vector2() },
   uGridU: { value: new THREE.Vector2(f.ux, f.uy) },
   uGridV: { value: new THREE.Vector2(f.vx, f.vy) },
+  uGridOrigin: { value: new THREE.Vector2(grid.origin[0], grid.origin[1]) },
+  uObjSun: v3(object.sun),
+  uObjSunLight: v3(object.sunLight),
   uMapSize: { value: new THREE.Vector2(view.map.width, view.map.height) },
   uHeight: { value: tex.height },
   uSlope: { value: tex.slope },
@@ -179,7 +186,8 @@ function addSky(THREE, glScene, look) {
 /**
  * The GPU terrain on canvas (with its WebGL2 context gl) for the built world: bakes the textures (about 40 MB on the
  * GPU for the procedural map, terrain-bake.js) and builds the meshes once. Returns {render(view, scene), bytes
- * (terrainTextureBytes plus the trees' buffers), trees {drawCalls, trianglesPerTree, drawn, triangles: this frame's}};
+ * (terrainTextureBytes plus the trees' and the park's buffers), trees {drawCalls, trianglesPerTree, drawn, triangles:
+ * this frame's}, park {drawCalls, triangles, kickers, rails, flags, drawn: features drawn this frame}};
  * render draws the terrain, sky and trees for the camera updateCamera() set, at the screen canvas's
  * size (view.W × view.Hh px). Throws if the GPU cannot hold the map or the textures are over GL_TEXTURE_BUDGET_MB.
  * THREE: the three.js module (env.THREE).
@@ -201,6 +209,9 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const ribbon = createTrackRibbon(THREE, glScene, shared, view.trail, ribbonLook(s.shade, s.lit));
  const trees = createTreeMesh(THREE, glScene, shared, scene.treeArr, scene.terrain, scene.look, view.mapFrame);
  const treeStats = { drawCalls: trees.drawCalls, trianglesPerTree: trees.triangles, drawn: 0, triangles: 0 };
+ const park = createParkMesh(THREE, glScene, shared, scene.course, scene.terrain, scene.look, view.mapFrame);
+ const parkStats = { drawCalls: park.drawCalls, triangles: park.triangles, kickers: park.counts.kickers,
+  rails: park.counts.rails, flags: park.counts.flags, drawn: 0 };
  const sky = addSky(THREE, glScene, scene.look);
  const unused = new THREE.Camera(); // three.js wants one; the shaders project for themselves
  const proj = createProjection();
@@ -232,7 +243,8 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   ribbon.update(v.trail);
   treeStats.drawn = trees.update(sc.camera);
   treeStats.triangles = treeStats.drawn * trees.triangles;
+  parkStats.drawn = park.update(sc.camera);
   renderer.render(glScene, unused);
  }
- return { render, bytes: addGpuBytes(bytes, trees.bytes), trees: treeStats };
+ return { render, bytes: addGpuBytes(addGpuBytes(bytes, trees.bytes), park.bytes), trees: treeStats, park: parkStats };
 }

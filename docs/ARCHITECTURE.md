@@ -149,7 +149,9 @@ src/
                                 in GLSL), terrain-mesh.js, terrain-bake.js, detail-texture.js, snow-material.js,
                                 sky-material.js, horizon.js (view.occ for the trees, without the raycast), track-ribbon.js (the ski track
                                 as one draped, instanced ribbon), gl-budget.js (texture
-                                memory and its budget), context-loss.js (lost-context state, drawer switch)
+                                memory and its budget), tree-mesh.js (E3a, the trees, one instanced mesh), park-mesh.js
+                                (E3b, kickers, flags, rails and boxes, one static mesh), sun-visibility.js (the baked sun
+                                visibility every GPU object is lit by), context-loss.js (lost-context state, drawer switch)
                  look/          look.js  the Look (P4, ADR 0007): colours, terrain tone, sky, fog, sprite colours,
                                          camera framing, UI tokens, rider.project; validateLook()
                                 hanga.js createHangaLook(HANGA, RiderAnim): the only file reading HANGA's fields
