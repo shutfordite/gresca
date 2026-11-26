@@ -16,7 +16,8 @@ const HEAD_MAX_DEG = 5;      // the face stays this close to travel at the end o
 const JUMP_MAX_DEG = 8;      // most the twist may change in one 1/60 s frame (the sim yaws at up to 230 deg/s)
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const snow = (o) => Object.assign({ wiped: false, grinding: false, airborne: false, braking: false, approach: false,
-  landed: false, impact: 0, speed: 10, edge: 0, skid: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
+  landed: false, impact: 0, speed: 10, edge: 0, skid: 0, riderSide: 1,
+  feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
 const course = { kickers: [], project: (x, y, out) => Object.assign(out, { s: 0, d: 0 }) };
 
 // Replays the brake trace for a rig and side (mirrored for the other side); calls onFrame(s, off, inp, prevTwist).

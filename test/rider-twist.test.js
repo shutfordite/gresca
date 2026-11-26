@@ -12,7 +12,8 @@ const RA = require('../art/gresca-rider-anim.js');
 const DT = 1 / 60;
 const D2R = Math.PI / 180;
 const snow = (o = {}) => Object.assign({ wiped: false, grinding: false, airborne: false, braking: false, approach: false,
-  landed: false, impact: 0, speed: 10, edge: 0, skid: 0, riderSide: 1, feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
+  landed: false, impact: 0, speed: 10, edge: 0, skid: 0, riderSide: 1,
+  feetAccelUp: 0, slopeDeg: 17, meanSlopeDeg: 17 }, o);
 const run = (s, inp, sec) => { for (let t = 0; t < sec - 1e-9; t += DT) RA.update(s, inp, DT); return s; };
 // equipment `off` degrees counter-clockwise (world frame) of the direction of travel
 const skid = (off, side = 1) => snow({ travelDir: 0.3, facing: 0.3 + off * D2R + (side < 0 ? Math.PI : 0), riderSide: side });

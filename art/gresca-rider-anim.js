@@ -8,7 +8,8 @@
  *     fast to blend into it, landing holds for timing.hold.land and a wipeout snaps in.
  *  2. Body dynamics on top of the blended pose, so the rider reacts to real terrain nobody animated:
  *     a spring-damped compression driven by the ground under the feet and by landings, a lean
- *     into the edge (F6), unweighting between turns, angulation, arm counterbalance, and a deeper stance on steep or fast ground.
+ *     into the edge (F6), unweighting between turns, angulation, arm counterbalance,
+ *     and a deeper stance on steep or fast ground.
  *
  * All joint maths is in the spec's rider space (metres, x across, y up, z forward, regular stance).
  * Goofy is left to HANGA.projectRider, which mirrors z after the pose is built.

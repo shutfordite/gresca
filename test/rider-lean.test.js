@@ -31,7 +31,7 @@ test('lean follows the edge', async (t) => {
       for (const speed of [0, 6, 20]) assert.ok(Math.abs(run(RA.create(rig), snow({ speed }), 1.5).roll) < 1e-6);
     });
   }
-  await t.test('goofy and regular boards lean the same way for the same edge (the sim and AnimInput agree)', async () => {
+  await t.test('goofy and regular boards: the roll is mirrored for the same turn (riderSide)', async () => {
     const lean = async (stance) => {
       const g = await load({ store: { 'gresca-stance': stance } });
       g.place({ y: 470, vy: 12 });
@@ -111,13 +111,19 @@ test('unweighting between turns', async (t) => {
     for (let k = 0; k < 120; k++) { RA.update(s, snow({ edge: 0.8 }), DT); peak = Math.max(peak, s.rise); }
     assert.equal(peak, 0, 'edge from 0 into a turn');
     const a = run(RA.create('ski'), snow({ edge: 0.8 }), 1);
-    for (let k = 0; k < 60; k++) { RA.update(a, snow({ edge: -0.8, airborne: true }), DT); peak = Math.max(peak, a.rise); }
+    for (let k = 0; k < 60; k++) {
+      RA.update(a, snow({ edge: -0.8, airborne: true }), DT);
+      peak = Math.max(peak, a.rise);
+    }
     assert.equal(peak, 0, 'edge flip in the air');
   });
   await t.test('a small wobble around flat does not unweight', () => {
     const s = run(RA.create('ski'), snow(), 1);
     let peak = 0;
-    for (let k = 0; k < 240; k++) { RA.update(s, snow({ edge: 0.1 * Math.sin(k / 3) }), DT); peak = Math.max(peak, s.rise); }
+    for (let k = 0; k < 240; k++) {
+      RA.update(s, snow({ edge: 0.1 * Math.sin(k / 3) }), DT);
+      peak = Math.max(peak, s.rise);
+    }
     assert.equal(peak, 0);
   });
 });
