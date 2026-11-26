@@ -14,7 +14,7 @@
     "bench": "node tools/bench/run.mjs",
     "review": "node tools/review/run.mjs",
     "smoke": "node tools/review/smoke.mjs",
-    "test:sim": "node --test --test-reporter=dot test/sim.test.js test/physics.test.js test/park.test.js test/events.test.js test/timestep.test.js test/golden.test.js test/traces.test.js test/scenes.test.js",
+    "test:sim": "node --test --test-reporter=dot test/sim.test.js test/physics.test.js test/park.test.js test/events.test.js test/timestep.test.js test/golden.test.js test/traces.test.js test/scenes.test.js test/flip.test.js",
     "test:view": "node --test --test-reporter=dot test/camera.test.js test/timer.test.js test/look.test.js test/features.test.js test/rider-anim.test.js test/rider-brake-twist.test.js test/rider-lean.test.js test/hanga-v14.test.js test/gl-terrain.test.js test/gl-shadow.test.js",
     "test:input": "node --test --test-reporter=dot test/features.test.js test/sim.test.js test/contracts.test.js test/pause.test.js test/stance.test.js",
     "test:world": "node --test --test-reporter=dot test/terrain.test.js test/build.test.js test/course.test.js test/polyline-course.test.js test/frame.test.js test/rotated.test.js test/golden.test.js test/play-slope.test.js test/map-course.test.js"
