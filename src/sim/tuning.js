@@ -1,4 +1,4 @@
-// Sim feel tunables that live next to the sim (core/config.js keeps the shared ones): the brake, the edge and flips, each
+// Sim feel tunables that live next to the sim (core/config.js keeps the shared ones): the brake, the edge, flips; each
 // with its unit. The rig-specific edge data (sidecut, edge rate, edge grip) is in RIGS (core/config.js).
 
 /** The brake (F5): a hockey stop or heel-side skid, the equipment yawed across the fall line. */
@@ -20,6 +20,6 @@ export const EDGE = Object.freeze({
 /** Flips (F3, sim/jump.js): InputState.flip turns the rider about its across axis in the air. */
 export const FLIP = Object.freeze({
  RATE: 7,             // rad/s at full flip (input.flip 1 or -1), + a front flip: one rotation in about 0.9 s
- LAND_WINDOW: 40 * Math.PI / 180, // rad (40 degrees), a landing this close to a whole rotation is clean, further crashes
+ LAND_WINDOW: 40 * Math.PI / 180, // rad (40 degrees), within this of a whole rotation is clean, beyond it a crash
  POINTS: 90,          // points for the first rotation; n rotations score POINTS * n * (n + 1) / 2 (90, 270, 540, ...)
 });

@@ -24,10 +24,11 @@ const newWhere = () => ({ s: 0, d: 0, tx: 0, ty: 1 });
  * one-shot request it uses up), session (crashes, score, events: land, crash, score) and spray (landing snow).
  * course: the Course whose kickers launch the rider; where: a {s,d,tx,ty} scratch object for it.
  * Flips (F3): in the air input.flip (-1..1, + front flip) turns rider.flipRot at FLIP.RATE (rad/s), held keeps
- * turning, alongside the spin in rider.rotation. One SimEvent 'flip' ({}) goes out on each clean landing of one or more
- * whole rotations, before its 'score' (the count and direction are in the score's points and trickName). Landing within FLIP.LAND_WINDOW of a whole number of rotations is clean, otherwise a
- * crash (cause 'landing'). A clean flip scores FLIP.POINTS * n * (n + 1) / 2 on top of the air score; trickName(n,
- * degrees) names it ('Backflip 360'). flipRot is 0 on the snow, on a rail and at every take-off.
+ * turning, alongside the spin in rider.rotation. One SimEvent 'flip' ({}) goes out on each clean landing of one or
+ * more whole rotations, before its 'score' (the count is in the points; trickName names it). Landing within
+ * FLIP.LAND_WINDOW of a whole number of rotations is clean, otherwise a crash (cause 'landing'). A clean flip scores
+ * FLIP.POINTS * n * (n + 1) / 2 on top of the air score; trickName(n, degrees) names it ('Backflip 360'). flipRot is
+ * 0 on the snow, on a rail and at every take-off.
  */
 export function jumpStep(rider, input, session, spray, dt, course = DEFAULT_COURSE, where = newWhere()) {
  if (rider.crashTimer > 0) {

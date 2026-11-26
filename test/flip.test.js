@@ -151,6 +151,7 @@ describe('flips', () => {
   assert.equal(rider.crashTimer, 0);
   assert.ok(!events.includes('flip'));
   const score = session.events.find((e) => e.type === 'score');
-  assert.equal(score.points, Math.round(rider.airTime * 60 + 20 + 360 / 180 * 40), 'air time, kicker bonus and the spin');
+  const expected = Math.round(rider.airTime * 60 + 20 + 360 / 180 * 40); // air time, kicker bonus, the spin
+  assert.equal(score.points, expected);
  });
 });
