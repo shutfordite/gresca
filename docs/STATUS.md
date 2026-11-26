@@ -59,6 +59,7 @@ Updated 26 Nov 2026, main after PR #61.
 | Shared | `AnimInput` gains `edge`, `skid`, `flipRot` (for F6-lean and the F3 tuck) | `core/anim-input-edge` (#62) |
 | Shared | This file after #61; `edge`, `map-loader`, `gl-trees`, `air-controls`, `track-trail` in the per-area test scripts | `docs/status-after-61` |
 | S1 controls and UI | **Stance picker**: regular / goofy for the snowboard, on the menu, saved under `gresca-stance` | `ui/s1-stance-picker` |
+| S1 controls and UI | **F3-touch** two-finger flips (owner, 26 Nov): both fingers drag up = front flip, down = backflip; air hints and Controls screen follow | `ui/f3-two-finger-flip` |
 | S2 sim feel | **F3** flip physics and scoring: `InputState.flip` turns `flipRot`, the `flip` event, landing a flip, flip and spin combos in the score | `sim/f3-flip-physics` |
 | S3 rider animation | **F6-lean** edge-driven lean and unweighting, from `AnimInput.edge` and `skid` (draft on #62) | `anim/f6-lean` |
 | S4 look, camera, render | **E3b** rails, flags and kickers as GPU objects; every GPU object (trees too) lit by the baked sun visibility | `view/e3b-gpu-features` |
