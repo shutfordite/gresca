@@ -68,8 +68,9 @@ Updated 26 Nov 2026, main after PR #69.
 | S5 maps | **C4b** waits for the owner's El Tarter bake (below) | none |
 
 ## Next, in order
-- Shared: **split the golden trace** into a sim hash and an anim hash (an animation change re-records only the anim
-  one), plus a carving scene in `src/scenes.js` (#66 review).
+- **X1 conflict-proofing (`docs/ROADMAP.md`, phase 3), first, with a short freeze:** test areas from tags in each
+  test file instead of lists in `package.json`, the golden split into sim and anim hashes, one property per line at
+  stream seams. After #66 and #67 merge; no other code PR until it is in.
 - Shared: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the
   HUD popup ("Backflip 360"), moving `trickName` from `sim/jump.js` to `src/ui/` (#65 review).
 - S1: C4b menu entry for real maps (with S5's C4b).
