@@ -95,6 +95,7 @@ export function createView(doc, look) {
   sun: { X: 0, Y: 0, r: 0, on: false }, // scratch: the sun disc (sky.js)
   trackRows: { v0: 0, v1: -1 }, // colour map rows (grid v) the ski tracks changed since the GPU terrain last read them
   trail: createTrail(), // the equipment's track (track-trail.js), drawn as a ribbon by the GPU terrain
+  parkGpu: null, // the GPU park's counts (gl/gl-renderer.js), null with the CPU raycaster
   treeGpu: null, // the GPU trees' counts this frame (gl/gl-renderer.js), null with the CPU raycaster
   renderer: { name: 'cpu', fallback: null }, // which terrain renderer draws, and why the GPU one did not (renderer.js)
   timer: null,

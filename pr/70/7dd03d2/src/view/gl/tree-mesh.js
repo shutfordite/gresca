@@ -5,6 +5,7 @@
 // createTreeMesh(). docs/adr/0008-three-js-gpu-renderer.md.
 import { PROJECT_GLSL, NEAR_M } from './gl-projection.js';
 import { FOG_GLSL, snowLook, sunOnGrid } from './snow-material.js';
+import { SUN_VISIBILITY_GLSL, SUN_LIGHT_GLSL } from './sun-visibility.js';
 import { sunAzimuthDeg } from '../sky.js';
 import { FOV } from '../../core/config.js';
 
@@ -30,6 +31,7 @@ export const TREE_MESH = Object.freeze({
  TRUNK_RADIUS_M: 0.25,
  TRUNK_BOTTOM_M: -0.4,  // m, below the ground: the terrain mesh at its coarser levels can lie a little above it
  TRUNK_TOP_M: 1.4,
+ SUN_SAMPLE_M: 2.8,      // m toward the sun where a tree reads the sun visibility (past its own baked shadow)
 });
 
 // The three crown cones: bottom radius, base height and height (m). They stack to TREE_HEIGHT_M.
@@ -228,13 +230,18 @@ in float aPart;
 in vec4 aTree;   // x, y (m), ground z (m), scale
 in vec2 aStyle;  // yaw (rad), tone
 uniform vec2 uFade; // m along the view: where trees start to shrink, where they are gone
+uniform float uSunSample; // m toward the sun where the sun visibility is read
 out vec3 vNormal;
+out float vVisible;
 out float vPart;
 out float vTone;
 out float vDist;
 ${PROJECT_GLSL}
+${SUN_VISIBILITY_GLSL}
+${SUN_LIGHT_GLSL}
 void main() {
  vec2 o = aTree.xy - uCam.xy;
+ vVisible = sunVisibilityAt(aTree.xy + normalize(uObjSun.xy) * uSunSample);
  float f = dot(o, uDir);
  float scale = aTree.w * (1.0 - smoothstep(uFade.x, uFade.y, f));
  float c = cos(aStyle.x);
@@ -253,22 +260,21 @@ void main() {
 const TREE_FRAGMENT = `
 precision highp float;
 in vec3 vNormal;
+in float vVisible;
 in float vPart;
 in float vTone;
 in float vDist;
 uniform vec3 uCrown;    // the Look's crown colour (0..1)
 uniform vec3 uAmbient;  // the shade's colour over lit (per channel)
-uniform vec3 uSunLight; // the sun's colour over its brightest channel
-uniform vec3 uTreeSun;  // unit vector toward the sun, world
 uniform vec3 uFog;
 uniform vec2 uTreeShade; // trunk share of the crown colour, the undersides' share of the ambient
 out vec4 outColour;
 ${FOG_GLSL}
+${SUN_LIGHT_GLSL}
 void main() {
  vec3 n = normalize(vNormal);
- float sun = clamp(dot(n, uTreeSun), 0.0, 1.0);
  vec3 ambient = uAmbient * (n.z < -0.5 ? uTreeShade.y : 1.0);
- vec3 light = mix(ambient, uSunLight, sun);
+ vec3 light = sunLit(n, ambient, vVisible);
  vec3 base = uCrown * (vPart > 0.5 ? 1.0 : uTreeShade.x) * vTone;
  vec3 c = mix(base * light, uFog, fogAmount(vDist));
  outColour = vec4(c, 1.0);
@@ -306,11 +312,12 @@ export function createTreeMesh(THREE, glScene, shared, treeArr, terrain, look, f
   uniforms: {
    uCam: shared.uCam, uDir: shared.uDir, uScreen: shared.uScreen, uClip: shared.uClip,
    uFar: shared.uFar, uFogLut: shared.uFogLut, uFog: shared.uFog,
+   uAux: shared.uAux, uMapSize: shared.uMapSize, uGridOrigin: shared.uGridOrigin, uGridU: shared.uGridU,
+   uGridV: shared.uGridV, uObjSun: shared.uObjSun, uObjSunLight: shared.uObjSunLight,
+   uSunSample: { value: TREE_MESH.SUN_SAMPLE_M },
    uFade: { value: new THREE.Vector2(TREE_FAR_M - TREE_MESH.FADE_M, TREE_FAR_M) },
    uCrown: { value: new THREE.Vector3(L.crown[0], L.crown[1], L.crown[2]) },
    uAmbient: { value: new THREE.Vector3(L.ambient[0], L.ambient[1], L.ambient[2]) },
-   uSunLight: { value: new THREE.Vector3(L.sunLight[0], L.sunLight[1], L.sunLight[2]) },
-   uTreeSun: { value: new THREE.Vector3(L.sun[0], L.sun[1], L.sun[2]) },
    uTreeShade: { value: new THREE.Vector2(TREE_MESH.TRUNK_DARKEN, TREE_MESH.UNDERSIDE_DARKEN) },
   },
   side: THREE.FrontSide,
