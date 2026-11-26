@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 25 Nov 2026, main after PR #54.
+Updated 26 Nov 2026, main after PR #61.
 
 ## Done
 | Package | PR |
@@ -46,28 +46,39 @@ Updated 25 Nov 2026, main after PR #54.
 | F4b pause button, pause panel, hidden-page auto-pause, the Controls screen in game | #52 |
 | C3b the course file `<id>.course.json` (ADR 0010) and `validateCourse` | #53 |
 | E2 soft sun shadows from the terrain, rider and tree shadows on the GPU | #54 |
+| F7 ski fakie: the head looks over the downhill-side shoulder | #56 |
+| C4a map loader in `world/` (ADR 0011): terrain and course file to a world, corridor-only 2 m detail; synthetic map | #57 |
+| F6 edge and carve model, no heading clamp, sim yaw counter-clockwise (golden hash `958814d0…`) | #58 |
+| E3a trees as one instanced GPU mesh | #59 |
+| F3-input flip input in the air (drag up/down, `W`/`S`), air hints for the first 3 jumps | #60 |
+| CI: the preview comment links both maps | #61 |
 
 ## In progress (phase 3, the five streams; parallel, each in its own folders)
 | Stream | Package | Branch |
 |---|---|---|
-| Shared | This file after #54 | `docs/status-after-54` |
-| S1 controls and UI | **F3-input** flip input in the air (drag up/down, `W`/`S`), air hints for the first jumps, the flip and Pause rows on the Controls screen | `ui/f3-flip-input` |
-| S2 sim feel | **F6** edge and carve model, no heading clamp, yaw counter-clockwise (new golden hash) | `sim/f6-edge-carve` |
-| S3 rider animation | **F7** ski fakie: the head looks over the downhill-side shoulder, with hysteresis | `anim/f7-fakie-look` |
-| S4 look, camera, render | **E3a** trees as instanced GPU objects | `view/e3a-gpu-trees` |
-| S5 maps | **C4a** the map loader in `world/`: a baked terrain and course file to a world, corridor-only 2 m detail, memory budget; tested on a synthetic map (no fetch, no UI) | `maps/c4a-map-loader` |
+| Shared | `AnimInput` gains `edge`, `skid`, `flipRot` (for F6-lean and the F3 tuck) | `core/anim-input-edge` (#62) |
+| Shared | This file after #61; `edge`, `map-loader`, `gl-trees`, `air-controls`, `track-trail` in the per-area test scripts | `docs/status-after-61` |
+| S1 controls and UI | **Stance picker**: regular / goofy for the snowboard, on the menu, saved under `gresca-stance` | `ui/s1-stance-picker` |
+| S2 sim feel | **F3** flip physics and scoring: `InputState.flip` turns `flipRot`, the `flip` event, landing a flip, flip and spin combos in the score | `sim/f3-flip-physics` |
+| S3 rider animation | **F6-lean** edge-driven lean and unweighting, from `AnimInput.edge` and `skid` (draft on #62) | `anim/f6-lean` |
+| S4 look, camera, render | **E3b** rails, flags and kickers as GPU objects; every GPU object (trees too) lit by the baked sun visibility | `view/e3b-gpu-features` |
+| S5 maps | **C4b** waits for the owner's El Tarter bake (below) | none |
 
 ## Next, in order
-- S1: stance picker → C4b menu entry for real maps.
-- S2: F3 flip physics and scoring (ollie preload if F6 leaves it out).
-- S3: F6 edge-driven lean (after S2's F6) → F3 flip tuck. F7 moved ahead of F6-lean because it needs only
-  `isSwitch` and `downhillSide`, which exist; F6-lean needs the edge the sim gets in F6.
-- S4: E3b rails, flags and kickers as GPU objects → E4 tilt-shift and haze. The camera framing on the play
-  mountain's 30° slopes (looks flat, #48) folds into E3b or its own small package.
+- S1: C4b menu entry for real maps (with S5's C4b).
+- S2: **ollie preload** (moved out of F6, #58, and out of F3 to keep F3 small): pop on jump release needs S1 to request
+  the jump on release, and the crouch needs an `AnimInput` field (a Shared contract PR first). Then (optional) the
+  gravity slope-law A/B.
+- S3: F3 flip tuck (after S2's F3; `AnimInput.flipRot` is ready from #62).
+- S4: E4 tilt-shift and haze. The camera framing on the play mountain's 30° slopes (looks flat, #48) is its own
+  small package after E3b.
 - Ski tracks: T1 is done; pressing them into the snow, lit edges and fading are the later tracks workstream.
-- S5: **C4b** loading a map in the game: `fetch` from `maps/` (same origin), a file the player picks, chunked
-  build with progress, the course's sun from the Look's dawn setting (S4 confirms, #53). Needs the owner's bake of
-  El Tarter (below) for its acceptance ride.
+- S5: **C4b** loading a map in the game: `fetch` from `maps/` through `env` (same origin), a file the player picks,
+  chunked build with progress (`loadMapSteps`), `createGame` taking a loaded world (a Shared prep PR first: `app.js`),
+  a real-map branch for `world.H`/`M`/`layout` until D2, the rider start from the course tangent at `startS` (replacing
+  `START_HEADING`/`MENU_HEADING`), credits from `world.credits`, kickers without ramps until the features layer, the
+  course's sun from the Look's dawn setting, and removing `PENDING_ROOTS` from `test/page.test.js` (#57). Its
+  acceptance ride is El Tarter start to finish. **C4c** R5 slope and data-defect rules can run alongside, in `world/`.
 
 ## Owner to do
 - **Bake El Tarter** (the agents' sandbox blocks the tile and piste hosts): `node tools/map-compiler/cli.mjs --config
@@ -82,12 +93,11 @@ Updated 25 Nov 2026, main after PR #54.
 ## Known issues (not yet fixed)
 - **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
   in D1.
-- **C2 leftovers, for later packages:** the carve limit (`CARVE_LIMIT`) is measured from the map frame's across axis
-  until F6 moves it to the fall line; `START_HEADING`/`MENU_HEADING` (1.57, camera and menu) are grid headings turned
-  through the frame until C1 gives the course a start direction; the rider yaw and path turn rate are clockwise-positive
-  (the mirror of main, to keep the golden trace bit for bit): F6 should flip them to counter-clockwise when it changes
-  feel anyway and update the golden hash then; the minimap still draws in grid orientation, so S1/C4 decide whether a
-  rotated or real map gets a north-up minimap. `?rot=<deg>` in the URL places the procedural map rotated (debug).
+- **C2 leftovers, for later packages:** `START_HEADING`/`MENU_HEADING` (1.57, `view/camera.js` and `app.js`) are grid
+  headings turned through the frame until C4b starts the rider on the course tangent; the minimap still draws in grid
+  orientation, so S1/C4b decide whether a rotated or real map gets a north-up minimap. The view keeps the spec's
+  clockwise sign for `pathTurn` and `riderYaw` on purpose (#58); S3 may tidy it. `?rot=<deg>` in the URL places the
+  procedural map rotated (debug). (F6 removed `CARVE_LIMIT` and made the sim's yaw counter-clockwise.)
 - **The design canvas copy of the art spec** (claude.ai design "Gresca Rider Style Prototypes",
   `project/data/gresca-hanga-spec.js`) is synced from the repo; re-sync it after every spec version.
 - **Pose tuning for S3:** the ski tuck reads as a blob from straight behind, the ski brake legs look short, and the
