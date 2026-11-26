@@ -205,6 +205,9 @@ describe('AnimInput (sim/anim-input.js)', () => {
   assert.equal(animInput(rider, session, DEFAULT_COURSE, out), out);
   assert.deepEqual(checkAnimInput(out), []);
   assert.deepEqual([out.speed, out.travelDir, out.riderSide, out.impact, out.approach], [10, F.downhill, 1, 3, true]);
+  Object.assign(rider, { edge: 0.4, skid: 1.5, flipRot: -2 });
+  animInput(rider, session, DEFAULT_COURSE, out);
+  assert.deepEqual([out.edge, out.skid, out.flipRot], [0.4, 1.5, -2]); // passed through as the sim has them
   session.stance = 'goofy';
   animInput(rider, session, DEFAULT_COURSE, out);
   assert.deepEqual([out.facing, out.riderSide], [F.downhill - Math.PI, -1]);
