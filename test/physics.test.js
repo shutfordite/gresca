@@ -93,15 +93,15 @@ describe('riding physics', () => {
     assert.ok(st().heading < a0 - 0.5);
   });
 
-  it('limits how far the rider can turn', () => {
+  it('turns on past straight across the slope when the turn is held (F6: no heading clamp)', () => {
     g.place({ vy: 10 });
     g.input({ right: 1 });
     g.sim(5);
-    assert.ok(st().heading <= Math.PI - 0.15 + 1e-9);
+    assert.ok(st().heading > Math.PI, `heading ${st().heading}`);
     g.place({ vy: 10 });
     g.input({ left: 1 });
     g.sim(5);
-    assert.ok(st().heading >= 0.15 - 1e-9);
+    assert.ok(st().heading < 0, `heading ${st().heading}`);
   });
 
   it('keeps the rider inside the map', () => {

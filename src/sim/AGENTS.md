@@ -8,10 +8,13 @@
   comment, and expose them in `src/sim/fields.js` if tests need them. No module-level state.
 - Talk outwards only through the SimEvents `step()` returns (`core/contracts.js`, pushed with `pushEvent()`) and the
   RiderState it leaves; `ui/` and `view/` subscribe on the bus (`core/events.js`). Never write the DOM, ui or view.
-- World frame (ADR 0005): ENU metres, headings counter-clockwise from east, right turns clockwise. No "+y is
-  downhill" and no fixed axes: ask the terrain (`terrain.gradient`), the course and `world.frame`. The heading clamp
-  (`CARVE_LIMIT` in `step.js`, measured from the frame's across axis) goes in F6.
-- Tunables go in `core/config.js`, or in `sim/tuning.js` for sim feel (the brake so far), each with its unit.
+- World frame (ADR 0005): ENU metres, headings counter-clockwise from east, right turns clockwise; yaw rates and
+  `rider.edge` are counter-clockwise + (a left turn). No "+y is downhill" and no fixed axes: ask the terrain
+  (`terrain.gradient`), the course and `world.frame`. There is no heading clamp (gone in F6): measure from the fall line.
+- The edge and carve (F6) is `edge.js`: the steer sets a target edge, `rider.edge` follows at the rig's `edgeRate`;
+  the carve turns at speed / R with R = `sidecut` / sin(edge); a turn asking more than the rig's `edgeGrip` washes out
+  into a skid (`rider.skid`, m/s) that the sideways friction (`rig.grip`) wears off as speed. Rig data is in `RIGS`.
+- Tunables go in `core/config.js`, or in `sim/tuning.js` for sim feel (the brake, the edge), each with its unit.
 - The brake (F5) is `brake.js`: `input.brake` is analog 0..1; it yaws the board across the fall line (`rider.fallLine`'s
   source, `course.fallLine`) and wears the sideways slip off as speed, so `travelHeading` keeps its direction while
   `boardHeading` turns. There is no fixed brake deceleration and no brake gravity cut.

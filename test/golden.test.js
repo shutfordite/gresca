@@ -3,17 +3,22 @@
 // A deliberate feel change updates GOLDEN_HASH in the same PR and says so. C1 re-recorded it on top of F5 and F5-cam:
 // the course became a polyline with arc-length s and perpendicular d, so the finish line moved by a fraction of a
 // metre (crossed a few steps later) and the rides differ by at most 0.02 m; every ride takes the same kickers and rails.
+// F6 re-recorded it: the edge and carve model replaced the turn rate and the heading clamp, so every turn of the pilot
+// follows a new line (the same number of events per ride; the second ride finishes 131 steps sooner).
 // The same rides with the map rotated (docs/adr/0005-enu-frame.md) must match it step for step, within ROTATED_TOL:
 // not bit for bit, because turning every position, velocity and gradient through cos and sin of an angle that is not a
-// multiple of 90 degrees rounds in the last bits, and those differences carry along the ride.
+// multiple of 90 degrees rounds in the last bits, and those differences carry along the ride. Since F6 they grow
+// faster: a carve turns at speed / radius, so a rounding difference in speed becomes one in heading, and the brake
+// snaps the equipment to the fall line's rounding; the worst is about 1e-8 after 30 s at 37, 150 and 300 degrees.
+// ROTATED_TOL keeps ten times that: an axis assumption left in the code differs by metres, not by 1e-7.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { goldenTrace } from '../tools/golden-trace.mjs';
 import { MAP_ROTATION_DEG } from './harness.js';
 
-const GOLDEN_HASH = '45b95fa6867546904c5975d8245b6f70455f8d366c61ea0de4b962165e63c233';
+const GOLDEN_HASH = '958814d04f76acaf9f9503bd686c7d727ffb1af260c3289c94d1d6ae87434091';
 const ROTATED_DEG = MAP_ROTATION_DEG || 37; // deg, the placement the rotated rides use (npm run test:rotated sets it)
-const ROTATED_TOL = 1e-9; // m, m/s, rad, points, px: the most any number in the rotated trace may differ
+const ROTATED_TOL = 1e-7; // m, m/s, rad, points, px: the most any number in the rotated trace may differ (was 1e-9)
 
 const traces = { zero: goldenTrace({ rotationDeg: 0 }), rotated: goldenTrace({ rotationDeg: ROTATED_DEG }) };
 
