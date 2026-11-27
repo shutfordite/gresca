@@ -1,6 +1,9 @@
 /*
- * Gresca · Hanga Dawn art spec  v1.4.0
+ * Gresca · Hanga Dawn art spec  v1.5.0
  * Standalone, data-only module. No drawing code and no dependencies.
+ * v1.5.0 (additive): the environment for real maps: tree sets, treeline, bushes, rocks, sky, sun and backdrop peaks
+ * (the Pyrenees set first), new palette roles, and new maps keys for El Tarter. Nothing existing changes. Notes:
+ * docs/art/HANGA-v1.5.md in the game repo.
  * v1.4.0 (additive): rider twist, head yaw with the face vector, body pitch and the real camera pitch as an options
  * argument to projectRider; brake, switch-ski and flip-tuck poses; true-scale rider guidance. Calls without the new
  * options or state fields give exactly the v1.3 result. Notes: docs/art/HANGA-v1.4.md in the game repo.
@@ -13,7 +16,7 @@
 'use strict';
 var HANGA = {
  "name": "Gresca · Hanga Dawn",
- "version": "1.4.0",
+ "version": "1.5.0",
  "contrastTargets": [
   {
    "a": "kickSide",
@@ -109,7 +112,49 @@ var HANGA = {
     "Elevation: AWS Terrain Tiles",
     "Pistes and lifts © OpenStreetMap contributors (ODbL)"
    ],
-   "note": "The El Tarter runs fall roughly north, so a dawn sun from the east-southeast lights them from the side. Treeline and meanSlopeDeg are art-directed defaults; replace them with values from data when the baker has them (meanSlopeDeg = total drop over total length along the chosen piste)."
+   "note": "The El Tarter runs fall roughly north, so a dawn sun from the east-southeast lights them from the side. Treeline and meanSlopeDeg are art-directed defaults; replace them with values from data when the baker has them (meanSlopeDeg = total drop over total length along the chosen piste).",
+   "backdrop": "pyrenees",
+   "treeline": {
+    "treelineM": 2300,
+    "bandUpToM": {
+     "forest": 1950,
+     "thinning": 2200,
+     "open": 2300,
+     "krummholz": 2420
+    },
+    "aspectShiftM": {
+     "north": -60,
+     "east": 0,
+     "south": 60,
+     "west": 0
+    },
+    "courseBandStartS": {
+     "krummholz": 235,
+     "open": 599,
+     "thinning": 929,
+     "forest": 1989
+    },
+    "note": "Absolute altitudes for El Tarter (treelineM 2300 + environment.treeline.defaults offsets). The run starts above the treeline at 2462 m, so it rides from alpine rock through krummholz and thinning trees into forest at the bottom. courseBandStartS is the distance along the course (m of s) where it first passes each band limit, measured on the baked terrain; the first 235 m are alpine."
+   },
+   "meanSlopeDegData": 14.89,
+   "heightRangeM": {
+    "min": 1570.3,
+    "max": 2749.1
+   },
+   "courseAltitudeM": {
+    "start": 2462,
+    "finish": 1700.5
+   },
+   "startWorld": {
+    "x": 30.8,
+    "y": -2085.5
+   },
+   "fallLineCompassDeg": 346,
+   "sunData": {
+    "azimuthDeg": 76,
+    "elevationDeg": 16
+   },
+   "dataNote": "Data-derived values from maps/el-tarter.course.json and maps/el-tarter.terrain.json; the art-directed keys above are unchanged. meanSlopeDegData is the course file's meanSlopeDeg, atan(drop / length) = atan((2462.0 - 1700.5) / 2864.7). heightRangeM is the terrain file's heights minM and maxM. courseAltitudeM is the ground height at s = 0 and s = finishS (finishS 2864.7). startWorld is the course point at s = 0 (world x east, y north, m from the terrain origin 42.5775 N, 1.655 E). fallLineCompassDeg is the compass bearing from the start to the finish. sunData is the sun the baker put in the course file, which is not the art-directed sun above: the baked azimuth 76 is 90 degrees off the fall line, as terrain.sun.rule asks; the art-directed 110 is 124 degrees off it. Which wins is open (see HANGA-v1.5.md)."
   }
  },
  "palette": {
@@ -5042,6 +5087,1283 @@ var HANGA = {
    "cap": "key",
    "minPxHeight": 8,
    "note": "Piste marker poles on both edges of the corridor, every 20 m along the run. Billboards. With the edge band, they show where the ridable line is at any distance."
+  }
+ },
+ "environment": {
+  "note": "v1.5 environment for real maps. Data only; the game does not read it until S4 builds from it. Units are metres and degrees; compass degrees at the art boundary. Every colour is a palette role, in fields named role, *Role, or inside an object called roles.",
+  "trees": {
+   "note": "Tree sets by map.treeSet. Profiles are the right-hand silhouette in tree-local metres: [halfWidth, height] from the foot of the trunk to the apex; mirror for the left. The reference tree is scaled uniformly by height / reference.heightM. Tips are the outer points of each tier; the segment from a tip up and inward to the next notch is the tier upper side, where snow load sits.",
+   "sets": {
+    "pine": {
+     "note": "Pyrenean set. Mountain pine (Pinus uncinata) is the tree of the treeline; fir (Abies alba) is a sparse lower-forest variant. Variants young/mid/old follow trees.placement.sizeFrom: under 6 m, 6 to 10 m, over 10 m.",
+     "mix": {
+      "species": "uncinata",
+      "variant": "fir",
+      "firShareByAltM": [
+       [
+        1550,
+        0.2
+       ],
+       [
+        1750,
+        0.1
+       ],
+       [
+        1900,
+        0
+       ]
+      ]
+     },
+     "species": {
+      "uncinata": {
+       "latin": "Pinus uncinata",
+       "heightM": {
+        "min": 5,
+        "typical": 11,
+        "max": 20
+       },
+       "crownRatio": {
+        "min": 0.35,
+        "typical": 0.5,
+        "max": 0.6,
+        "note": "crown width / height. Real mountain pine is 0.35 to 0.5; the typical value is a little fat for legibility (trees.pine is fatter still, about 0.7)."
+       },
+       "trunkClearM": {
+        "min": 1.5,
+        "typical": 2.4,
+        "max": 4
+       },
+       "reference": {
+        "heightM": 12,
+        "crownWidthM": 6
+       },
+       "profile": [
+        [
+         0.15,
+         0
+        ],
+        [
+         0.15,
+         2.4
+        ],
+        [
+         3,
+         2.9
+        ],
+        [
+         1.2,
+         4.4
+        ],
+        [
+         2.5,
+         4.8
+        ],
+        [
+         1,
+         6.3
+        ],
+        [
+         2,
+         6.7
+        ],
+        [
+         0.8,
+         8
+        ],
+        [
+         1.5,
+         8.4
+        ],
+        [
+         0.55,
+         9.6
+        ],
+        [
+         0.95,
+         10
+        ],
+        [
+         0.25,
+         11.2
+        ],
+        [
+         0,
+         12
+        ]
+       ],
+       "roles": {
+        "lit": "pineLit",
+        "body": "pine",
+        "shade": "pineS",
+        "trunk": "trunk",
+        "snow": "snowLoad",
+        "snowShade": "snowLoadS"
+       },
+       "snowLoad": {
+        "coverOfTierUpperSide": {
+         "min": 0.3,
+         "typical": 0.6,
+         "max": 0.9
+        },
+        "byAltM": [
+         [
+          1600,
+          0.2
+         ],
+         [
+          2000,
+          0.45
+         ],
+         [
+          2300,
+          0.75
+         ]
+        ],
+        "thicknessM": 0.18,
+        "sunSideMeltFrac": 0.3,
+        "note": "Snow sits on the upper side of every tier, thicker toward the tip. The cover fraction rises with altitude. On the side facing the sun the load is 30% thinner. A tree on a slope over 30 degrees loads on its uphill side only."
+       },
+       "render": {
+        "mesh": {
+         "withinM": 120,
+         "tiers": "one cone or flat disc per profile tier, 6 sides, flat shaded in lit/shade roles"
+        },
+        "billboard": {
+         "fromM": 120,
+         "facing": "camera yaw only (vertical axis)",
+         "variants": 4,
+         "note": "Pre-drawn from the profile: left half lit, right half shade (flip when the sun is on the right)."
+        },
+        "minPxHeight": 6,
+        "belowMinPx": "drop the tree and let the forest-mass strip (roles.shade, hazed) stand for it"
+       }
+      },
+      "fir": {
+       "latin": "Abies alba",
+       "heightM": {
+        "min": 12,
+        "typical": 18,
+        "max": 30
+       },
+       "crownRatio": {
+        "min": 0.28,
+        "typical": 0.4,
+        "max": 0.5
+       },
+       "trunkClearM": {
+        "min": 2.5,
+        "typical": 3.5,
+        "max": 6
+       },
+       "reference": {
+        "heightM": 18,
+        "crownWidthM": 7.2
+       },
+       "profile": [
+        [
+         0.2,
+         0
+        ],
+        [
+         0.2,
+         3.5
+        ],
+        [
+         3.6,
+         4.2
+        ],
+        [
+         1.7,
+         6.4
+        ],
+        [
+         3.1,
+         7.2
+        ],
+        [
+         1.4,
+         9.4
+        ],
+        [
+         2.6,
+         10.2
+        ],
+        [
+         1.1,
+         12.2
+        ],
+        [
+         2,
+         13.2
+        ],
+        [
+         0.8,
+         14.8
+        ],
+        [
+         1.3,
+         15.6
+        ],
+        [
+         0.4,
+         16.9
+        ],
+        [
+         0,
+         18
+        ]
+       ],
+       "roles": {
+        "lit": "firLit",
+        "body": "fir",
+        "shade": "firS",
+        "trunk": "trunk",
+        "snow": "snowLoad",
+        "snowShade": "snowLoadS"
+       },
+       "snowLoad": {
+        "coverOfTierUpperSide": {
+         "min": 0.2,
+         "typical": 0.45,
+         "max": 0.75
+        },
+        "byAltM": [
+         [
+          1600,
+          0.15
+         ],
+         [
+          1900,
+          0.3
+         ]
+        ],
+        "thicknessM": 0.14,
+        "sunSideMeltFrac": 0.3,
+        "note": "As the pine, lighter: fir tiers droop and shed snow. Fir does not grow above 1900 m here."
+       },
+       "render": {
+        "mesh": {
+         "withinM": 120,
+         "tiers": "one cone or flat disc per profile tier, 6 sides, flat shaded in lit/shade roles"
+        },
+        "billboard": {
+         "fromM": 120,
+         "facing": "camera yaw only (vertical axis)",
+         "variants": 3,
+         "note": "Pre-drawn from the profile: left half lit, right half shade (flip when the sun is on the right)."
+        },
+        "minPxHeight": 6,
+        "belowMinPx": "drop the tree and let the forest-mass strip (roles.shade, hazed) stand for it"
+       }
+      }
+     }
+    },
+    "sugi": {
+     "note": "The procedural map. Documents the look of trees.sugi (variants 5, 8 and 12 m) in the same terms, so S4 can read both sets alike. Nothing here changes trees.sugi.",
+     "mix": {
+      "species": "sugi",
+      "variant": null
+     },
+     "species": {
+      "sugi": {
+       "latin": "Cryptomeria japonica",
+       "heightM": {
+        "min": 4,
+        "typical": 8,
+        "max": 14
+       },
+       "crownRatio": {
+        "min": 0.4,
+        "typical": 0.55,
+        "max": 0.68
+       },
+       "trunkClearM": {
+        "min": 0.6,
+        "typical": 1.1,
+        "max": 1.7
+       },
+       "reference": {
+        "heightM": 12,
+        "crownWidthM": 5.06
+       },
+       "profile": [
+        [
+         0.84,
+         0
+        ],
+        [
+         0.84,
+         0.98
+        ],
+        [
+         2.53,
+         0.98
+        ],
+        [
+         0.76,
+         2.45
+        ],
+        [
+         2.15,
+         2.6
+        ],
+        [
+         0.65,
+         4.07
+        ],
+        [
+         1.77,
+         4.21
+        ],
+        [
+         0.53,
+         5.68
+        ],
+        [
+         1.39,
+         5.83
+        ],
+        [
+         0.42,
+         7.3
+        ],
+        [
+         1.01,
+         7.44
+        ],
+        [
+         0.3,
+         8.91
+        ],
+        [
+         0.63,
+         9.06
+        ],
+        [
+         0.19,
+         10.53
+        ],
+        [
+         0,
+         12
+        ]
+       ],
+       "roles": {
+        "lit": "sugi",
+        "body": "sugi",
+        "shade": "sugiS",
+        "trunk": "trunk",
+        "snow": "paper",
+        "snowShade": "paperS"
+       },
+       "snowLoad": {
+        "coverOfTierUpperSide": {
+         "min": 0.5,
+         "typical": 0.7,
+         "max": 0.9
+        },
+        "byAltM": [
+         [
+          0,
+          0.7
+         ]
+        ],
+        "thicknessM": 0.15,
+        "sunSideMeltFrac": 0,
+        "note": "The existing snow cap (trees.sugi.snowCap) stays as drawn; this block only names it."
+       },
+       "render": {
+        "mesh": {
+         "withinM": 120,
+         "tiers": "one cone or flat disc per profile tier, 6 sides, flat shaded in lit/shade roles"
+        },
+        "billboard": {
+         "fromM": 120,
+         "facing": "camera yaw only (vertical axis)",
+         "variants": 3,
+         "note": "Pre-drawn from the profile: left half lit, right half shade (flip when the sun is on the right)."
+        },
+        "minPxHeight": 6,
+        "belowMinPx": "drop the tree and let the forest-mass strip (roles.shade, hazed) stand for it"
+       }
+      }
+     }
+    }
+   }
+  },
+  "treeline": {
+   "note": "Bands are altitudes above sea level, set from a map's treelineM (the last upright trees) and shifted by aspect. A map may override any value in maps[id].treeline. This is more detailed than trees.placement.treeline (linear fade over 150 m) and adds krummholz above the line; for real maps S4 reads this section.",
+   "defaults": {
+    "bandsRelativeToTreelineM": [
+     {
+      "id": "forest",
+      "upToOffsetM": -350,
+      "densityPerHa": 380,
+      "heightScale": 1,
+      "note": "Closed forest. Every tree grows to its species range."
+     },
+     {
+      "id": "thinning",
+      "upToOffsetM": -100,
+      "densityPerHa": 140,
+      "heightScale": 0.8,
+      "note": "Gaps and glades; trees are shorter."
+     },
+     {
+      "id": "open",
+      "upToOffsetM": 0,
+      "densityPerHa": 40,
+      "heightScale": 0.6,
+      "note": "Scattered last trees, flagged by wind: the upwind side is bare."
+     },
+     {
+      "id": "krummholz",
+      "upToOffsetM": 120,
+      "densityPerHa": 0,
+      "bushDensityPerHa": 90,
+      "heightScale": 0.2,
+      "note": "No upright trees. Prostrate pine and juniper (bushes.kinds.krummholz)."
+     }
+    ],
+    "aboveLastBand": "alpine: no trees and no bushes except grass tufts on wind-bared ridges; rocks and scree take over",
+    "aspectShiftM": {
+     "north": -60,
+     "east": 0,
+     "south": 60,
+     "west": 0,
+     "note": "Added to treelineM by the compass side a slope faces (linear between the four)."
+    },
+    "exclusion": {
+     "pisteMarginM": 8,
+     "liftMarginM": 10,
+     "maxSlopeDeg": 40,
+     "note": "No trees on the piste corridor plus 8 m (as TREE_CLEAR_M in world/map-trees.js), 10 m either side of a lift line, or on ground over 40 degrees."
+    },
+    "clustering": {
+     "seed": "hash of map id and the 60 m tile index, so a map always gets the same trees",
+     "patchScaleM": 70,
+     "patchThreshold": {
+      "forest": 0.28,
+      "thinning": 0.42,
+      "open": 0.58,
+      "note": "Value-noise below the threshold is a clearing. Noise scale is patchScaleM."
+     },
+     "clumpTrees": {
+      "min": 2,
+      "max": 7
+     },
+     "clumpRadiusM": 9,
+     "minSpacingM": 3.2,
+     "gapChance": 0.12,
+     "leeBias": {
+      "frac": 0.35,
+      "note": "Clumps are 35% more likely on the side of a ridge away from the prevailing wind (compass west for the Pyrenees: the lee is east)."
+     }
+    }
+   }
+  },
+  "bushes": {
+   "note": "Low plants. A bush is drawn as the part of it standing above the snow: snowDepthByAltM gives the depth, a bush shorter than the depth is hidden.",
+   "snowDepthByAltM": [
+    [
+     1600,
+     0.5
+    ],
+    [
+     2000,
+     1
+    ],
+    [
+     2400,
+     1.5
+    ],
+    [
+     2700,
+     0.8
+    ]
+   ],
+   "kinds": {
+    "krummholz": {
+     "latin": "Pinus uncinata (prostrate)",
+     "heightM": {
+      "min": 1,
+      "max": 3
+     },
+     "widthM": {
+      "min": 2,
+      "max": 5
+     },
+     "altitudeBandIds": [
+      "open",
+      "krummholz"
+     ],
+     "maxSlopeDeg": 38,
+     "densityPerHa": {
+      "open": 60,
+      "krummholz": 90
+     },
+     "roles": {
+      "lit": "krummholz",
+      "shade": "krummholzS",
+      "snow": "snowLoad"
+     },
+     "snowCover": 0.5,
+     "minPxHeight": 4
+    },
+    "juniper": {
+     "latin": "Juniperus communis nana",
+     "heightM": {
+      "min": 0.4,
+      "max": 1
+     },
+     "widthM": {
+      "min": 1.2,
+      "max": 3
+     },
+     "altitudeM": {
+      "min": 1700,
+      "max": 2650
+     },
+     "maxSlopeDeg": 36,
+     "densityPerHa": {
+      "forest": 20,
+      "thinning": 60,
+      "open": 80,
+      "krummholz": 60
+     },
+     "roles": {
+      "lit": "scrub",
+      "shade": "scrubS",
+      "snow": "snowLoad"
+     },
+     "snowCover": 0.4,
+     "minPxHeight": 3
+    },
+    "rhododendron": {
+     "latin": "Rhododendron ferrugineum",
+     "heightM": {
+      "min": 0.5,
+      "max": 1.2
+     },
+     "widthM": {
+      "min": 0.8,
+      "max": 2
+     },
+     "altitudeM": {
+      "min": 1800,
+      "max": 2500
+     },
+     "maxSlopeDeg": 34,
+     "densityPerHa": {
+      "thinning": 80,
+      "open": 120,
+      "krummholz": 40
+     },
+     "roles": {
+      "lit": "rhodo",
+      "shade": "scrubS",
+      "snow": "snowLoad"
+     },
+     "snowCover": 0.4,
+     "minPxHeight": 3,
+     "note": "Grows in patches 8 to 25 m across (use clustering.patchScaleM 20). Prefers shaded north faces."
+    },
+    "grassTuft": {
+     "latin": "dry grass",
+     "heightM": {
+      "min": 0.2,
+      "max": 0.5
+     },
+     "widthM": {
+      "min": 0.3,
+      "max": 0.9
+     },
+     "altitudeM": {
+      "min": 1700,
+      "max": 2800
+     },
+     "slopeDeg": {
+      "min": 18,
+      "max": 38
+     },
+     "densityPerHa": {
+      "krummholz": 100,
+      "alpine": 60
+     },
+     "roles": {
+      "lit": "scrub",
+      "shade": "scrubS",
+      "snow": "snowLoad"
+     },
+     "snowCover": 0,
+     "minPxHeight": 2,
+     "note": "Only on convex, wind-bared ridges; shows where snowDepthByAltM is under its height or the slope is over 30 degrees."
+    }
+   },
+   "render": {
+    "form": "billboard blob: two overlapping ellipses, lit left and shade right, with the snow cover as a paper-coloured top slab",
+    "keyline": "key",
+    "note": "Keyline 1 px. Under minPxHeight draw a 2 px dot or nothing."
+   }
+  },
+  "rocks": {
+   "note": "Rock shows where snow cannot lie. slopeDeg is the local slope of the terrain.",
+   "snowRule": {
+    "slopeDeg": {
+     "snowFull": 30,
+     "patchy": 32,
+     "rockShows": 38,
+     "mostlyRock": 45,
+     "bare": 55
+    },
+    "rockShareAt": [
+     [
+      30,
+      0
+     ],
+     [
+      32,
+      0.05
+     ],
+     [
+      38,
+      0.35
+     ],
+     [
+      45,
+      0.75
+     ],
+     [
+      55,
+      1
+     ]
+    ],
+    "windScour": {
+     "ridgeCrestLowersThresholdsDeg": 8,
+     "note": "On a convex ridge crest every slope threshold above is lowered by 8 degrees."
+    },
+    "note": "rockShows matches trees.placement.rocks (over 38 degrees). Between patchy and bare the share of rock rises as rockShareAt (slope, share 0 to 1), laid out by noise of 12 m scale so it reads as patches."
+   },
+   "snowCap": {
+    "role": "snowLoad",
+    "shadeRole": "snowLoadS",
+    "depthM": {
+     "min": 0.15,
+     "max": 0.4
+    },
+    "rule": "Each rock gets a cap over the faces whose normal is within 55 degrees of up. The cap is thinner (0.15 m) on the sun side, thicker (0.4 m) on the shade side, and absent on faces steeper than 70 degrees.",
+    "keyline": "key"
+   },
+   "kinds": {
+    "boulder": {
+     "sizeM": {
+      "min": 0.8,
+      "max": 3.5
+     },
+     "shape": "trees.rock.shape scaled",
+     "slopeDeg": {
+      "min": 20,
+      "max": 55
+     },
+     "densityPerHa": {
+      "onRockGround": 80,
+      "elsewhere": 6
+     },
+     "roles": {
+      "lit": "rockLit",
+      "body": "rock",
+      "shade": "rockS"
+     },
+     "minPxHeight": 4
+    },
+    "outcrop": {
+     "widthM": {
+      "min": 4,
+      "max": 14
+     },
+     "heightM": {
+      "min": 2,
+      "max": 7
+     },
+     "shape": "angular slab with 2 to 4 stepped faces",
+     "slopeDeg": {
+      "min": 38,
+      "max": 65
+     },
+     "densityPerHa": {
+      "onRockGround": 14,
+      "elsewhere": 0
+     },
+     "roles": {
+      "lit": "rockLit",
+      "body": "rock",
+      "shade": "rockS"
+     },
+     "minPxHeight": 5
+    },
+    "screeField": {
+     "lengthM": {
+      "min": 15,
+      "max": 90
+     },
+     "widthM": {
+      "min": 10,
+      "max": 40
+     },
+     "slopeDeg": {
+      "min": 28,
+      "max": 38
+     },
+     "altitudeM": {
+      "min": 1900,
+      "max": 2800
+     },
+     "densityPerHa": {
+      "alpine": 3,
+      "krummholz": 1
+     },
+     "roles": {
+      "lit": "scree",
+      "shade": "screeS"
+     },
+     "form": "ground patch: terrain surface colour speckled 1 to 3 px, no billboard",
+     "note": "Grain 0.3 m. Snow may cover up to 60% of it, laid out by noise."
+    },
+    "cliffBand": {
+     "heightM": {
+      "min": 8,
+      "max": 40
+     },
+     "lengthM": {
+      "min": 30,
+      "max": 180
+     },
+     "slopeDeg": {
+      "min": 55,
+      "max": 90
+     },
+     "densityPerHa": {
+      "onBareGround": 1
+     },
+     "roles": {
+      "lit": "rockLit",
+      "body": "cliff",
+      "shade": "rockS"
+     },
+     "form": "a vertical or overhung face along a contour; drawn as a terrain surface where slope is over 55 degrees, with a snow ledge cap every 6 to 10 m of height",
+     "note": "Where the terrain is over 55 degrees (bare in snowRule) the surface takes the cliff role."
+    }
+   }
+  },
+  "sky": {
+   "note": "The dawn sky seen from the ground, by elevation angle above the horizon. Replaces screen-fraction stops (sky.stops) for real maps and follows the map's sun.",
+   "stops": [
+    {
+     "elevationDeg": 90,
+     "role": "skyTop"
+    },
+    {
+     "elevationDeg": 45,
+     "role": "skyMid"
+    },
+    {
+     "elevationDeg": 14,
+     "role": "skyDawn"
+    },
+    {
+     "elevationDeg": 0,
+     "role": "skyHorizon"
+    },
+    {
+     "elevationDeg": -4,
+     "role": "fog"
+    }
+   ],
+   "interpolation": "linear in sRGB between stops (bokashi, no banding steps)",
+   "followsSun": {
+    "source": "maps[id].sun (azimuthDeg compass, elevationDeg)",
+    "warmSide": {
+     "halfWidthDeg": 90,
+     "dawnStopElevationDeg": 26,
+     "note": "The skyDawn stop rises from 14 to 26 degrees on the sun azimuth and falls back to 14 at 90 degrees either side (cosine)."
+    },
+    "coolSide": {
+     "dawnStopElevationDeg": 8,
+     "horizonMixToSkyMid": 0.3,
+     "note": "Opposite the sun the dawn band sinks to 8 degrees and the horizon is 30% skyMid."
+    }
+   },
+   "sun": {
+    "role": "sun",
+    "discDiameterDeg": 5,
+    "glow": {
+     "role": "sunGlow",
+     "radiusDeg": 20,
+     "falloff": "quadratic",
+     "alphaCentre": 0.6
+    },
+    "horizonBand": {
+     "role": "sunGlow",
+     "halfWidthDeg": 45,
+     "heightDeg": 8,
+     "alpha": 0.35,
+     "note": "A low band of glow along the horizon, centred on the sun azimuth."
+    },
+    "elevationClampDeg": {
+     "min": 0.5,
+     "max": 60
+    },
+    "behindBackdrops": true,
+    "note": "discDiameterDeg 5 equals sky.sun.radiusFracOfWidth 0.045 at a 55 degree horizontal field of view. Drawn at the compass azimuth and elevation of maps[id].sun. Hidden where a backdrop layer is higher than the sun."
+   },
+   "alpenglow": {
+    "role": "alpenglow",
+    "tintMix": 0.45,
+    "onLayers": [
+     "mid",
+     "far"
+    ],
+    "withinDegOfSunAzimuth": 55,
+    "fadesOutAboveSunElevationDeg": 24,
+    "note": "The snow caps of mid and far layers within 55 degrees of the sun azimuth are tinted toward alpenglow while the sun is under 24 degrees. The near layer is not: it is in the valley shade."
+   },
+   "haze": {
+    "stops": [
+     {
+      "distM": 0,
+      "mix": 0,
+      "role": "fog"
+     },
+     {
+      "distM": 40,
+      "mix": 0,
+      "role": "fog"
+     },
+     {
+      "distM": 300,
+      "mix": 0.18,
+      "role": "fog"
+     },
+     {
+      "distM": 1500,
+      "mix": 0.35,
+      "role": "fog"
+     },
+     {
+      "distM": 5000,
+      "mix": 0.5,
+      "role": "skyHorizon"
+     },
+     {
+      "distM": 12000,
+      "mix": 0.65,
+      "role": "skyHorizon"
+     },
+     {
+      "distM": 30000,
+      "mix": 0.8,
+      "role": "skyHorizon"
+     }
+    ],
+    "note": "Mix toward the role colour by distance in metres, linear between stops. The first two stops are terrain.fog (start 40 m). Valley mist (terrain.gradient.valleyMist) is added to this, never replaced."
+   }
+  },
+  "backdrops": {
+   "pyrenees": {
+    "note": "Distant mountains for El Tarter and the Andorran Pyrenees. Three layers by distance. Each layer is drawn as a profile polyline with a keyline (mountains.real). The baked horizon gives the near terrain out to the edge of the map; the named peaks give summits beyond it.",
+    "layers": [
+     {
+      "id": "near",
+      "minM": 2000,
+      "maxM": 8000,
+      "parallax": 0.25,
+      "hazeMix": 0.2,
+      "roles": {
+       "fill": "mtnNear",
+       "shade": "mtnNearS",
+       "cap": "mtnNearCap"
+      },
+      "cap": {
+       "snowlineM": 1900,
+       "depthM": 380
+      }
+     },
+     {
+      "id": "mid",
+      "minM": 8000,
+      "maxM": 18000,
+      "parallax": 0.18,
+      "hazeMix": 0.45,
+      "roles": {
+       "fill": "mtnMid",
+       "shade": "mtnMidS",
+       "cap": "mtnMidCap"
+      },
+      "cap": {
+       "snowlineM": 1900,
+       "depthM": 520
+      }
+     },
+     {
+      "id": "far",
+      "minM": 18000,
+      "maxM": 60000,
+      "parallax": 0.12,
+      "hazeMix": 0.7,
+      "roles": {
+       "fill": "mtnFar",
+       "shade": "mtnFarS",
+       "cap": "mtnFarCap"
+      },
+      "cap": {
+       "snowlineM": 1900,
+       "depthM": 700
+      }
+     }
+    ],
+    "capRule": "Snow covers a summit from its top down to max(snowlineM, altM - depthM). Winter snowline is 1900 m for the Andorran Pyrenees (higher on south faces). The cap edge is jagged every 2 degrees by 25% of its depth (mountains.real.ridge).",
+    "shadeRule": "The face away from the sun azimuth is filled in the shade role, as mountains.real.",
+    "ridge": {
+     "profile": "triangle",
+     "floorElevDeg": -1,
+     "verticalExaggeration": 2,
+     "jag": {
+      "everyDeg": 2,
+      "depthFrac": 0.25
+     },
+     "note": "Each named summit is a triangle (as mountains.procedural): its apex is elevDeg x verticalExaggeration above the horizon, and it falls in a straight line to floorElevDeg at atan(halfWidthM / distM) degrees of bearing either side. Where triangles of one layer overlap, take the higher. Real elevations are only 1.5 to 6.5 degrees, so S4 may lift the ridge by verticalExaggeration, keeping bearings true. Where the baked horizon (course.horizon) is higher than a layer, the baked profile wins for the near layer."
+    },
+    "peaks": [
+     {
+      "id": "casamanya",
+      "name": "Pic de Casamanya",
+      "layer": "near",
+      "lat": 42.5841,
+      "lon": 1.5655,
+      "altM": 2740,
+      "bearingEnuDeg": 159.1,
+      "bearingCompassDeg": 290.9,
+      "distM": 7899,
+      "elevDeg": 2.02,
+      "horizonAtStartDeg": -4.4,
+      "halfWidthM": 1300,
+      "source": "peakbook.org element 54931 (UTM converted)"
+     },
+     {
+      "id": "estanyo",
+      "name": "Pic de l'Estanyó",
+      "layer": "near",
+      "lat": 42.6085,
+      "lon": 1.5926,
+      "altM": 2915,
+      "bearingEnuDeg": 133,
+      "bearingCompassDeg": 317,
+      "distM": 7558,
+      "elevDeg": 3.43,
+      "horizonAtStartDeg": -3,
+      "halfWidthM": 1500,
+      "source": "peakbook.org element 78414 (UTM converted)"
+     },
+     {
+      "id": "serrera",
+      "name": "Pic de la Serrera",
+      "layer": "mid",
+      "lat": 42.626,
+      "lon": 1.601,
+      "altM": 2912,
+      "bearingEnuDeg": 120.8,
+      "bearingCompassDeg": 329.2,
+      "distM": 8704,
+      "elevDeg": 2.96,
+      "horizonAtStartDeg": 2.1,
+      "halfWidthM": 1300,
+      "source": "GeoNames highest mountains of Andorra"
+     },
+     {
+      "id": "comaPedrosa",
+      "name": "Coma Pedrosa",
+      "layer": "mid",
+      "lat": 42.59056,
+      "lon": 1.44478,
+      "altM": 2943,
+      "bearingEnuDeg": 168.4,
+      "bearingCompassDeg": 281.6,
+      "distM": 17648,
+      "elevDeg": 1.56,
+      "horizonAtStartDeg": -1.8,
+      "halfWidthM": 2200,
+      "source": "Wikipedia: Coma Pedrosa"
+     },
+     {
+      "id": "picaEstats",
+      "name": "Pica d'Estats",
+      "layer": "far",
+      "lat": 42.66722,
+      "lon": 1.39722,
+      "altM": 3143,
+      "bearingEnuDeg": 150.3,
+      "bearingCompassDeg": 299.7,
+      "distM": 24370,
+      "elevDeg": 1.6,
+      "horizonAtStartDeg": -8.7,
+      "halfWidthM": 3000,
+      "source": "Wikipedia: Pica d'Estats"
+     },
+     {
+      "id": "altGriu",
+      "name": "Alt del Griu",
+      "layer": "near",
+      "lat": 42.526,
+      "lon": 1.652,
+      "altM": 2874,
+      "bearingEnuDeg": 265.6,
+      "bearingCompassDeg": 184.4,
+      "distM": 3646,
+      "elevDeg": 6.45,
+      "horizonAtStartDeg": 0.7,
+      "halfWidthM": 1000,
+      "source": "GeoNames highest mountains of Andorra"
+     },
+     {
+      "id": "pessons",
+      "name": "Pic dels Pessons",
+      "layer": "near",
+      "lat": 42.508,
+      "lon": 1.665,
+      "altM": 2864,
+      "bearingEnuDeg": 278,
+      "bearingCompassDeg": 172,
+      "distM": 5690,
+      "elevDeg": 4.04,
+      "horizonAtStartDeg": 0.9,
+      "halfWidthM": 1000,
+      "source": "GeoNames highest mountains of Andorra"
+     },
+     {
+      "id": "picNegre",
+      "name": "Pic Negre d'Envalira",
+      "layer": "near",
+      "lat": 42.51722,
+      "lon": 1.72139,
+      "altM": 2823,
+      "bearingEnuDeg": 319.7,
+      "bearingCompassDeg": 130.3,
+      "distM": 7118,
+      "elevDeg": 2.9,
+      "horizonAtStartDeg": -2.4,
+      "halfWidthM": 1100,
+      "source": "Wikipedia: Pic Negre d'Envalira"
+     },
+     {
+      "id": "envalira",
+      "name": "Pic d'Envalira",
+      "layer": "near",
+      "lat": 42.51879,
+      "lon": 1.72485,
+      "altM": 2659,
+      "bearingEnuDeg": 322.2,
+      "bearingCompassDeg": 127.8,
+      "distM": 7229,
+      "elevDeg": 1.56,
+      "horizonAtStartDeg": -2.8,
+      "halfWidthM": 800,
+      "source": "aroundus.com 4041992"
+     },
+     {
+      "id": "maia",
+      "name": "Pic del Maià",
+      "layer": "near",
+      "lat": 42.55384,
+      "lon": 1.71889,
+      "altM": 2615,
+      "bearingEnuDeg": 354.1,
+      "bearingCompassDeg": 95.9,
+      "distM": 5244,
+      "elevDeg": 1.67,
+      "horizonAtStartDeg": -3.5,
+      "halfWidthM": 1000,
+      "source": "elevation visitandorra.com; position komoot highlight 3422136 (map centre, approx)"
+     }
+    ],
+    "peaksNote": "Positions are from the course start (maps.el-tarter.startWorld) in the world frame. bearingEnuDeg is counter-clockwise from east (ADR 0005); bearingCompassDeg is clockwise from north (the art boundary). elevDeg = atan((altM - start altitude) / distM), flat earth (curvature is under 0.1 degrees at 25 km). horizonAtStartDeg is the terrain-grid horizon from the start at that bearing: a peak whose elevDeg is above it is visible. halfWidthM is art-directed, not measured."
+   }
+  },
+  "contrastTargets": [
+   {
+    "a": "pine",
+    "b": "pisteLit",
+    "min": 6,
+    "why": "Mountain pine body against lit snow"
+   },
+   {
+    "a": "pineLit",
+    "b": "pisteLit",
+    "min": 4.5,
+    "why": "Lit pine side against lit snow"
+   },
+   {
+    "a": "fir",
+    "b": "pisteLit",
+    "min": 6,
+    "why": "Fir body against lit snow"
+   },
+   {
+    "a": "firLit",
+    "b": "pisteLit",
+    "min": 4.5,
+    "why": "Lit fir side against lit snow"
+   },
+   {
+    "a": "trunk",
+    "b": "pisteLit",
+    "min": 6,
+    "why": "Trunk against snow"
+   },
+   {
+    "a": "snowLoad",
+    "b": "pine",
+    "min": 6,
+    "why": "Snow on pine tiers"
+   },
+   {
+    "a": "snowLoad",
+    "b": "fir",
+    "min": 6,
+    "why": "Snow on fir tiers"
+   },
+   {
+    "a": "snowLoadS",
+    "b": "pine",
+    "min": 3.5,
+    "why": "Shaded snow on pine tiers"
+   },
+   {
+    "a": "snowLoad",
+    "b": "rock",
+    "min": 3,
+    "why": "Snow cap on rock"
+   },
+   {
+    "a": "krummholz",
+    "b": "powderLit",
+    "min": 4,
+    "why": "Krummholz in powder"
+   },
+   {
+    "a": "scrub",
+    "b": "powderLit",
+    "min": 3,
+    "why": "Juniper and grass in powder"
+   },
+   {
+    "a": "rhodo",
+    "b": "powderLit",
+    "min": 4,
+    "why": "Rhododendron in powder"
+   },
+   {
+    "a": "rock",
+    "b": "pisteLit",
+    "min": 3.5,
+    "why": "Rock against lit snow"
+   },
+   {
+    "a": "rockLit",
+    "b": "pisteLit",
+    "min": 2.4,
+    "why": "Lit rock face against lit snow"
+   },
+   {
+    "a": "cliff",
+    "b": "pisteLit",
+    "min": 6,
+    "why": "Cliff against lit snow"
+   },
+   {
+    "a": "scree",
+    "b": "pisteLit",
+    "min": 2,
+    "why": "Scree against lit snow"
+   },
+   {
+    "a": "scree",
+    "b": "powderLit",
+    "min": 1.6,
+    "why": "Scree against powder"
+   },
+   {
+    "a": "mtnFar",
+    "b": "skyHorizon",
+    "min": 1.4,
+    "why": "Far layer against the horizon sky"
+   },
+   {
+    "a": "mtnMid",
+    "b": "mtnFar",
+    "min": 1.15,
+    "why": "Mid layer against far layer"
+   },
+   {
+    "a": "mtnNear",
+    "b": "mtnMid",
+    "min": 1.25,
+    "why": "Near layer against mid layer"
+   },
+   {
+    "a": "mtnNearCap",
+    "b": "mtnNear",
+    "min": 2.4,
+    "why": "Near snow cap"
+   },
+   {
+    "a": "mtnMidCap",
+    "b": "mtnMid",
+    "min": 1.9,
+    "why": "Mid snow cap"
+   },
+   {
+    "a": "mtnFarCap",
+    "b": "mtnFar",
+    "min": 1.6,
+    "why": "Far snow cap"
+   },
+   {
+    "a": "alpenglow",
+    "b": "skyDawn",
+    "min": 1.15,
+    "why": "Glowing summits against the dawn band"
+   },
+   {
+    "a": "sun",
+    "b": "sunGlow",
+    "min": 1.2,
+    "why": "Sun disc against its glow"
+   }
+  ],
+  "palette": {
+   "note": "New roles for the environment (sRGB hex). They live here, not in the top-level palette, so that palette stays exactly as in v1.4.0 (test/hanga-v14.test.js compares it with v1.3.0 whole). Code resolves a role from palette first, then from this object. Moving them into palette is one line of data and one test change; see HANGA-v1.5.md.",
+   "roles": {
+    "pineLit": "#4F7058",
+    "fir": "#2C4B4C",
+    "firS": "#1F3637",
+    "firLit": "#42696A",
+    "snowLoad": "#E8EDF5",
+    "snowLoadS": "#BFC9DE",
+    "krummholz": "#55684F",
+    "krummholzS": "#3C4B3B",
+    "scrub": "#7A6F58",
+    "scrubS": "#5C5342",
+    "rhodo": "#7A5A55",
+    "rockLit": "#8F98B2",
+    "scree": "#A2A8BC",
+    "screeS": "#8088A2",
+    "cliff": "#4C566F",
+    "mtnMid": "#97A8CB",
+    "mtnMidS": "#7F92B9",
+    "mtnMidCap": "#F1EBDD",
+    "alpenglow": "#F0A98E",
+    "sunGlow": "#F8C9A8"
+   }
   }
  },
  "terrain": {

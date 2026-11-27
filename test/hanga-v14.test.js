@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const HANGA = require('../art/gresca-hanga-spec.js');
 const V13 = require('./fixtures/hanga-spec-v1.3.0.cjs');
+const V14 = require('./fixtures/hanga-spec-v1.4.0.cjs');
 const RA = require('../art/gresca-rider-anim.js');
 
 const RIGS = ['ski', 'board'];
@@ -36,7 +37,8 @@ function listsClose(a, b, msg) {
 
 test('v1.4 metadata', async (t) => {
   await t.test('version, poses in poseOrder, blend timings', () => {
-    assert.equal(HANGA.version, '1.4.0');
+    // v1.5 and later keep v1.4's data (test/hanga-v15.test.js), so the version is at least v1.4.0.
+    assert.ok(HANGA.version.localeCompare(V14.version, undefined, { numeric: true }) >= 0, HANGA.version);
     for (const rig of RIGS) {
       assert.deepEqual(HANGA.rider.poseOrder[rig], V13.rider.poseOrder[rig].concat(NEW_POSES[rig]), 'old order kept, new appended');
       for (const pose of NEW_POSES[rig]) {
