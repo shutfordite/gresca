@@ -36,6 +36,13 @@ const UNSPECIFIED = Object.freeze({
  mapFinishDark: FINISH_RED,
  mapFinishPost: FINISH_RED,
  mapLabel: '#16202e',
+ // piste edge poles on real maps (view/piste-poles.js): Europe's difficulty colours, orange on the right-hand ones
+ pisteGreen: '#2e9e4f',
+ pisteBlue: '#2f6fd6',
+ pisteRed: '#d8333a',
+ pisteBlack: '#1b1d22',
+ pisteYellow: '#f2c230',
+ pisteRightTop: SIGNAL_ORANGE,
 });
 
 // The colour map's snow tone (view/colour-map.js paintSnow until D2), not in the spec yet: RGB 0..255.
@@ -103,6 +110,14 @@ function sprites(colour) {
   tree: Object.freeze({ colour: colour('treeCrown'), rgb: Object.freeze(hexRgb(colour('treeCrown'))) }),
   flag: Object.freeze({ kicker: colour('kickerFlag'), bigKicker: colour('bigKickerFlag') }),
   pole: Object.freeze({ colour: colour('poleShaft') }),
+  pistePole: Object.freeze({
+   green: colour('pisteGreen'),
+   blue: colour('pisteBlue'),
+   red: colour('pisteRed'),
+   black: colour('pisteBlack'),
+   yellow: colour('pisteYellow'),
+   rightTop: colour('pisteRightTop'),
+  }),
   rail: Object.freeze({ colour: colour('railBar') }),
   box: Object.freeze({ colour: colour('boxBar') }),
   kickerRamp: Object.freeze({

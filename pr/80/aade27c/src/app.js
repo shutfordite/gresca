@@ -11,6 +11,7 @@ import { bindInput } from './input/bind-input.js';
 import { createView, resizeScreen } from './view/view-state.js';
 import { createHangaLook } from './view/look/hanga.js';
 import { buildColourMap } from './view/colour-map.js';
+import { pistePoles } from './view/piste-poles.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
 import { updateCamera, draw } from './view/draw.js';
 import { chooseRenderer } from './view/renderer.js';
@@ -27,11 +28,17 @@ const START_SPEED = 2;  // m/s down the map at the drop
 const MENU_HEADING = 1.57; // rad on the map's grid: just short of straight down
 const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
 
+// The menu text on a real map: its run and its data credits (ODbL attribution must show with real map data).
+function mapMenuText(world) {
+ return 'Ride ' + world.name + ' from the top to the finish. Data: ' + world.credits.join(' ');
+}
+
 /**
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
  * requestAnimationFrame, setTimeout, HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
  * procedural map at that heading, for the rotated-map tests; default 0), map (optional: 'test' (default) builds the
- * test slope, 'play' the steep play mountain; world/build.js MAPS), scene (optional name: open that scene after
+ * test slope, 'play' the steep play mountain; world/build.js MAPS), world (optional: a real map's world from
+ * world/map-loader.js, which main.js loads before the game; replaces map), scene (optional name: open that scene after
  * the boot, src/scenes.js), renderer (optional: 'gl' draws the terrain on the GPU, view/renderer.js), THREE (the
  * three.js module, with renderer 'gl'), showFps (optional: the fps readout), now () -> ms (with showFps), warn
  * (optional: message -> nothing)}; localStorage and devicePixelRatio are read at each use.
@@ -40,7 +47,7 @@ const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." 
  */
 export function createGame(env) {
  const look = createHangaLook(env.HANGA, env.RiderAnim); // every colour, tone and style the view draws with
- const world = createWorld({ rotationRad: env.mapRotationRad || 0, map: env.map || 'test' });
+ const world = env.world || createWorld({ rotationRad: env.mapRotationRad || 0, map: env.map || 'test' });
  const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
  const view = createView(env.document, look);
  const ui = getUi(env.document);
@@ -85,6 +92,7 @@ export function createGame(env) {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, course: world.course,
   frame: mapFrame,
   treeArr: world.treeArr,
+  pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
   particles: spray.particles, timestep, look, riderAnim: env.RiderAnim,
  };
 
@@ -97,10 +105,12 @@ export function createGame(env) {
  // A new run from the top: what the Drop in button does. The rider points and moves straight down the map's grid.
  function startRun() {
   placeAtStart();
-  mapFrame.vecToWorld(0, START_SPEED, startVelocity);
+  // "Down the map" is the colour map's grid (view.mapFrame): the map's own grid on the procedural map, the painted
+  // window along the run on a real one (view/paint-window.js).
+  view.mapFrame.vecToWorld(0, START_SPEED, startVelocity);
   rider.vx = startVelocity.x;
   rider.vy = startVelocity.y;
-  rider.heading = mapFrame.downhill;
+  rider.heading = view.mapFrame.downhill;
   rider.crashTimer = 0;
   session.crashes = 0;
   session.time = 0;
@@ -119,7 +129,7 @@ export function createGame(env) {
   resetDerived(rider);
   reseed(rng);
   clearTracks(view);
-  resetCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
+  resetCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame);
   session.phase = 'run';
   ui.msg.hidden = true;
   timestep.acc = 0;
@@ -131,7 +141,7 @@ export function createGame(env) {
   const t0 = fps ? env.now() : 0;
   updateCamera(view, scene, dt, alpha);
   render.draw(view, scene, dt);
-  updateHud(ui, hud, view.drawn, rider, session, world.terrain.bounds, world.course);
+  updateHud(ui, hud, view.drawn, rider, session, view.mapBounds, world.course);
   updatePauseButton(ui, hud, session);
   if (fps) {
    tickFps(fps, clock.dt, env.now() - t0, view.renderer.name);
@@ -152,8 +162,14 @@ export function createGame(env) {
 
  // Builds the mountain, then shows the menu over the top of the run.
  function boot() {
-  buildWorld(world);
+  if (world.layout) buildWorld(world); // a loaded real map comes built (world/map-loader.js)
   buildColourMap(view, world, ui.minimap, look, env.renderer === 'gl');
+  ui.msgT.textContent = 'Preparing the 3D view...';
+  env.setTimeout(bootView, BOOT_DELAY_MS); // let the page show it before the renderer's bakes block
+ }
+
+ // Picks the renderer (the GPU bakes its textures here), then shows the menu.
+ function bootView() {
   render.draw = chooseRenderer({
    want: env.renderer, THREE: env.THREE || null, document: env.document, screen: ui.canvas,
    warn: env.warn || (() => {}),
@@ -168,7 +184,7 @@ export function createGame(env) {
   session.phase = 'ready';
   placeAtStart();
   rider.vx = rider.vy = 0;
-  rider.heading = mapFrame.headingToWorld(MENU_HEADING);
+  rider.heading = view.mapFrame.headingToWorld(MENU_HEADING);
   rider.crashTimer = 0;
   session.crashes = 0;
   session.time = 0;
@@ -176,8 +192,8 @@ export function createGame(env) {
   rider.z = rider.vz = 0;
   rider.grind = null;
   spray.particles.length = 0;
-  menuCamera(camera, world.terrain.height(rider.x, rider.y), mapFrame);
-  ui.msgT.textContent = MENU_TEXT;
+  menuCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame);
+  ui.msgT.textContent = world.layout ? MENU_TEXT : mapMenuText(world);
   ui.go.textContent = 'Drop in';
   ui.go.hidden = false;
   ui.msg.hidden = false;
