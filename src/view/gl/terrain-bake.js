@@ -1,8 +1,9 @@
 // The GL terrain's textures, baked once at boot from the terrain on the map's grid: heights, slopes, relief, piste.
 // Pure: typed arrays in, typed arrays out, no GL. Texel (i, j) is grid point (u, v) = (i, j) m, placed in the world by
 // the map's frame (view.mapFrame), so nothing here knows which way is downhill. Memory on the procedural map (1000 ×
-// 2450 texels): heights 9.8 MB (R32F), slopes 9.8 MB (RG16F), aux 9.8 MB (RGBA8), the piste's across coordinate
-// 0.3 MB (R16F at PISTE_STEP_M), paint 9.8 MB (RGBA8): 40 MB on the GPU, and the same again as CPU copies.
+// 2450 texels): heights 9.8 MB (R32F), slopes 9.8 MB (RG16F), aux 9.8 MB (RGBA8), the piste's across coordinate and
+// the powder depth 0.6 MB (RG16F at PISTE_STEP_M), paint 9.8 MB (RGBA8): 40 MB on the GPU, and the same again as CPU
+// copies.
 
 const CAVITY_RADIUS_M = 6;      // m, half-width of the box blur the relief is measured against
 const CAVITY_BYTE_PER_M = 96;   // byte steps per m of relief (128 = flat): ±1.3 m fills the byte
@@ -126,9 +127,10 @@ export function trackRows(aux, col, col0, nx, v0, v1) {
 }
 
 /**
- * The piste's across coordinate d (m, course.project) every PISTE_STEP_M m of the grid, where the snow is groomed
- * (or within PISTE_MARGIN samples of it); 0 elsewhere. Returns {data (Float32Array w × h), w, h}. The shader's
- * corduroy runs along the piste, so it reads d between samples (linear: d is smooth across a piste).
+ * Every PISTE_STEP_M m of the grid, two values: the piste's across coordinate d (m, course.project) where the snow is
+ * groomed (or within PISTE_MARGIN samples of it), 0 elsewhere; and the loose snow's depth (m, terrain.powder; 0 when
+ * the terrain has none). Returns {data (Float32Array w × h × 2: d, depth), w, h}. The shader's corduroy runs along the
+ * piste, so it reads d between samples (linear: d is smooth across a piste); the powder look reads the depth.
  */
 export function bakePiste(course, terrain, frame, nx, ny) {
  const w = Math.ceil(nx / PISTE_STEP_M) + 1;
@@ -141,13 +143,14 @@ export function bakePiste(course, terrain, frame, nx, ny) {
    groomed[j * w + i] = terrain.groomed(at.x, at.y) > 0 ? 1 : 0;
   }
  }
- const data = new Float32Array(w * h);
+ const data = new Float32Array(w * h * 2);
  const where = { s: 0, d: 0, tx: 0, ty: 0 };
  for (let j = 0; j < h; j++) {
   for (let i = 0; i < w; i++) {
-   if (!nearGroomed(groomed, w, h, i, j)) continue;
    frame.toWorld(i * PISTE_STEP_M, j * PISTE_STEP_M, at);
-   data[j * w + i] = course.project(at.x, at.y, where).d;
+   const k = (j * w + i) * 2;
+   data[k + 1] = terrain.powder ? terrain.powder(at.x, at.y) : 0;
+   if (nearGroomed(groomed, w, h, i, j)) data[k] = course.project(at.x, at.y, where).d;
   }
  }
  return { data, w, h };

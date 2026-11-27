@@ -91,9 +91,10 @@ describe('GPU texture memory budget', () => {
   assert.equal(fitsTextureBudget(nx, ny), true);
  });
 
- it('counts every texture from its format: 16 B a grid texel, 2 B a piste sample, the mipmapped detail', () => {
+ // H3: the piste texture is RG16F (the across coordinate and the powder depth), 4 B a sample (was R16F, 2 B)
+ it('counts every texture from its format: 16 B a grid texel, 4 B a piste sample, the mipmapped detail', () => {
   const grid = 1000 * 2450 * (4 + 4 + 4 + 4);
-  const piste = (250 + 1) * (613 + 1) * 2;
+  const piste = (250 + 1) * (613 + 1) * 4;
   const detail = Math.round(256 * 256 * 4 * 4 / 3);
   assert.equal(terrainTextureBytes(1000, 2450).gpuBytes, grid + piste + detail);
  });

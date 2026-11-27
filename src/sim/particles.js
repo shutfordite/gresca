@@ -8,10 +8,10 @@ const SPRAY_FLOOR_M = -0.2; // m, a particle this far below the snow is gone
 
 /**
  * Adds up to n particles to spray.particles (at most MAX_PARTICLES alive) at (px,py) (m), pz m above the ground,
- * with random horizontal speed up to spread/2 (m/s) around (dvx,dvy) and upward speed up to `up` (m/s).
- * Draws from spray.rng.
+ * with random horizontal speed up to spread/2 (m/s) around (dvx,dvy) and upward speed up to `up` (m/s); size and life
+ * (default 1) scale the puff's drawn size (each particle's r) and how long it lives. Draws from spray.rng.
  */
-export function emit(spray, n, px, py, pz, spread, up, dvx, dvy) {
+export function emit(spray, n, px, py, pz, spread, up, dvx, dvy, size = 1, life = 1) {
  const parts = spray.particles;
  const rng = spray.rng;
  for (let k = 0; k < n && parts.length < MAX_PARTICLES; k++) {
@@ -21,7 +21,8 @@ export function emit(spray, n, px, py, pz, spread, up, dvx, dvy) {
    vy: dvy + (rnd(rng) - 0.5) * spread,
    vz: up * (0.4 + rnd(rng) * 0.6),
    t: 0,
-   life: 0.45 + rnd(rng) * 0.4,
+   life: (0.45 + rnd(rng) * 0.4) * life,
+   r: size, // dimensionless, the drawn size, times a plain puff's
   });
  }
 }

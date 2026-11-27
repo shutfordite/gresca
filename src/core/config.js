@@ -3,15 +3,40 @@
 export const TAU = Math.PI * 2; // rad, one full turn
 
 // ---- equipment ----
-// Both are twin tip. Skis grip better and go edge to edge quicker (so they turn in a little quicker) but carve a
-// longer radius; the board spins a little slower. turn: dimensionless gain on the low-speed pivot rate
-// (sim/tuning.js EDGE.PIVOT_RATE); grip: 1/s, how fast sideways slip dies in a skid; spin: rad/s in the air.
-// The edge and carve (F6, sim/edge.js): sidecut: m, the carve radius at 90 degrees of edge (R = sidecut / sin(edge)),
-// shorter than real gear (about 7 m for a board, 13-16 m for skis) for an arcade turn; edgeRate: rad/s, how fast
-// the edge angle follows the steer; edgeGrip: m/s², the most sideways acceleration the edge holds before it skids.
+// Both are twin tip. Skis grip harder and go edge to edge quicker but carve a longer radius and sink deeper in
+// powder; the board floats sooner and spins a little slower. turn: dimensionless gain on the low-speed pivot rate
+// (sim/tuning.js EDGE.PIVOT_RATE); spin: rad/s in the air.
+// The edge and the snow (sim/edge.js, sim/contact.js): sidecut: m, the carve radius at 90 degrees of edge
+// (R = sidecut / sin(edge)), a little shorter than real gear (about 7 m for a board, 12-16 m for skis);
+// edgeRate: rad/s, how fast the rider tips onto an edge (weight moving over, the turn building while steer is held);
+// releaseRate: rad/s, how fast an edge flattens or rolls to the other one (letting go is quicker than tipping in);
+// edgeGrip: m/s², the most sideways acceleration a fully tipped edge holds on firm snow before it breaks into a skid;
+// skidGrip: 0..1, the share of edgeGrip the snow still gives once the edge slides (kinetic against static);
+// yawLag: s, how long the equipment takes to answer a new turn rate on firm snow (its swing weight);
+// float: m/s, the speed at which it planes on top of deep powder instead of ploughing through it.
 export const RIGS = Object.freeze({
- board: Object.freeze({ turn: 1, grip: 5, spin: 7, sidecut: 5, edgeRate: 5, edgeGrip: 28 }),
- ski: Object.freeze({ turn: 1.12, grip: 6.5, spin: 8, sidecut: 5.8, edgeRate: 12, edgeGrip: 32 }),
+ board: Object.freeze({
+  turn: 1, // dimensionless, low-speed pivot gain
+  spin: 7, // rad/s in the air
+  sidecut: 5.5, // m, carve radius at 90 degrees of edge
+  edgeRate: 2.2, // rad/s, tipping onto an edge
+  releaseRate: 4.5, // rad/s, flattening or rolling over
+  edgeGrip: 28, // m/s², sideways hold of a full edge on firm snow
+  skidGrip: 0.72, // 0..1 of edgeGrip once sliding
+  yawLag: 0.09, // s, swing weight
+  float: 9, // m/s, planes on deep powder
+ }),
+ ski: Object.freeze({
+  turn: 1.12, // dimensionless, low-speed pivot gain
+  spin: 8, // rad/s in the air
+  sidecut: 7.5, // m, carve radius at 90 degrees of edge
+  edgeRate: 3.6, // rad/s, tipping onto an edge
+  releaseRate: 5.5, // rad/s, flattening or rolling over
+  edgeGrip: 32, // m/s², sideways hold of a full edge on firm snow
+  skidGrip: 0.78, // 0..1 of edgeGrip once sliding
+  yawLag: 0.05, // s, swing weight
+  float: 13, // m/s, planes on deep powder
+ }),
 });
 
 // ---- fixed timestep ----
@@ -28,7 +53,7 @@ export const GRAVITY = 9.81;    // m/s², real gravity
 export const GRAVITY_GAIN = 1.6; // dimensionless, game-feel gain on gravity along the slope
 
 // ---- spray particles ----
-export const MAX_PARTICLES = 160; // particles alive at once, at most
+export const MAX_PARTICLES = 360; // particles alive at once, at most (deep powder throws a plume)
 
 // ---- input ----
 export const SWIPE_PX = 36; // CSS px a finger must move down to brake

@@ -10,6 +10,18 @@ import { cssRgba } from './look/look.js';
 import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
 import { TREE_FAR_M, TREE_HEIGHT_M } from './gl/tree-mesh.js'; // m: the sprites and the GPU trees share them
 
+const SPRAY_NEAR_SCALE = 0.6; // times the rider's px per m: spray between the camera and the rider grows no bigger
+// The rider sunk in powder (rider.sink): the snow line over the equipment and the mound of snow around it.
+const EQUIPMENT_BELOW_M = 0.35; // m (rider draw scale), how far the board or skis reach below the feet on the screen
+const SINK_SCREEN = 1.4;      // times rider.sink, how far up the screen the snow line moves (the camera looks down)
+const SUNK_MIN_PX = 0.6;      // px, less sink than this is not drawn
+const SUNK_CLIP_M = 6;        // m (rider draw scale), the clip rectangle's half size: all of the rider
+const COLLAR_HALF_M = 1.0;    // m, the snow mound's half-width
+const COLLAR_HEIGHT_M = 0.18; // m, its half-height on the screen with no sink
+const COLLAR_FULL_M = 0.15;   // m of sink at which the mound is fully opaque
+const COLLAR_RINGS = 3;       // ellipses in the mound
+const AIRBORNE_DRAW_M = 0.05; // m above the snow (view.drawn.z): in the air, not sunk
+
 const NS = RAY_SAMPLES;
 const MAX_RENDER_W = 360;     // render px, the low-res terrain render is at most this wide
 const CSS_PX_PER_RENDER_PX = 1.6; // CSS px of screen per render column
@@ -339,15 +351,48 @@ function sortTrees(buf) {
  }
 }
 
-// Snow spray particles, fading and growing as they age. spray: the Look's sprites.spray. view: its projection scratch.
+// Snow spray particles, fading and growing as they age (near the camera no bigger than SPRAY_NEAR_SCALE), each its
+// own size (p.r: a powder plume's puffs are bigger and fade slower, sim/particles.js). spray: the Look's
+// sprites.spray. view: its projection scratch.
 function drawSpray(ctx, camera, terrain, view, particles, spray) {
  const P = view.projA;
+ const most = camera.focalPx / camera.back * camera.pixelScale * SPRAY_NEAR_SCALE; // px per m: puffs nearer the camera
  for (const p of particles) {
   if (!projectInto(camera, p.x, p.y, terrain.height(p.x, p.y) + p.z, P)) continue;
   const k = p.t / p.life;
-  ctx.fillStyle = cssRgba(spray.rgb, spray.maxAlpha * (1 - k));
+  const r = p.r || 1;
+  const fade = r > 1 ? (1 - k) * (1 - k * 0.5) : 1 - k; // a plume hangs, then thins
+  ctx.fillStyle = cssRgba(spray.rgb, spray.maxAlpha * fade);
   ctx.beginPath();
-  ctx.arc(P.X, P.Y, Math.max(1, P.s * (0.2 + 0.5 * k)), 0, 7);
+  ctx.arc(P.X, P.Y, Math.max(1, Math.min(P.s, most) * r * (0.2 + 0.5 * k)), 0, 7);
+  ctx.fill();
+ }
+}
+
+// Sunk in powder (rider.sink, m): the snow hides the equipment and the boots. Clips what drawRider() draws below the
+// snow line (sink above the equipment's lowest point, in the rider's draw scale m px per m) and returns that line's
+// y (px), or null when nothing is sunk.
+function clipSunk(ctx, rider, m, inAir) {
+ const sink = inAir || rider.crashTimer > 0 ? 0 : rider.sink || 0;
+ if (sink * m < SUNK_MIN_PX) return null;
+ const line = (EQUIPMENT_BELOW_M - sink * SINK_SCREEN) * m;
+ ctx.beginPath();
+ ctx.rect(-SUNK_CLIP_M * m, -SUNK_CLIP_M * m, 2 * SUNK_CLIP_M * m, SUNK_CLIP_M * m + line);
+ ctx.clip();
+ return line;
+}
+
+// The powder around a sunk rider: a soft mound of snow along the cut line (y px, from clipSunk), in the spray's colour,
+// as COLLAR_RINGS nested ellipses, fainter outward.
+function drawCollar(ctx, look, m, y, sink) {
+ const sp = look.sprites.spray;
+ const a = Math.min(1, sink / COLLAR_FULL_M); // light powder: a dusting round the boots; deep: a mound
+ const ry = (COLLAR_HEIGHT_M + sink * 0.4) * m;
+ for (let k = COLLAR_RINGS; k >= 1; k--) {
+  const f = k / COLLAR_RINGS;
+  ctx.fillStyle = cssRgba(sp.rgb, a * (1.05 - f) * 0.9);
+  ctx.beginPath();
+  ctx.ellipse(0, y, COLLAR_HALF_M * m * f, ry * f, 0, 0, 7);
   ctx.fill();
  }
 }
@@ -380,6 +425,10 @@ function drawRiderOnSnow(ctx, view, scene, gR, dt) {
   ctx.rotate(rider.wipeoutSpin);
   ctx.translate(0, WIPEOUT_PIVOT * m);
  }
+ ctx.save();
+ const line = clipSunk(ctx, rider, m, jz > AIRBORNE_DRAW_M);
  drawRider(ctx, look, m, list);
+ ctx.restore();
+ if (line !== null) drawCollar(ctx, look, m, line, rider.sink);
  ctx.restore();
 }

@@ -19,7 +19,7 @@ async function ridden(id, opts = {}) {
 }
 
 describe('mode A is the camera as it was', () => {
- it('gives the same camera numbers as before the change (captured on main at CV1)', async () => {
+ it('gives the same camera numbers as before the change (captured on main with the camera modes, before the camera follows them)', async () => {
   const h = await load();
   h.place({ s: 500, vx: 0, vy: 8 });
   h.sim(1);
@@ -28,14 +28,14 @@ describe('mode A is the camera as it was', () => {
   // the tolerance is only for the rotated-map runs, which pass the numbers through a rotation
   const TOL = 1e-6;
   near(c.heading, 1.5706425099534858, TOL, 'heading');
-  near(c.height, 2584.7519554721403, TOL, 'height');
+  near(c.height, 2584.7587344788876, TOL, 'height');
   near(c.x, 597.7712975771643, TOL, 'x');
-  near(c.y, 490.79299366161484, TOL, 'y');
+  near(c.y, 490.77145411553727, TOL, 'y');
   near(c.focalPx, 396, TOL, 'focalPx');
   near(c.horizonPx, 73.92, TOL, 'horizonPx');
-  near(c.pitchPx, 173.4372163634107, TOL, 'pitchPx');
-  near(c.tilt, 0.4379727685944715, TOL, 'tilt');
-  near(c.slope, 0.22185547546349418, TOL, 'slope');
+  near(c.pitchPx, 173.46064741043995, TOL, 'pitchPx');
+  near(c.tilt, 0.4380319379051514, TOL, 'tilt');
+  near(c.slope, 0.22196187512797913, TOL, 'slope');
  });
 });
 
