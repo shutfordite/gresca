@@ -28,7 +28,7 @@ splits into G7a (this ADR and the pure `world/` half) and G7b (S4: the clipmap s
   world the loader built from the `gresca-map-1` file (ADR 0006: bicubic base plus the corridor detail), at the
   texel's world point. That is the surface the rider rides, so what is drawn is what is ridden at every level
   (point-sampled; the clipmap's morph hides the level seams as today). A pre-baked pyramid would only save the
-  `height()` calls (about 330,000 for the whole resident set, tens of ms) at the cost of 4 to 50 MB more file and a
+  `height()` calls (about 330,000 for the whole resident set: 50 ms in Node 22 for El Tarter's 80 tiles) at the cost of 4 to 50 MB more file and a
   second source of truth that a corridor refinement would contradict, so it is not worth a `gresca-map-2`.
 - **GPU sampling (G7b).** One R32F **2D texture array of 256 × 256 × 5** (a 4 × 4-tile ring per layer), addressed
   toroidally: texel (a, b) of level L lives at (a mod 256, b mod 256) of layer L, so moving the ring re-uploads only the
@@ -72,6 +72,7 @@ window's code under the CPU path; the GPU path never builds it. If the owner cho
 ## Consequences
 - G7b: the texture array, ring updates on tile crossings, slopes in the shader, `paint-window.js` removed from the
   GPU path, `gl-budget.js` computing from the rings, and a real-map `gl-smoke` scene (ROADMAP G7, "done when").
-- A ring move costs up to 4 tiles per level (16,384 `height()` calls at level 0); spread over frames if the iPad
-  shows a hitch, or in G8's worker.
+- A ring move costs up to 4 tiles per level (16,384 `height()` calls, about 2.5 ms in Node, at level 0); spread
+  over frames if the iPad shows a hitch, or in G8's worker. A lost context's re-bake is the 50 ms above.
+- Until G7b samples it, `height-tiles.js` is a pending root in `test/page.test.js` (not reached from `main.js`).
 - The CPU fallback still draws only the window; riding off it in CPU mode shows the horizon, as now.
