@@ -59,11 +59,12 @@ function saveCameraMode(env, index) {
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
  * requestAnimationFrame, setTimeout, cam (optional id: the camera mode to start in, ?cam=), HANGA, RiderAnim,
  * mapRotationRad (optional, rad counter-clockwise: places the procedural map at that heading, for the rotated-map
- * tests; default 0), map (optional: 'test' (default) builds the test slope, 'play' the steep play mountain; world/build.js MAPS), world (optional: a real map's world from
- * world/map-loader.js, which main.js loads before the game; replaces map), scene (optional name: open that scene after
- * the boot, src/scenes.js), renderer (optional: 'gl' draws the terrain on the GPU, view/renderer.js), THREE (the
- * three.js module, with renderer 'gl'), showFps (optional: the fps readout), now () -> ms (with showFps), warn
- * (optional: message -> nothing)}; localStorage and devicePixelRatio are read at each use.
+ * tests; default 0), map (optional: 'test' (default) builds the test slope, 'play' the steep play mountain;
+ * world/build.js MAPS), world (optional: a real map's world from world/map-loader.js, which main.js loads before the
+ * game; replaces map), scene (optional name: open that scene after the boot, src/scenes.js), renderer (optional:
+ * 'gl' draws the terrain on the GPU, view/renderer.js), THREE (the three.js module, with renderer 'gl'), showFps
+ * (optional: the fps readout), now () -> ms (with showFps), warn (optional: message -> nothing)}; localStorage and
+ * devicePixelRatio are read at each use.
  * Every piece of state lives in the objects made here; the modules hold none (docs/adr/0002). Returns the frozen
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
  */
