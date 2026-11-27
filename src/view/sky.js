@@ -1,5 +1,5 @@
 // The sky (the Look's sky and fog): the gradient above the horizon, the sun disc at the map's sun azimuth, the fog.
-import { FOV, RAY_FAR } from '../core/config.js';
+import { RAY_FAR } from '../core/config.js';
 import { camCompass } from './camera.js';
 
 /** 0..1, how much fog at z m from the camera (fog: the Look's fog; full at the far edge of the render). */
@@ -21,7 +21,7 @@ export function sunDisc(sky, camera, W, Hh, frame, out = {}) {
  const az = sunAzimuthDeg(sky, frame);
  const rel = ((az - camCompass(camera) + 540) % 360 - 180) * Math.PI / 180;
  const r = W * S.radiusFracOfWidth;
- const X = (rel / FOV + 0.5) * W;
+ const X = (rel / camera.fov + 0.5) * W;
  const Y = (camera.horizonPx - camera.pitchPx) * camera.pixelScale - S.aboveHorizonFrac * Hh;
  out.X = X;
  out.Y = Y;

@@ -72,7 +72,7 @@ describe('tree instances', () => {
 });
 
 describe('tree culling', () => {
- const camera = { x: 0, y: 0, dirX: 1, dirY: 0 };
+ const camera = { x: 0, y: 0, dirX: 1, dirY: 0, fov: FOV };
  const mk = (pts) => buildTreeInstances(pts.map(([x, y]) => ({ x, y })), flat);
  const run = (inst) => {
   const outTree = new Float32Array(inst.length / INSTANCE_STRIDE * 4);
@@ -106,7 +106,7 @@ describe('tree culling', () => {
 
  it('handles a camera turned any way (headings are world headings)', () => {
   const inst = mk([[0, 80], [0, -80], [80, 0], [-80, 0]]);
-  const cam = { x: 0, y: 0, dirX: 0, dirY: 1 };
+  const cam = { x: 0, y: 0, dirX: 0, dirY: 1, fov: FOV };
   const out = new Float32Array(16);
   const style = new Float32Array(8);
   assert.equal(cullTrees(inst, cam, out, style), 1);

@@ -71,6 +71,7 @@ const env = Object.freeze({
  THREE,
  map: query('map') === 'test' || query('scene') ? 'test' : 'play',
  world, // a loaded real map (?map=<id>), or null
+ cam: query('cam'), // ?cam=<id>: the camera mode to start in (A, B or C)
  showFps: query('fps') === '1',
  now: () => performance.now(),
  warn: (message) => console.warn(message),
