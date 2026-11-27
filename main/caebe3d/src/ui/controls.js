@@ -13,6 +13,7 @@ const GESTURE_TEXT = Object.freeze({
  [GESTURES.DRAG_BOTH_UP_AIR]: 'Swipe up with a finger on each half in the air and keep both down',
  [GESTURES.DRAG_BOTH_DOWN_AIR]: 'Swipe down with a finger on each half in the air and keep both down',
  [GESTURES.TAP_PAUSE]: 'Tap the pause button, top right',
+ [GESTURES.TAP_RIDER]: 'Tap the rider, bottom centre',
 });
 
 // Gesture diagrams: a screen outline (48 x 64) with the touched area filled. Colours come from CSS classes (var(--…)).
@@ -32,6 +33,7 @@ const SWIPE_DOWN_LEFT = '<circle class="ctl-hit" cx="15" cy="18" r="5"/>' +
 const SWIPE_DOWN_RIGHT = '<circle class="ctl-hit" cx="33" cy="18" r="5"/>' +
  '<path class="ctl-arrow" d="M33 25v21M27 40l6 7 6-7"/>';
 const PAUSE_BUTTON = '<rect class="ctl-hit" x="28" y="7" width="12" height="12" rx="3"/>';
+const RIDER_SPOT = '<circle class="ctl-hit" cx="24" cy="46" r="6"/>';
 const DIAGRAMS = Object.freeze({
  [GESTURES.HOLD_LEFT]: SCREEN + LEFT_HALF,
  [GESTURES.HOLD_RIGHT]: SCREEN + RIGHT_HALF,
@@ -41,6 +43,7 @@ const DIAGRAMS = Object.freeze({
  [GESTURES.DRAG_BOTH_UP_AIR]: SCREEN + SWIPE_UP_LEFT + SWIPE_UP_RIGHT,
  [GESTURES.DRAG_BOTH_DOWN_AIR]: SCREEN + SWIPE_DOWN_LEFT + SWIPE_DOWN_RIGHT,
  [GESTURES.TAP_PAUSE]: SCREEN + PAUSE_BUTTON,
+ [GESTURES.TAP_RIDER]: SCREEN + RIDER_SPOT,
 });
 
 const ESCAPES = Object.freeze({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' });
