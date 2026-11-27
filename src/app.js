@@ -79,8 +79,8 @@ export function createGame(env) {
  env.window.addEventListener('resize', resize);
  resize();
 
- const camera = createCamera(mapFrame);
  const camMode = { index: startCameraMode(env) }; // which CAM_MODES entry the camera frames the rider with
+ const camera = createCamera(mapFrame, CAM_MODES[camMode.index]);
  const rider = createRider();
  const session = createSession();
  const input = createInput();
@@ -168,7 +168,7 @@ export function createGame(env) {
   resetDerived(rider);
   reseed(rng);
   clearTracks(view);
-  resetCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame);
+  resetCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame, CAM_MODES[camMode.index]);
   session.phase = 'run';
   ui.msg.hidden = true;
   timestep.acc = 0;
@@ -231,7 +231,7 @@ export function createGame(env) {
   rider.z = rider.vz = 0;
   rider.grind = null;
   spray.particles.length = 0;
-  menuCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame);
+  menuCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame, CAM_MODES[camMode.index]);
   ui.msgT.textContent = world.layout ? MENU_TEXT : mapMenuText(world);
   ui.go.textContent = 'Drop in';
   ui.go.hidden = false;

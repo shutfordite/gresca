@@ -7,7 +7,6 @@ import { PROJECT_GLSL, NEAR_M } from './gl-projection.js';
 import { FOG_GLSL, snowLook, sunOnGrid } from './snow-material.js';
 import { SUN_VISIBILITY_GLSL, SUN_LIGHT_GLSL } from './sun-visibility.js';
 import { sunAzimuthDeg } from '../sky.js';
-import { FOV } from '../../core/config.js';
 
 const DEG = Math.PI / 180;
 
@@ -90,12 +89,12 @@ export function buildTreeInstances(treeArr, terrain) {
 /**
  * Copies the trees in view from instances to the front of outTree (x, y, z, scale per tree) and outStyle (yaw, tone),
  * and returns how many. In view: not behind the near plane, not past TREE_FAR_M (they have shrunk to nothing there)
- * and inside the field of view across, each with TREE_MESH.RADIUS_M of margin. camera: {x, y, dirX, dirY}. Allocates
- * nothing.
+ * and inside the field of view across, each with TREE_MESH.RADIUS_M of margin. camera: {x, y, dirX, dirY, fov (rad)}.
+ * Allocates nothing.
  */
 export function cullTrees(instances, camera, outTree, outStyle) {
  const R = TREE_MESH.RADIUS_M;
- const half = FOV / 2;
+ const half = camera.fov / 2;
  const tanHalf = half < Math.PI / 2 ? Math.tan(half) : Infinity;
  let n = 0;
  for (let o = 0; o < instances.length; o += INSTANCE_STRIDE) {

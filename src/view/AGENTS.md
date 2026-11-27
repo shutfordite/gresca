@@ -28,7 +28,7 @@
 ## Code map
 | To change | Edit | Tests |
 |---|---|---|
-| Camera follow, tilt, compass, the swing to look back (`InputState.lookBack`) | `camera.js` | `camera`, `look` |
+| Camera follow, tilt, compass, the swing to look back (`InputState.lookBack`), the framing eased to the camera mode (`CAM_MODES`: `back`, `rise`, `fov`, `focalFrac`, `horizonFrac` live on the camera; renderers read `camera.fov`, never `FOV`) | `camera.js` | `camera`, `camera-follows-mode`, `look` |
 | Terrain render (CPU), trees, rider placement (sunk in powder: the snow line and its mound), spray puffs; the stage timer `view.timer` | `draw.js`, `view-state.js` | `features`, `look`, `timer` |
 | Which renderer draws (GPU by default, `?renderer=cpu`) and the fallback; the `?fps=1` readout | `renderer.js`, `fps-meter.js` (ADR 0008) | `gl-terrain`, `timer` |
 | The GPU terrain and objects (three.js in `vendor/three/`): projection, clipmap mesh, baked textures, snow and sky shaders, horizon, sun and rider shadows (E2), texture budget, instanced trees (E3a), park mesh and sun visibility (E3b), lost context, the track ribbon | `gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `sun-shadow.js`, `rider-shadow.js`, `gl-budget.js`, `tree-mesh.js`, `park-mesh.js`, `sun-visibility.js`, `context-loss.js`, `track-ribbon.js`) | `gl-terrain`, `gl-shadow`, `gl-resilience`, `gl-trees`, `gl-park`, `track-trail`; in a browser `npm run smoke:gl` (CI `gl-smoke`) |
@@ -39,6 +39,7 @@
 | Sky, sun, fog | `sky.js` | `look` |
 | Flags, poles, rails on the CPU raycaster and after a lost GL context | `sprites.js` | `park` |
 | A real run's edge poles: in its difficulty colour, orange-topped on the right going down (CPU `drawPistePoles`, GPU `gl/park-mesh.js`; colours `sprites.pistePole` in the Look) | `piste-poles.js` | `real-map`, `gl-park` |
+| Where the rider is on the screen, in CSS px (the box a tap on the rider must hit; `app.js` hands it to input, which pads it) | `touch-box.js` | `touch-box` |
 | Rider pose input and body motion (S3) | `rider-animation.js` (with `art/gresca-rider-anim.js`) | `rider-anim`, `rider-lean`, `rider-twist`, `rider-brake-twist`, `rider-flip` |
 | Drawing the rider (S3) | `rider-draw.js` | `rider-anim` |
 | What tests can read of the view (`Gresca.debug`) | `fields.js` | `facade`, `look` |

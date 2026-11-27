@@ -1,5 +1,4 @@
 // The camera: its state, following the rider (heading, height, slope), the partial slope-follow tilt, compass heading.
-import { CAM_BACK, CAM_HEIGHT, HORIZON_FRAC } from '../core/config.js';
 import { compassDeg } from '../world/map-frame.js';
 
 const START_HEADING = 1.57; // rad on the map's grid (clockwise from across, MapFrame): just short of straight down
@@ -12,46 +11,78 @@ const SLOPE_MIN = -0.3;     // m/m, the slope estimate's range
 const SLOPE_MAX = 0.8;
 const MIN_CLEARANCE_M = 2.5; // m, the camera stays this far above the ground under it
 const JUMP_FOLLOW = 0.5;    // dimensionless, share of the rider's jump height the camera rises with
-const FOCAL_FRAC = 0.75;    // focal length as a fraction of the render height
+const MODE_TAU = 0.1;       // s, time constant of the ease to a new camera mode (98% there in 0.4 s)
+const MODE_DONE = 1e-3;     // a framing value this close to the mode's snaps to it (under a pixel of focal length)
 const TRACK_SPEED = 1.5;    // m/s, faster than this the camera turns toward the direction of travel; slower, it holds
 const LOOK_TAU = 0.35;       // s, time constant of the swing to look back uphill and of the swing home again
 const LOOK_DONE = 1e-3;     // dimensionless, a look blend this close to 0 or 1 snaps to it
 const AIRBORNE_Z = 0.05;    // m above the snow, higher counts as in the air
 const R2D = 180 / Math.PI;
+// The framing the camera carries (eased to the mode): [camera field, CAM_MODES field]. See createCamera().
+const MODE_FIELDS = Object.freeze([
+ Object.freeze(['back', 'back']),
+ Object.freeze(['rise', 'height']),
+ Object.freeze(['fov', 'fov']),
+ Object.freeze(['focalFrac', 'focalFrac']),
+ Object.freeze(['horizonFrac', 'horizonFrac']),
+]);
 
 /**
  * A new camera, in world metres and radians (docs/adr/0005-enu-frame.md): heading (rad, counter-clockwise from east),
- * height (m altitude), x, y (m, CAM_BACK behind the rider), dirX, dirY (unit view direction), renderW, renderH
+ * height (m altitude), x, y (m, back behind the rider), dirX, dirY (unit view direction), renderW, renderH
  * (low-res render px), pixelScale (screen px per render px), focalPx, horizonPx (render px), slope (m/m ahead,
  * full-tilt tan), pitchPx (render px), tilt (tan, after partial follow and the clamp), look (0..1, how far the swing
- * to look back uphill has got), lookOffset (rad the view is turned from the follow heading, 0..PI). frame: the map's
- * MapFrame.
+ * to look back uphill has got), lookOffset (rad the view is turned from the follow heading, 0..PI). The framing, which
+ * eases to the camera mode (CAM_MODES): back (m behind the rider), rise (m above the rider's ground), fov (rad),
+ * focalFrac and horizonFrac (of the render height). frame: the map's MapFrame. mode: the CAM_MODES entry to start in.
  */
-export function createCamera(frame) {
+export function createCamera(frame, mode) {
  const dir = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the map until the first frame sets it
  return {
   heading: frame.headingToWorld(START_HEADING), height: 0, x: 0, y: 0, dirX: dir.x, dirY: dir.y, renderW: 1,
   renderH: 1, pixelScale: 1, look: 0, lookOffset: 0,
   focalPx: 1, horizonPx: 0, slope: START_SLOPE, pitchPx: 0, tilt: START_SLOPE,
+  back: mode.back, rise: mode.height, fov: mode.fov, focalFrac: mode.focalFrac, horizonFrac: mode.horizonFrac,
  };
 }
 
-/** Puts the camera behind a rider at the top of the run: heading down the map (frame), groundM (m) the ground. */
-export function resetCamera(camera, groundM, frame) {
+/** Sets the camera's framing to mode (a CAM_MODES entry) at once, with no ease. */
+export function snapMode(camera, mode) {
+ for (let i = 0; i < MODE_FIELDS.length; i++) camera[MODE_FIELDS[i][0]] = mode[MODE_FIELDS[i][1]];
+}
+
+// Eases the framing toward mode over MODE_TAU (frame-rate independent): no snap when the player switches views.
+function easeMode(camera, mode, dt) {
+ const k = 1 - Math.exp(-dt / MODE_TAU);
+ for (let i = 0; i < MODE_FIELDS.length; i++) {
+  const own = MODE_FIELDS[i][0];
+  const wanted = mode[MODE_FIELDS[i][1]];
+  const gap = wanted - camera[own];
+  camera[own] = Math.abs(gap) < MODE_DONE ? wanted : camera[own] + gap * k;
+ }
+}
+
+/**
+ * Puts the camera behind a rider at the top of the run: heading down the map (frame), groundM (m) the ground, framed
+ * as mode (a CAM_MODES entry).
+ */
+export function resetCamera(camera, groundM, frame, mode) {
+ snapMode(camera, mode);
  camera.heading = frame.headingToWorld(START_HEADING);
  camera.look = camera.lookOffset = 0;
  camera.slope = START_SLOPE;
- camera.height = groundM + CAM_HEIGHT + camera.slope * CAM_BACK;
+ camera.height = groundM + camera.rise + camera.slope * camera.back;
 }
 
 /**
  * Puts the camera over the top of the run for the menu backdrop, heading down the map (frame), keeping the slope
- * estimate. groundM: m altitude.
+ * estimate. groundM: m altitude. mode: the CAM_MODES entry to frame it with.
  */
-export function menuCamera(camera, groundM, frame) {
+export function menuCamera(camera, groundM, frame, mode) {
+ snapMode(camera, mode);
  camera.heading = frame.headingToWorld(START_HEADING);
  camera.look = camera.lookOffset = 0;
- camera.height = groundM + CAM_HEIGHT;
+ camera.height = groundM + camera.rise;
 }
 
 /** Camera heading in compass degrees (0..360, clockwise from north): the art spec's unit. */
@@ -66,11 +97,11 @@ export function camCompass(camera) {
 // from a camera rel metres above them, and look down by (fullPitch - partialPitch) less. Level ground: no change.
 /**
  * The view tilt (tan). s: full-tilt slope (tan); rel: m, camera height above the rider's ground; drop: m, how far the
- * ground lookAheadM ahead lies below the rider's. framing: the Look's camera. The rider clamp is applied in
- * followRider(), in render pixels.
+ * ground lookAheadM ahead lies below the rider's. framing: the Look's camera. back: m, the camera's distance behind
+ * the rider. The rider clamp is applied in followRider(), in render pixels.
  */
-export function cameraTilt(framing, s, rel, drop) {
- const D = CAM_BACK + framing.lookAheadM;
+export function cameraTilt(framing, s, rel, drop, back) {
+ const D = back + framing.lookAheadM;
  const level = -Math.atan(rel / D) * R2D;
  const full = -Math.atan((rel + drop) / D) * R2D;
  const part = framing.partialPitchDeg(level, full); // negative = looking down
@@ -86,9 +117,12 @@ const ease = (t) => t * t * (3 - 2 * t);
  * nose: when riding switch it still looks down the slope, and it ignores the board while it spins in the air.
  * lookBack (0..1, InputState.lookBack, a view request): above 0 the camera swings round to face uphill (heading + PI),
  * placed downhill of the rider so it looks back at them and the slope above; it eases there and back with
- * LOOK_TAU. framing: the Look's camera. Returns the ground height under the rider (m). Mutates camera.
+ * LOOK_TAU. framing: the Look's camera. mode: the CAM_MODES entry to frame the rider with; the camera eases to it
+ * (MODE_TAU). Returns the ground height under the rider (m). Mutates camera.
  */
-export function followRider(camera, terrain, framing, pose, rider, renderW, renderH, screenW, dt, lookBack = 0) {
+export function followRider(camera, terrain, framing, pose, rider, renderW, renderH, screenW, dt, lookBack, mode) {
+ easeMode(camera, mode, dt);
+ const back = camera.back;
  const x = pose.x;
  const y = pose.y;
  const jz = pose.z;
@@ -110,22 +144,22 @@ export function followRider(camera, terrain, framing, pose, rider, renderW, rend
  // and SLOPE_AHEAD_M ahead (the slope the camera height follows).
  const dx = Math.cos(camera.heading);
  const dy = Math.sin(camera.heading);
- const px = x - dx * CAM_BACK;
- const py = y - dy * CAM_BACK;
+ const px = x - dx * back;
+ const py = y - dy * back;
  const gR = terrain.height(x, y);
  const ahead = (gR - terrain.height(x + dx * SLOPE_AHEAD_M, y + dy * SLOPE_AHEAD_M)) / SLOPE_AHEAD_M;
  camera.slope += (Math.max(SLOPE_MIN, Math.min(SLOPE_MAX, ahead)) - camera.slope) * Math.min(1, dt * SLOPE_RATE);
- const overRider = gR + CAM_HEIGHT + camera.slope * CAM_BACK + jz * JUMP_FOLLOW;
+ const overRider = gR + camera.rise + camera.slope * back + jz * JUMP_FOLLOW;
  const wantH = Math.max(overRider, terrain.height(px, py) + MIN_CLEARANCE_M);
  camera.height += (wantH - camera.height) * Math.min(1, dt * HEIGHT_RATE);
- const hz = renderH * HORIZON_FRAC;
- const sc = renderH * FOCAL_FRAC;
+ const hz = renderH * camera.horizonFrac;
+ const sc = renderH * camera.focalFrac;
  // View tilt: partial slope follow, then clamp so the rider stays riderMarginDeg inside the bottom of the frame.
  const LA = framing.lookAheadM;
  const yMax = renderH - sc * Math.tan(framing.riderMarginDeg * Math.PI / 180);
  const rel = camera.height - gR;
- const tilt = Math.max(cameraTilt(framing, camera.slope, rel, gR - terrain.height(x + dx * LA, y + dy * LA)),
-  (rel / CAM_BACK * sc + hz - yMax) / sc);
+ const tilt = Math.max(cameraTilt(framing, camera.slope, rel, gR - terrain.height(x + dx * LA, y + dy * LA), back),
+  (rel / back * sc + hz - yMax) / sc);
  camera.tilt = tilt;
  camera.x = px;
  camera.y = py;

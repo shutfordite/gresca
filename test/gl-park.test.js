@@ -14,6 +14,7 @@ import { createHangaLook } from '../src/view/look/hanga.js';
 import { TREE_MESH } from '../src/view/gl/tree-mesh.js';
 import { SUN_SHADOW } from '../src/view/gl/sun-shadow.js';
 import { createMapFrame } from '../src/world/map-frame.js';
+import { FOV } from '../src/core/config.js';
 import { createWorld, buildWorld } from '../src/world/build.js';
 import { MAP_ROTATION_DEG } from './harness.js';
 
@@ -197,7 +198,7 @@ for (const [name, g] of Object.entries(maps)) {
    const t = { x: 0, y: 0 };
    course.point(k.s - 59, 0, t);
    const len = Math.hypot(t.x - p.x, t.y - p.y);
-   const camera = { x: p.x, y: p.y, dirX: (t.x - p.x) / len, dirY: (t.y - p.y) / len };
+   const camera = { x: p.x, y: p.y, dirX: (t.x - p.x) / len, dirY: (t.y - p.y) / len, fov: FOV };
    const n = cullPark(mesh.features, mesh.indices, camera, out);
    assert.ok(n > 0 && n < mesh.indices.length, 'some, not all: ' + n);
    const drawn = new Set(Array.from(out.subarray(0, n)));
@@ -212,7 +213,7 @@ for (const [name, g] of Object.entries(maps)) {
   });
 
   it('copies whole triangles and allocates nothing: the output is the caller\'s buffer', () => {
-   const camera = { x: 0, y: 0, dirX: 1, dirY: 0 };
+   const camera = { x: 0, y: 0, dirX: 1, dirY: 0, fov: FOV };
    const before = out.buffer;
    const n = cullPark(mesh.features, mesh.indices, camera, out);
    assert.equal(n % 3, 0);
@@ -263,7 +264,7 @@ describe('park mesh on the GPU', () => {
   const p = { x: 0, y: 0 };
   course.point(course.kickers[2].s - 50, 0, p);
   const down = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the piste
-  const camera = { x: p.x, y: p.y, dirX: down.x, dirY: down.y };
+  const camera = { x: p.x, y: p.y, dirX: down.x, dirY: down.y, fov: FOV };
   const first = again.update(camera);
   for (let i = 0; i < 20; i++) again.update({ ...camera, x: camera.x + i });
   assert.ok(first > 0);
@@ -276,7 +277,7 @@ describe('park mesh on the GPU', () => {
   const { THREE } = fakeThree();
   let mesh = null;
   const park = createParkMesh(THREE, { add: (m) => { mesh = m; } }, shared, course, terrain, look, frame);
-  assert.equal(park.update({ x: 1e6, y: 1e6, dirX: 1, dirY: 0 }), 0);
+  assert.equal(park.update({ x: 1e6, y: 1e6, dirX: 1, dirY: 0, fov: FOV }), 0);
   assert.equal(mesh.geometry.drawRange.count, 0);
  });
 });

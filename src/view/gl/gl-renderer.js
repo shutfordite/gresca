@@ -15,7 +15,7 @@ import { createTreeMesh, treeLook } from './tree-mesh.js';
 import { createParkMesh } from './park-mesh.js';
 import { sunVisibilityGrid } from './sun-visibility.js';
 import { checkTextureBudget, addGpuBytes } from './gl-budget.js';
-import { FOV } from '../../core/config.js';
+import { CAM_MODES } from '../../core/config.js';
 
 const MAX_ANISOTROPY = 8; // the detail texture's anisotropic filtering, at most (grazing views of the ripples)
 
@@ -93,7 +93,7 @@ function sharedUniforms(THREE, tex, view, look) {
   uCam: { value: new THREE.Vector3() },
   uDir: { value: new THREE.Vector2() },
   uScreen: { value: new THREE.Vector4() },
-  uClip: { value: new THREE.Vector3(FOV, NEAR_M, FAR_M) },
+  uClip: { value: new THREE.Vector3(CAM_MODES[0].fov, NEAR_M, FAR_M) },
   uCamGrid: { value: new THREE.Vector2() },
   uGridU: { value: new THREE.Vector2(f.ux, f.uy) },
   uGridV: { value: new THREE.Vector2(f.vx, f.vy) },
@@ -227,6 +227,7 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   shared.uCam.value.set(p.x, p.y, p.height);
   shared.uDir.value.set(p.dirX, p.dirY);
   shared.uScreen.value.set(p.focalC, p.rowC, p.W, p.Hh);
+  shared.uClip.value.x = p.fov; // the camera mode's field of view (rad)
   v.mapFrame.toGrid(p.x, p.y, at);
   shared.uCamGrid.value.set(at.u, at.v);
   for (let level = 0; level < levels.length; level++) {
