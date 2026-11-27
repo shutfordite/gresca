@@ -13,4 +13,5 @@
 |---|---|---|
 | Which keys and gestures do what (the one table) | `bindings.js` | `bindings`, `controls` |
 | Touch and key controls; flips in the air (`InputState.flip`, `setAirborne`); look back | `input.js` (logic), `bind-input.js` (DOM) | `features`, `sim`, `contracts`, `bindings`, `air-controls` |
+| Tap the rider (and the `c` key) for the next camera view: a touch that starts on the rider's box does not steer; not part of `InputState`, `bind-input.js` hands it to the game's `cycleCamera()` through `riderBox` and `onCamera`. Numbers (250 ms, 12 px, 64 px box) are on the `camera` touch row | `bindings.js`, `input.js` (`onRider`, `pointerUp`'s result), `bind-input.js` | `tap-rider`, `bindings`, `controls` |
 | What tests can read of input | `fields.js` | `facade` |

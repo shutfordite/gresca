@@ -1,5 +1,4 @@
 // Sprites on the 3D view: project() to the screen, flags and poles at the kickers and rails, rails and boxes.
-import { FOV } from '../core/config.js';
 import { PISTE_POLE } from './piste-poles.js';
 
 const NEAR_M = 3;          // m, nearer than this along the view is not drawn
@@ -30,9 +29,9 @@ export function projectInto(camera, wx, wy, h, out) {
  if (f < NEAR_M) return false;
  const r = ox * camera.dirY - oy * camera.dirX; // m to the right of the view (clockwise of it)
  const p = Math.atan2(r, f);
- if (Math.abs(p) > FOV / 2 + FOV_MARGIN) return false;
+ if (Math.abs(p) > camera.fov / 2 + FOV_MARGIN) return false;
  const kx = camera.pixelScale;
- out.X = (0.5 + p / FOV) * camera.renderW * kx;
+ out.X = (0.5 + p / camera.fov) * camera.renderW * kx;
  out.Y = ((camera.height - h) / f * camera.focalPx + camera.horizonPx - camera.pitchPx) * kx;
  out.s = camera.focalPx / f * kx;
  out.f = f;
