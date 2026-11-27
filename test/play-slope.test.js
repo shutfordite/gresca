@@ -96,7 +96,7 @@ describe('the play mountain course', () => {
   assert.equal(play.raw.world.groomed(mid.x, mid.y), 255);
  });
 
- it('has no kickers: its jumps are snow in the features layer (K1), and its rails and boxes are the jib section', () => {
+ it('has no kickers: its jumps are snow in the features layer (K1); its rails and boxes are the jib', () => {
   assert.equal(c.kickers.length, 0);
   assert.equal(play.raw.world.rampHeight(c.point(900, 0).x, c.point(900, 0).y), 0);
   assert.ok(play.raw.world.rails.length >= 5);
@@ -117,7 +117,7 @@ describe('steepness', () => {
   const park = [];
   for (let y = 360; y <= 2000; y += 4) park.push(rowSlope(play, y));
   park.sort((a, b) => a - b);
-  // the median row is the pitch itself; the rows on a jump's takeoff and landing are steeper, so only the median is held
+  // the median row is the pitch itself; rows on a jump's takeoff and landing are steeper, so only the median is held
   assert.ok(park[park.length >> 1] >= 3 && park[park.length >> 1] <= 11, 'median ' + park[park.length >> 1].toFixed(1));
   const finish = [];
   for (let y = 2150; y <= 2230; y += 4) finish.push(rowSlope(play, y));

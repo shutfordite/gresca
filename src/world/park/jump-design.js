@@ -19,7 +19,7 @@ const MID = 0.5;                   // 0..1, where in each range the size's nomin
 const LIP_AT = 0.8;                // 0..1, where in its range a jump's lip height and angle sit by default: a tall,
                                    // steep lip ...
 const LAND_AT = 0.2;               // ... over a landing angle (so a knuckle height) near the low end
-const TAKEOFF_RUN = 2.5;           // takeoff length as a multiple of 2h / m: the gentlest cubic that stays above the snow
+const TAKEOFF_RUN = 2.5;           // takeoff length as a multiple of 2h / m: a cubic that stays above the snow
 const SEARCH_STEPS = 40;           // bisection halvings (to far below a millimetre)
 const FLIGHT_STEP_M = 0.02;        // m of s, the trajectory's marching step
 const FLIGHT_MAX_M = 120;          // m of s, flights longer than this count as off the end
@@ -47,7 +47,10 @@ function jumpWith(size, slope, tableM, landingM, at, s, d, speed) {
  const lipAngle = lerp(row.lipAngle, at.lip);
  const landAngle = lerp(row.landAngle, at.land);
  const drop = Math.tan(landAngle) - slope; // m/m, how much steeper than the base snow the knuckle falls
- if (!(drop > 0)) throw new Error('jump ' + size + ': a ' + (landAngle / DEG).toFixed(0) + ' degree landing is not steeper than a ' + (Math.atan(slope) / DEG).toFixed(0) + ' degree slope');
+ if (!(drop > 0)) {
+  const land = (landAngle / DEG).toFixed(0);
+  throw new Error('jump ' + size + ': a ' + land + ' degree landing is not steeper than the ' + slope + ' m/m slope');
+ }
  const lipSlope = Math.tan(lipAngle) + slope; // m/m, the lip's slope relative to the base snow
  return {
   s,
@@ -132,5 +135,5 @@ export function nominalSpeed(size, slope) {
  return solveDecreasing(f, SPEED_RANGE.min, SPEED_RANGE.max);
 }
 
-/** The size table's row for a size: {lip, lipAngle, table, landAngle, landing, width, isGap}, ranges as [least, most]. */
+/** The size table's row for a size: {lip, lipAngle, table, landAngle, landing, width, isGap}; ranges [least, most]. */
 export const sizeSpec = (size) => SIZE_TABLE[size];

@@ -16,7 +16,7 @@ export const BOX_SHAPES = Object.freeze(['flat', 'down', 'kinked', 'rainbow']);
 const TOP_M = 1.5;               // m, the highest a top may be above the snow (the roadmap: 0.3 to 1.5 m high)
 const LOW_M = 0.3;               // m, the lowest
 const DOWN_SLOPE = 0.4;          // m/m, how steeply a down segment falls in the world (about 22 degrees)
-const DOWN_LEAST_M = 0.15;       // m/m, the least a down segment falls relative to the snow, so it still reads as a kink
+const DOWN_LEAST_M = 0.15;       // m/m, the least a down segment falls relative to the snow (it must read as a kink)
 const ARCH_M = 0.7;              // m, how high a rainbow rises above its ends
 const BEND_SHARE = 0.15;         // the sideways swing of a C or S rail, as a share of its length
 const BEND_POINTS = 33;          // points along a bent or arched line (an arc is sampled, not kinked)
@@ -85,7 +85,9 @@ function placeInWindow(points) {
 function lengthOf(points) {
  let sum = 0;
  for (let i = 1; i < points.length; i++) {
-  sum += Math.hypot(points[i].a - points[i - 1].a, points[i].lateral - points[i - 1].lateral, points[i].h - points[i - 1].h);
+  const a = points[i - 1];
+  const b = points[i];
+  sum += Math.hypot(b.a - a.a, b.lateral - a.lateral, b.h - a.h);
  }
  return sum;
 }

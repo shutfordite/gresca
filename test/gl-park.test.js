@@ -194,7 +194,8 @@ for (const [name, g] of Object.entries(maps)) {
   };
 
   it('keeps every feature clearly in view and drops those behind the camera', () => {
-   const k = course.kickers[1] || { s: course.rails[4].s0 + 60 }; // a kicker, or on the play mountain the middle row of the jib (the camera 60 m before it)
+   // a kicker, or on the play mountain the middle row of the jib (the camera 60 m before it)
+   const k = course.kickers[1] || { s: course.rails[4].s0 + 60 };
    const p = { x: 0, y: 0 };
    course.point(k.s - 60, 0, p);
    const t = { x: 0, y: 0 };

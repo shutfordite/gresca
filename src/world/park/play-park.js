@@ -6,7 +6,7 @@
 import { designJump } from './jump-design.js';
 import { railLine } from './rail-shapes.js';
 
-// The jump lines: [y of the lip (m), size, speed (m/s) a rider has at the lip], the speed measured riding the centreline
+// The jump lines: [y of the lip (m), size, speed (m/s) a rider has at the lip], the speed measured riding the centre
 // with no brake (test/park-play.test.js keeps them honest). The speeds climb along a line as the rider settles into its
 // pitch, so each jump is sized for its own.
 const JUMP_LINES = Object.freeze([

@@ -43,7 +43,7 @@ export function createWorld({ rotationRad = 0, map = 'test' } = {}) {
  const frame = createMapFrame({ rotation: rotationRad });
  const at = { u: 0, v: 0 }; // scratch for groomed(): world to grid
  // The procedural map's terrain (world/terrain.js): the base layer, the H grid (1 m cells) placed by frame, and for a
- // map with a park (layout.park) the features layer, its jumps stamped on top of the base by buildWorld() (world/park/);
+ // map with a park (layout.park) the features layer, its jumps stamped on the base by buildWorld() (world/park/);
  // sculpt and detail are empty. Groomed is the M mask of the grid cell containing world (x,y), 0..1. Everything
  // outside this file reads the ground through `terrain`, never H or M.
  const base = Terrain.grid(H, W, Hm, 1, frame);

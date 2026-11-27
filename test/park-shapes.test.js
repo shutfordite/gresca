@@ -28,7 +28,8 @@ describe('a jump is sized so a rider at its design speed lands in the middle of 
    assert.ok(x >= knuckle && x <= bottom, size + ' at ' + speed.toFixed(1) + ' m/s lands at ' + x.toFixed(1) +
     ' m, the landing is ' + knuckle.toFixed(1) + ' to ' + bottom.toFixed(1));
    const middle = knuckle + jump.landing.length / 2;
-   assert.ok(Math.abs(x - middle) <= MID_TOL * jump.landing.length, 'lands ' + (x - middle).toFixed(1) + ' m from the middle');
+   const off = Math.abs(x - middle);
+   assert.ok(off <= MID_TOL * jump.landing.length, 'lands ' + off.toFixed(1) + ' m from the middle');
   });
 
   it(size + ': its dimensions are the roadmap\'s size table', () => {
@@ -78,7 +79,8 @@ describe('the snow of a jump, above the base snow', () => {
  it('rises from the base snow to the lip height, with the lip\'s angle above the horizontal', () => {
   assert.equal(shapeAt(jump, slope, -shape.back - 1).h, 0);
   assert.ok(Math.abs(shapeAt(jump, slope, 0).h - jump.takeoff.height) < 1e-9, 'the lip');
-  const rise = shapeAt(jump, slope, -1e-9).dhdx; // m/m above the base (the takeoff's end), so the world's slope is rise - slope
+  // m/m above the base at the takeoff's end, so the slope in the world is rise - slope
+  const rise = shapeAt(jump, slope, -1e-9).dhdx;
   assert.ok(Math.abs(Math.atan(rise - slope) - jump.takeoff.angle) < 1e-6, 'lip angle');
  });
 
@@ -127,7 +129,7 @@ function half(jump) {
 }
 
 // The kinks of a line (vertices where its slope in the profile changes by more than KINK_RAD) and its length.
-const KINK_RAD = 5 * DEG; // a kink the eye and the grind both feel; the arcs of a rainbow turn less than this per vertex
+const KINK_RAD = 5 * DEG; // a kink the eye and the grind both feel; a rainbow's arc turns less per vertex
 function profileOf(points) {
  const kinks = [];
  let length = 0;
@@ -183,7 +185,8 @@ describe('rails and boxes', () => {
   const down = railLine({ shape: 'down', s: 0, d: 0, length: 12, slope }).points;
   assert.ok(down[1].h < down[0].h, 'the top falls along a down rail');
   const flat = railLine({ shape: 'straight', s: 0, d: 0, length: 12, slope }).points;
-  assert.ok(Math.abs((flat[1].h - flat[0].h) / 12 - slope) < 0.01, 'level in the world means rising relative to the snow');
+  const rising = (flat[1].h - flat[0].h) / 12;
+  assert.ok(Math.abs(rising - slope) < 0.01, 'level in the world means rising relative to the snow');
  });
 
  it('C and S rails bend in plan, a C one way and an S both ways', () => {
@@ -196,6 +199,7 @@ describe('rails and boxes', () => {
 
  it('refuses an unknown shape', () => {
   assert.throws(() => railLine({ shape: 'loop', s: 0, d: 0, length: 10, slope }), /unknown rail shape/);
-  assert.throws(() => railLine({ shape: 'straight', profile: 'box', s: 0, d: 0, length: 10, slope }), /unknown box shape/);
+  const asBox = { shape: 'straight', profile: 'box', s: 0, d: 0, length: 10, slope };
+  assert.throws(() => railLine(asBox), /unknown box shape/);
  });
 });

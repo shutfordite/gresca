@@ -1,7 +1,8 @@
 // The play mountain: a procedural map with a snow park (K1) above a steep finish run, the layout the game opens on
 // (ADR 0009).
 // Same 1000 x 2450 m grid as the test slope (world/course.js), so the same texture budget; a different centreline,
-// height profile, park (jumps and rails as features, world/park/) and piste width. Pure and stateless: functions and frozen constants; build.js fills the grids.
+// height profile, park (jumps and rails as features, world/park/) and piste width. Pure and stateless: functions and
+// frozen constants; build.js fills the grids.
 import { defineRails } from './course.js';
 import { fbmRows } from './noise.js';
 import { createPlayPark } from './park/play-park.js';
@@ -62,7 +63,7 @@ export function cx(y) {
  return CENTRE_X + top + bottom;
 }
 
-/** m/m, how steeply the piste falls along y at y (m): PITCH eased between its anchors, the rolls where it isn't park. */
+/** m/m, how steeply the piste falls along y at y (m): PITCH eased between its anchors (no rolls here). */
 export function pitchAt(y) {
  const last = PITCH.length - 1;
  let g = PITCH[last][1];
@@ -77,10 +78,11 @@ export function pitchAt(y) {
 
 // 0..1, how much of the park's flat grooming applies at y: 1 inside, easing out over PARK_EASE_M at each end.
 function parkness(y) {
- return smooth(unit(y, PARK_FROM_Y - PARK_EASE_M, PARK_FROM_Y)) * (1 - smooth(unit(y, PARK_TO_Y, PARK_TO_Y + PARK_EASE_M)));
+ const easeIn = smooth(unit(y, PARK_FROM_Y - PARK_EASE_M, PARK_FROM_Y));
+ return easeIn * (1 - smooth(unit(y, PARK_TO_Y, PARK_TO_Y + PARK_EASE_M)));
 }
 
-/** m/m, how steeply the ground falls along the piste at y (m): the pitch, the rolls outside the park and the run-out. */
+/** m/m, how steeply the ground falls along the piste at y (m): the pitch, rolls outside the park, the run-out. */
 export function playGradient(y) {
  const roll = ROLL_LONG.amp * Math.sin(y * 2 * Math.PI / ROLL_LONG.wavelengthM) +
   ROLL_SHORT.amp * Math.sin(y * 2 * Math.PI / ROLL_SHORT.wavelengthM + 1);

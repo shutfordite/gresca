@@ -110,7 +110,8 @@ describe('the jumps are snow, measured from the base snow', () => {
      Math.abs(p.d - j.d) < j.takeoff.width * 0.65 + FOOTPRINT_MARGIN_M);
     if (near) continue;
     outside++;
-    assert.equal(world.terrain.height(w.x, w.y), base.height(w.x, w.y), 'at s ' + p.s.toFixed(0) + ', d ' + p.d.toFixed(0));
+    const where = 'at s ' + p.s.toFixed(0) + ', d ' + p.d.toFixed(0);
+    assert.equal(world.terrain.height(w.x, w.y), base.height(w.x, w.y), where);
    }
   }
   assert.ok(outside > 5000, outside + ' points checked');
@@ -131,7 +132,7 @@ describe('the jumps are snow, measured from the base snow', () => {
   }
  });
 
- it('has a gradient that is the derivative of the height on a jump, so the sim\'s normal is the stamped surface', () => {
+ it('has a gradient that is the derivative of the height on a jump (the sim\'s normal is the stamped snow)', () => {
   const e = 1e-4;
   const p = at(m.s + 5, 1.3);
   const g = world.terrain.gradient(p.x, p.y, { gx: 0, gy: 0 });
