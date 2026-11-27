@@ -8,9 +8,6 @@ small{opacity:.7;font-size:12px}
 .pick{display:flex;margin:14px auto 0;max-width:260px}
 .pick[hidden]{display:none}
 .pick+.pick{margin-top:8px}
-/* The map picker: stacked, full-width buttons (the labels are too long for two halves). */
-.pick-col{flex-direction:column;gap:8px}
-.pick-col button,.pick-col button:first-child,.pick-col button:last-child{border:2px solid var(--acc);border-radius:12px}
 #map-note{margin-top:14px}
 #cr{min-height:44px;padding:8px 14px;border:0;background:transparent;color:var(--ink);font:700 13px "Trebuchet MS",system-ui,sans-serif;text-decoration:underline}
 #credits{white-space:pre-line;text-align:left}
@@ -19,6 +16,9 @@ small{opacity:.7;font-size:12px}
 .pick button:first-child{border-radius:12px 0 0 12px}
 .pick button:last-child{border-radius:0 12px 12px 0;border-left:0}
 .pick button.on{background:var(--acc);color:var(--on-acc)}
+/* The map picker: stacked, full-width buttons (the labels are too long for two halves). */
+.pick-col{flex-direction:column;gap:8px}
+.pick-col button,.pick-col button:first-child,.pick-col button:last-child{border:2px solid var(--acc);border-radius:12px}
 #cb,#cc{display:block;margin:10px auto 0;min-height:44px;padding:10px 24px;border:2px solid var(--acc);border-radius:12px;background:transparent;color:var(--ink);font:700 15px "Trebuchet MS",system-ui,sans-serif}
 /* The Controls screen: scrolls on its own when the screen is short (the page itself does not scroll). */
 #ctl{width:100%;max-width:560px;max-height:100%;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch}
