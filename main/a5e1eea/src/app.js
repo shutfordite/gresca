@@ -37,9 +37,9 @@ const DRAW_FULL = 1; // step the sim, move the camera and draw
 const DRAW_STILL = 2; // draw once with no step and dt 0
 const MENU_SETTLE_S = 2; // s, how long the start screen keeps drawing after something changed (the camera easing in)
 
-// The menu text on a real map: its run and its data credits (ODbL attribution must show with real map data).
+// The menu text on a real map: its run. The credits and ODbL attribution show once, in the map line (ui/menu.js).
 function mapMenuText(world) {
- return 'Ride ' + world.name + ' from the top to the finish. Data: ' + world.credits.join(' ');
+ return 'Ride ' + world.name + ' from the top to the finish. Tap Controls to see how to turn, jump, spin and brake.';
 }
 
 // The camera mode to start in (an index): the ?cam= id if it names a mode, else the one saved last visit, else 0 (A).
