@@ -75,7 +75,7 @@ function makeTextures(THREE, renderer, view, scene) {
   auxTex: dataTexture(THREE, aux, nx, ny, THREE.RGBAFormat, THREE.UnsignedByteType, 'RGBA8', true),
   paint: dataTexture(THREE, bakePaint(view.col0, view.colSnow), nx, ny, THREE.RGBAFormat, THREE.UnsignedByteType,
    'RGBA8', true),
-  piste: dataTexture(THREE, halfArray(piste.data), piste.w, piste.h, THREE.RedFormat, THREE.HalfFloatType, 'R16F',
+  piste: dataTexture(THREE, halfArray(piste.data), piste.w, piste.h, THREE.RGFormat, THREE.HalfFloatType, 'RG16F',
    true),
   pisteSize: [piste.w, piste.h],
   detail,

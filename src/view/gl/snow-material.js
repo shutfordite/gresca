@@ -1,7 +1,8 @@
 // The GL terrain's snow: its colours and sun from the Look (uniform values) and its shaders (GLSL ES 3.0).
 // Per pixel: the terrain's slope plus a tiling ripple and crust detail, sun from the spec's azimuth and elevation,
-// lavender shade and warm lit snow, bluer hollows, sparkle, corduroy on the groomed piste, rock where steep, painted
-// features from the colour map, ski tracks and the Look's fog. Colours are only ever the Look's (ADR 0007).
+// lavender shade and warm lit snow, bluer hollows, sparkle, corduroy on the groomed piste, rock where steep, light powder
+// (more glints) and deep powder (buried ripples, soft pillows, brighter, colder in shade), painted features from the
+// colour map, ski tracks and the Look's fog. Colours are only ever the Look's (ADR 0007).
 import { RAY_FAR } from '../../core/config.js';
 import { hexRgb } from '../look/look.js';
 import { sunAzimuthDeg } from '../sky.js';
@@ -58,6 +59,16 @@ const float SPARKLE_DOT_PX = 1.5;   // canvas px across one glint
 const float SPARKLE_NEAR_M = 2.0;   // m, glints at full strength from here
 const float SPARKLE_FAR_M = 24.0;   // m, and none past here
 const float SHADOW_TINT = 0.6;      // 0..1, how far the sun's cast shadow moves toward the Look's shadow colour
+const float POWDER_LIGHT_FROM = 0.02; // m of loose snow where light powder starts to show (world/snow.js)
+const float POWDER_LIGHT_TO = 0.1;    // m, fully light powder
+const float POWDER_DEEP_FROM = 0.25;  // m, deep powder starts to show (POWDER.LIGHT_BELOW)
+const float POWDER_DEEP_TO = 0.45;    // m, fully deep
+const float POWDER_SMOOTH = 0.75;     // 0..1 of the ripple and crust deep powder buries
+const float PILLOW_TILE_M = 14.0;     // m, the detail tile laid big: the soft pillows of deep snow
+const float PILLOW_SLOPE = 0.3;       // m/m, the pillows' steepest slope
+const float POWDER_LIFT = 0.05;       // brightness added on fully deep powder (fresh, untouched)
+const float POWDER_COLD = 0.18;       // 0..1, how far deep powder in shade moves toward the Look's shadow colour
+const float FRESH_SPARKLE = 2.0;      // times as many glints on light powder
 const float FEATURE_FROM = 0.2;     // feature weight where painted features start to show
 const float FEATURE_TO = 0.55;      // and where they are solid: a crisp edge between 1 m texels
 `;
@@ -107,7 +118,7 @@ in vec3 vToCam;
 uniform sampler2D uSlope;  // RG16F: dh/du, dh/dv (m/m)
 uniform sampler2D uAux;    // RGBA8: relief, groomed (terrain-bake.js bakeAux)
 uniform sampler2D uPaint;  // RGBA8: the colour map as built (painted features) and the feature weight (bakePaint)
-uniform sampler2D uPiste;  // R16F: the piste's across coordinate (m) every uPisteStep m
+uniform sampler2D uPiste;  // RG16F: the piste's across coordinate and the powder depth (m) every uPisteStep m
 uniform sampler2D uDetail; // RGBA8: ripple slope, grain, sparkle seed (detail-texture.js), tiling
 uniform vec2 uMapSize;     // texels
 uniform vec2 uPisteSize;   // samples
@@ -154,11 +165,19 @@ void main() {
  float groomed = aux.g;
  float steep = length(g);
 
+ vec2 pisteAt = texture(uPiste, (vGrid / uPisteStep + 0.5) / uPisteSize).rg;
+ float depth = pisteAt.g;
+ float deep = smoothstep(POWDER_DEEP_FROM, POWDER_DEEP_TO, depth);
+ float light = smoothstep(POWDER_LIGHT_FROM, POWDER_LIGHT_TO, depth) * (1.0 - deep);
+
  float near = 1.0 - smoothstep(DETAIL_NEAR_M, DETAIL_FAR_M, vDist);
  vec4 ripple = texture(uDetail, vGrid / DETAIL_TILE_M);
  vec4 crust = texture(uDetail, mat2(0.8, -0.6, 0.6, 0.8) * vGrid / CRUST_TILE_M);
- vec2 dg = (ripple.rg - 0.5) * 2.0 * RIPPLE_SLOPE * (1.0 - GROOMED_SMOOTH * groomed)
-  + (crust.rg - 0.5) * 2.0 * CRUST_SLOPE;
+ vec4 pillow = texture(uDetail, mat2(0.6, 0.8, -0.8, 0.6) * vGrid / PILLOW_TILE_M);
+ float buried = 1.0 - POWDER_SMOOTH * deep;
+ vec2 dg = ((ripple.rg - 0.5) * 2.0 * RIPPLE_SLOPE * (1.0 - GROOMED_SMOOTH * groomed)
+  + (crust.rg - 0.5) * 2.0 * CRUST_SLOPE) * buried
+  + (pillow.rg - 0.5) * 2.0 * PILLOW_SLOPE * deep;
  vec3 n = normalize(vec3(-(g + dg * near), 1.0));
  float ndl = dot(n, uSun);
  float lit = smoothstep(LIT_FROM, LIT_TO, ndl);
@@ -182,9 +201,10 @@ void main() {
  float shadowAmount = (1.0 - sunVisible) * SHADOW_TINT;
  vec3 tinted = uShadowTint * (dot(c, vec3(0.3333)) / dot(uShadowTint, vec3(0.3333))); // the same brightness
  c = mix(c, tinted, shadowAmount);
- c *= 1.0 + ridge * RIDGE_LIFT + (crust.b - 0.5) * 2.0 * GRAIN * near;
+ c = mix(c, tinted, deep * POWDER_COLD * (1.0 - lit)); // deep snow's shade is colder
+ c *= 1.0 + ridge * RIDGE_LIFT + (crust.b - 0.5) * 2.0 * GRAIN * near * buried + deep * POWDER_LIFT * lit;
 
- float across = texture(uPiste, (vGrid / uPisteStep + 0.5) / uPisteSize).r;
+ float across = pisteAt.r;
  float wobble = (crust.g - 0.5) * 2.0 * CORDUROY_WOBBLE_RAD;
  float phase = across * 6.2831853 / CORDUROY_PERIOD_M;
  float resolved = 1.0 - smoothstep(0.25, 0.7, fwidth(phase) / 6.2831853); // fades stripes thinner than a pixel
@@ -198,7 +218,9 @@ void main() {
  vec2 cells = vGrid / SPARKLE_CELL_M;
  vec2 cell = floor(cells);
  vec3 toCam = normalize(vToCam);
- float glint = step(1.0 - SPARKLE_DENSITY, hash12(cell)) * step(0.5, hash12(cell + floor(toCam.xy * SPARKLE_FLICKER)));
+ float fresh = 1.0 + (FRESH_SPARKLE - 1.0) * light; // light powder glints more: fresh crystals on top
+ float glint = step(1.0 - SPARKLE_DENSITY * fresh, hash12(cell))
+  * step(0.5, hash12(cell + floor(toCam.xy * SPARKLE_FLICKER)));
  // a dot of about SPARKLE_DOT_PX at the cell's centre, however the cell is foreshortened
  vec2 offPx = (fract(cells) - 0.5) / max(fwidth(cells), vec2(1e-4));
  glint *= 1.0 - smoothstep(SPARKLE_DOT_PX * 0.5, SPARKLE_DOT_PX * 0.5 + 1.0, length(offPx));

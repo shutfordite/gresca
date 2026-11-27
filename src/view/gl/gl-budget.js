@@ -13,7 +13,7 @@ const HEIGHT_BYTES = 4;  // R32F, one 32-bit float
 const SLOPE_BYTES = 4;   // RG16F, two half floats
 const AUX_BYTES = 4;     // RGBA8: relief, groomed, ski tracks, sun visibility (E2: the shadows cost no texture)
 const PAINT_BYTES = 4;   // RGBA8: the colour map and its feature weight
-const PISTE_BYTES = 2;   // R16F, one half float, on a PISTE_STEP_M grid
+const PISTE_BYTES = 4;   // RG16F, two half floats (across, powder depth), on a PISTE_STEP_M grid
 const DETAIL_BYTES = 4;  // RGBA8, with a mipmap chain
 const MIPMAP_CHAIN = 4 / 3; // a full mipmap chain adds a third
 
