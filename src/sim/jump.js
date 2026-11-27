@@ -3,8 +3,8 @@ import { DEFAULT_COURSE } from '../world/course.js';
 import { emit } from './particles.js';
 import { pushEvent } from './state.js';
 import { FLIP } from './tuning.js';
+import { JUMP_GRAVITY } from '../core/config.js';
 
-const JUMP_GRAVITY = 15;    // m/s², in the air (stronger than real gravity, for snappy game jumps)
 const JUMP_SPEED = 6.5;     // m/s up, an ollie from the snow
 const TAKEOFF_Z = 0.01;     // m, first height of a jump (so the rider counts as airborne)
 const KICKER_MIN_SPEED = 4; // m/s, slower riders roll over the lip
