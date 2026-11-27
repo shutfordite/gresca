@@ -51,6 +51,8 @@ export const SIM_EPS = 1e-9;   // s, slack so frame times that are exact multipl
 // the game has always been tuned with). Before B3 this was a bare 15.7 times a cell-by-cell central difference.
 export const GRAVITY = 9.81;    // m/s², real gravity
 export const GRAVITY_GAIN = 1.6; // dimensionless, game-feel gain on gravity along the slope
+// In the air (sim/jump.js), and what world/ sizes a jump's landing with (ADR 0012), so the two agree.
+export const JUMP_GRAVITY = 15; // m/s², stronger than real gravity, for snappy game jumps
 
 // ---- spray particles ----
 export const MAX_PARTICLES = 360; // particles alive at once, at most (deep powder throws a plume)

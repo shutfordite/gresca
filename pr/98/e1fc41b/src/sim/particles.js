@@ -63,7 +63,7 @@ export function sprayCount(spray) {
  return spray.particles.length;
 }
 
-/** Copies of spray's live particles, oldest first: {x, y, z (m), vx, vy, vz (m/s), t, life (s)}. Allocates; façade only. */
+/** Copies of spray's live particles, oldest first: {x, y, z (m), vx, vy, vz (m/s), t, life (s)}. Façade only. */
 export function sprayCopies(spray) {
  return spray.particles.map((p) => ({ x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, t: p.t, life: p.life }));
 }
