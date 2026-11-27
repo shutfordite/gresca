@@ -35,7 +35,13 @@ export function simFields(r, s, spray, course) {
     r.grind = null;
     return;
    }
-   r.grind = { r: course.rails[v.rail], t: v.t };
+   r.grind = {
+    r: course.rails[v.rail],
+    t: v.t,
+    seg: 0,
+    style: '5050',
+    balance: 0,
+   };
    if ('dist' in v) r.grindDist = v.dist;
   }),
   landings: prop(r, 'landings'),     // count of touchdowns since the page loaded

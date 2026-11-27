@@ -2,6 +2,7 @@
 // polyline and d the signed perpendicular distance from it, positive on its left. Also Course.fromRun(ways), which
 // builds one from a real run's ways (docs/REAL-WORLD-DATA.md R4). Pure: every query writes into the caller's out.
 import { DEFAULT_FRAME } from './map-frame.js';
+import { NO_FEATURES } from './park-features.js';
 import {
  arcLengths, joinWays, toPolyline, smoothRun, MIN_SPACING_M, MAX_SPACING_M,
 } from './run-geometry.js';
@@ -158,11 +159,12 @@ function inBand(k, s, d) {
  * s and perpendicular d (left positive). opts: width (m, a number, or a Float64Array with one per point), terrain
  * (for fallLine; null: the tangent), startS and finishS (m of s, default the start and the end), kickers and rails
  * (finished Course entries, copied and frozen), launchZone (kicker, s, d, point -> boolean: where a kicker
- * launches, default the band square to the piste; a map whose ramps are stamped another way matches them). Frozen and stateless; centreline() returns copies
- * of its points and their arc lengths.
+ * launches, default the band square to the piste; a map whose ramps are stamped another way matches them), features
+ * (ParkFeatures already resolved to world points, world/park-features.js; default none). Frozen and stateless;
+ * centreline() returns copies of its points and their arc lengths.
  */
 export function polylineCourseFromWorld(xy, opts = {}) {
- const { width, terrain = null, kickers = [], rails = [] } = opts;
+ const { width, terrain = null, kickers = [], rails = [], features = NO_FEATURES } = opts;
  if (!(xy instanceof Float64Array) || xy.length < 4 || !xy.every(Number.isFinite)) {
   throw new Error('polyline course: the centreline needs at least two finite [x, y] points in metres');
  }
@@ -233,6 +235,7 @@ export function polylineCourseFromWorld(xy, opts = {}) {
  const centreline = () => ({ xy: Float64Array.from(xy), s: Float64Array.from(seg.cum) });
  return Object.freeze({
   length, startS, finishS, kickers: kickerList, rails: freezeAll(rails),
+  features,
   project, point, fallLine, kickerAt, widthAt, centreline,
  });
 }
