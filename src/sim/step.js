@@ -3,7 +3,7 @@ import { RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
 import { DEFAULT_COURSE } from '../world/course.js';
 import { emit } from './particles.js';
 import { jumpStep } from './jump.js';
-import { railCheck, grindStep } from './grind.js';
+import { railCheck, grindStep, railIndex, newSegment } from './grind.js';
 import { pushEvent } from './state.js';
 import { brakeStrength, brakeYaw, skidKept } from './brake.js';
 import { steerOf, followEdge, edgeCap, yawRate, followYaw } from './edge.js';
@@ -43,7 +43,7 @@ export function step(state, input, world, dt) {
  session.time += dt;
  brakeEvents(rider, input, session);
  if (rider.grind) {
-  grindStep(rider, input, session, state.spray, dt, course);
+  grindStep(rider, input, session, state.spray, dt, course, world.terrain);
   rider.skid = 0;
   rider.edge = 0;
  } else {
@@ -76,9 +76,15 @@ function ride(state, input, world, dt, course, where) {
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
  jumpStep(rider, input, session, state.spray, dt, course, where);
- railCheck(rider, input, state.spray, course, where);
- if (rider.grind) {
-  pushEvent(session, 'grindStart', { rail: course.rails.indexOf(rider.grind.r), kind: rider.grind.r.t });
+ if (!state.railSegment) state.railSegment = newSegment(); // scratch for railCheck, made once
+ const onRail = railCheck(rider, input, state.spray, course, world.terrain, dt, state.railSegment);
+ if (onRail === 'grind') {
+  const grind = rider.grind;
+  pushEvent(session, 'grindStart', { rail: railIndex(course, grind.r), kind: grind.r.profile || grind.r.t,
+   style: grind.style });
+ } else if (onRail === 'crash') {
+  session.crashes++;
+  pushEvent(session, 'crash', { cause: 'rail' });
  }
  keepOnMap(rider, world.terrain.bounds);
  if (rider.crashTimer <= 0 && rider.z < TREE_TOP_M) hitTrees(rider, session, world.trees, state.near || [], s);

@@ -1,6 +1,27 @@
 // The sim's façade fields (debug.js state() and set()): the rider, the session and the spray, by their state() names.
 import { field, prop } from '../core/facade-fields.js';
 import { sprayCount } from './particles.js';
+import { makeGrind, railIndex } from './grind.js';
+
+// The façade's view of rider r's grind on course (null off a rail): everything set() needs to carry it on exactly.
+function grindFields(r, course) {
+ const g = r.grind;
+ if (!g) return null;
+ return {
+  rail: railIndex(course, g.r),
+  feature: !!g.r.world,
+  t: g.t,
+  dist: r.grindDist,
+  seg: g.seg,
+  style: g.style,
+  balance: g.balance,
+  side: g.side,
+  lean: g.lean,
+  lift: g.lift,
+  liftV: g.liftV,
+  kinks: g.kinks,
+ };
+}
 
 /**
  * The sim's fields, in state() order. r: RiderState, s: the session, spray: {particles}, course: the Course (its rails
@@ -28,20 +49,15 @@ export function simFields(r, s, spray, course) {
   score: prop(s, 'score'),           // points this run
   time: prop(s, 'time'),             // s since the drop
   grinding: field(() => !!r.grind),  // read only
-  // rail index into world.rails, m along it, m ground so far
-  grind: field(() => (r.grind ? { rail: course.rails.indexOf(r.grind.r), t: r.grind.t, dist: r.grindDist } : null),
-   (v) => {
+  // the grind: rail (index into world.rails, or into world.features.rails when feature), t (m along it, plan), dist
+  // (m ground so far), seg, style, balance (-1..1), side (+1 came from the left), lean (rad), lift (m over a kink),
+  // liftV (m/s), kinks (count): sim/grind.js
+  grind: field(() => grindFields(r, course), (v) => {
    if (v === null) {
     r.grind = null;
     return;
    }
-   r.grind = {
-    r: course.rails[v.rail],
-    t: v.t,
-    seg: 0,
-    style: '5050',
-    balance: 0,
-   };
+   r.grind = makeGrind(v.feature ? course.features.rails[v.rail] : course.rails[v.rail], v);
    if ('dist' in v) r.grindDist = v.dist;
   }),
   landings: prop(r, 'landings'),     // count of touchdowns since the page loaded
