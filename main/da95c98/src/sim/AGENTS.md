@@ -20,3 +20,16 @@
   `boardHeading` turns. There is no fixed brake deceleration and no brake gravity cut.
 - Keep the empty piste between s 460 and 740 empty: `test/physics.test.js` measures there.
 - A feel change says in the PR what changed, measured through the façade at a fixed `dt`, and what to try.
+
+## Code map
+| To change | Edit | Tests |
+|---|---|---|
+| Riding physics: steer, grip, trees, finish, events | `step.js` | `physics`, `sim`, `events` |
+| The brake (yaw across the fall line, skid friction) and its tunables | `brake.js`, `tuning.js` | `brake`, `physics`, `golden` |
+| The edge and carve (edge angle, carve radius from the sidecut, skid past the edge's grip); rig data in `RIGS` (`core/config.js`) | `edge.js`, `tuning.js` | `edge`, `physics`, `park`, `golden` |
+| Jumps, air, landing, crash, air scoring; flips (`flipRot`, the ±40° landing window, trick names) | `jump.js`, `tuning.js` (`FLIP`) | `physics`, `park`, `sim`, `flip` |
+| Rails and boxes | `grind.js` | `park`, `sim` |
+| Snow spray | `particles.js` | `features`, `sim` |
+| Fixed timestep and interpolation | `timestep.js` | `timestep`, `facade` |
+| Rider and session state fields (+ `fields.js` to expose them to tests) | `state.js`, `fields.js` | `facade`, `sim` |
+| What the rider animation reads from the sim (`AnimInput`) | `anim-input.js` | `course`, `rider-anim` |
