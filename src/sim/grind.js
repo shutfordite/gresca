@@ -42,7 +42,13 @@ export function railCheck(rider, input, spray, course = DEFAULT_COURSE, where = 
   const bd = ((rider.heading - phi) % Math.PI + Math.PI) % Math.PI;
   const travelOff = wrapAbs(Math.atan2(rider.vy, rider.vx) - phi);
   if (travelOff > GRIND_MAX_ALIGN || Math.min(bd, Math.PI - bd) > GRIND_MAX_ALIGN) continue;
-  rider.grind = { r, t: Math.max(0, t) };
+  rider.grind = {
+   r,
+   t: Math.max(0, t),
+   seg: 0, // a straight rail has one segment (K3: polylines)
+   style: '5050', // lined up (K3: from the board's angle to the rail)
+   balance: 0, // centred (K3: drifts with misalignment)
+  };
   rider.grindDist = 0;
   rider.z = r.h;
   rider.vz = 0;
