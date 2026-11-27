@@ -1,7 +1,8 @@
-// The menu: the Snowboard / Skis picker (gresca-rig), the Regular / Goofy picker (gresca-stance), the menu texts and
+// The menu: the map picker, the Snowboard / Skis picker (gresca-rig), the Regular / Goofy picker (gresca-stance), the menu texts and
 // the finish screen (a SimEvent subscriber).
 import { on } from '../core/events.js';
 import { bindControls } from './controls.js';
+import { MAP_CATALOG, loadedMapId, mapButtonText } from './map-catalog.js';
 
 const RIG_KEY = 'gresca-rig';
 const OLD_RIG_KEY = 'gv-rig'; // before the rename; still read
@@ -9,6 +10,39 @@ const OLD_RIG_KEY = 'gv-rig'; // before the rename; still read
 /** The start screen's text: where the run goes, and a pointer to the Controls screen. */
 export const MENU_TEXT = 'Ride from the Encampadors ridge down to Pas de la Casa. Avoid the trees. Tap Controls to see ' +
  'how to turn, jump, spin and brake.';
+
+const STYLIZED_LINE = 'Stylized terrain inspired by the Encampadors to Pas de la Casa run.';
+const REAL_LINE = 'Real elevation and piste data. \u00a9 OpenStreetMap contributors (ODbL).';
+
+/** The map picker's markup: a button per catalog entry, the loaded map pressed (none for the test slope). */
+export function mapPickerHtml(loadedId) {
+ return MAP_CATALOG.map((m) => '<button data-map="' + m.id + '" aria-pressed="' + (m.id === loadedId) + '"' +
+  (m.id === loadedId ? ' class="on"' : '') + '>' + mapButtonText(m) + '</button>').join('');
+}
+
+/**
+ * Fills the map picker and the line about the map's data, and wires them. Picking another map calls env.openMap(id)
+ * (main.js reloads into it); picking the loaded one does nothing. Real maps show a Credits toggle for the full credits.
+ */
+export function bindMapPicker(ui, env) {
+ const loaded = loadedMapId(env);
+ ui.maps.innerHTML = mapPickerHtml(loaded);
+ ui.maps.addEventListener('click', (e) => {
+  const id = e.target && e.target.dataset ? e.target.dataset.map : null;
+  if (id && id !== loaded && MAP_CATALOG.some((m) => m.id === id) && env.openMap) env.openMap(id);
+ });
+ const world = env.world;
+ ui.mapLine.textContent = world ? world.name + (world.piste ? ' \u00b7 ' + world.piste.difficulty : '') + '. ' + REAL_LINE : STYLIZED_LINE;
+ ui.cr.hidden = !world;
+ ui.credits.hidden = true;
+ if (world) {
+  ui.creditsText.textContent = world.credits.join(' ');
+  ui.cr.addEventListener('click', () => {
+   ui.credits.hidden = !ui.credits.hidden;
+   ui.cr.setAttribute('aria-expanded', !ui.credits.hidden);
+  });
+ }
+}
 
 /**
  * Picks the rig ('board' | 'ski'): writes session.rig, shows it on the buttons and remembers it in storage where the
@@ -54,6 +88,7 @@ export function bindMenu(ui, session, env, hud, stanceKey) {
  ui.sg.addEventListener('click', () => setStance(ui, session, env, stanceKey, 'goofy'));
  showStance(ui, session.stance);
  bindControls(ui, hud);
+ bindMapPicker(ui, env);
  try {
   const s = env.localStorage.getItem(RIG_KEY) || env.localStorage.getItem(OLD_RIG_KEY);
   if (s === 'ski' || s === 'board') setRig(ui, session, env, s);
