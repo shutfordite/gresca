@@ -1,5 +1,6 @@
 // Entry point: builds the browser environment and starts one game. The only file that reads browser globals.
 import { createGame } from './app.js';
+import { startLoads } from './core/boot-loads.js';
 import { loadMapSteps } from './world/map-loader.js';
 
 // What the game needs from the browser. devicePixelRatio and localStorage are getters, read at each use as before:
@@ -55,15 +56,13 @@ async function loadRealMap(id) {
 const mapParam = query('map');
 const realMapId = mapParam && mapParam !== 'test' && mapParam !== 'play' && !query('scene') &&
  REAL_MAP_ID.test(mapParam) ? mapParam : null;
-const world = realMapId ? await loadRealMap(realMapId) : null;
 const rotDeg = Number(query('rot'));
 const renderer = query('renderer') === 'cpu' ? 'cpu' : 'gl';
-const THREE = renderer === 'gl'
- ? await import('../vendor/three/three.module.js').catch((e) => {
-  console.warn('Gresca: three.js did not load (' + e.message + ')');
-  return null;
- })
- : null;
+// The three.js import and the real map's files load together (core/boot-loads.js); index.html preloads both for it.
+const { THREE, world } = await startLoads({
+ renderer, mapId: realMapId, loadMap: loadRealMap, warn: (message) => console.warn(message),
+ importThree: () => import('../vendor/three/three.module.js'),
+});
 
 const env = Object.freeze({
  scene: query('scene'),
