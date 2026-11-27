@@ -214,7 +214,7 @@ function staticGraph(roots) {
 
 test('index.html preloads exactly the entry\'s static module tree and three.js, with relative URLs', () => {
   for (const href of preloads) {
-    assert.doesNotMatch(href, /^(\/|[a-z]+:)/i, `${href}: a preload URL is relative (preview folders live under a path)`);
+    assert.doesNotMatch(href, /^(\/|[a-z]+:)/i, `${href}: preload URLs are relative (previews live under a path)`);
     assert.ok(fs.existsSync(path.join(ROOT, href)), `${href} is missing`);
   }
   assert.equal(new Set(preloads).size, preloads.length, 'a module is preloaded twice');
@@ -222,7 +222,7 @@ test('index.html preloads exactly the entry\'s static module tree and three.js, 
     'main.js imports three.js from ' + THREE_FILE);
   const expected = staticGraph([ENTRY, THREE_FILE]);
   const stale = preloads.filter((p) => !expected.includes(p)), missing = expected.filter((p) => !preloads.includes(p));
-  assert.deepEqual({ missing, stale }, { missing: [], stale: [] }, 'keep the modulepreload links in step with the imports');
+  assert.deepEqual({ missing, stale }, { missing: [], stale: [] }, 'keep the modulepreload links in step');
 });
 
 // G2: the boot starts the three.js import before it waits for the map, and each failure keeps its fallback.
@@ -245,15 +245,15 @@ test('startLoads starts three.js and then the map before awaiting either, and aw
   assert.deepEqual(await run, { THREE: 'THREE', world: 'WORLD' });
 });
 
-test('startLoads skips three.js on the CPU renderer and the map on the play mountain, and keeps the fallbacks', async () => {
+test('startLoads skips unused loads and keeps the fallbacks', async () => {
   const { startLoads } = await import('../src/core/boot-loads.js');
   const calls = [], warns = [];
   const base = { warn: (m) => warns.push(m), importThree: () => { calls.push('three'); return Promise.resolve('T'); },
     loadMap: () => { calls.push('map'); return Promise.resolve('W'); } };
   assert.deepEqual(await startLoads({ ...base, renderer: 'cpu', mapId: null }), { THREE: null, world: null });
   assert.deepEqual(calls, [], '?renderer=cpu does not load three.js; no map id loads no map');
-  const failed = await startLoads({ ...base, renderer: 'gl', mapId: 'x', importThree: () => Promise.reject(new Error('boom')),
-    loadMap: () => Promise.resolve(null) });
-  assert.deepEqual(failed, { THREE: null, world: null }, 'a three.js failure is null (CPU); a missing map is null (play mountain)');
+  const failed = await startLoads({ ...base, renderer: 'gl', mapId: 'x', loadMap: () => Promise.resolve(null),
+    importThree: () => Promise.reject(new Error('boom')) });
+  assert.deepEqual(failed, { THREE: null, world: null }, 'three.js failing gives null (CPU); a missing map gives null');
   assert.match(warns[0], /three\.js did not load \(boom\)/);
 });
