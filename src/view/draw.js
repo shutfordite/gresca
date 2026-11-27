@@ -76,7 +76,7 @@ export function updateCamera(view, scene, dt, alpha) {
 /**
  * Draws one frame from the camera and pose updateCamera() set. dt: s since the last drawn frame (animation).
  * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, course, frame (the MapFrame), treeArr,
- * particles, timestep, look (the Look), riderAnim}. Mutates view (render buffers, animation, counts); reads the
+ * spray, timestep, look (the Look), riderAnim}. Mutates view (render buffers, animation, counts); reads the
  * rest.
  */
 export function draw(view, scene, dt) {
@@ -115,7 +115,7 @@ export function drawSprites(view, scene, dt, objectsOnGpu = false) {
   view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
   view.polesDrawn = drawPistePoles(ctx, camera, terrain, scene.course, view, scene.pistePoles, look.sprites);
  }
- drawSpray(ctx, camera, terrain, view, scene.particles, look.sprites.spray);
+ drawSpray(ctx, camera, terrain, view, scene.spray.particles, look.sprites.spray);
  if (timer !== null) timer.lap(STAGE.SPRITES);
  drawRiderOnSnow(ctx, view, scene, view.groundM, dt);
  if (timer !== null) timer.lap(STAGE.RIDER);
