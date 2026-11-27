@@ -8,7 +8,8 @@
  * wipeoutSpin (rad), grind (null or {r: rail, t: m along it}), grindDist (m ground this grind), landings (count),
  * landingSpeed (m/s); derived after each step: travelHeading, boardHeading (rad), skid (m/s), spinRot (rad), isSwitch,
  * isBraking, fallLine (rad), downhillSide (+1, -1, 0); edge (rad, + turns left, sim/edge.js); pre-added for S2 (0):
- * flipRot (rad).
+ * flipRot (rad), yawRate (rad/s, counter-clockwise +), snowDepth (m of loose snow under the rider), sink (m the
+ * equipment rides below the snow's surface).
  * Values before the first run are placeholders (0); the boot and start() set them.
  */
 export function createRider() {
@@ -16,7 +17,7 @@ export function createRider() {
   x: 0, y: 0, vx: 0, vy: 0, heading: 0, z: 0, vz: 0, airTime: 0, rotation: 0, fromKicker: false,
   crashTimer: 0, wipeoutSpin: 0, grind: null, grindDist: 0, landings: 0, landingSpeed: 0,
   travelHeading: 0, boardHeading: 0, edge: 0, skid: 0, flipRot: 0, spinRot: 0, isSwitch: false, isBraking: false,
-  fallLine: 0, downhillSide: 0,
+  fallLine: 0, downhillSide: 0, yawRate: 0, snowDepth: 0, sink: 0,
  };
 }
 
@@ -32,6 +33,9 @@ export function resetDerived(rider) {
  rider.isBraking = false;
  rider.fallLine = rider.heading; // until the first step measures it
  rider.downhillSide = 0;
+ rider.yawRate = 0;
+ rider.snowDepth = 0;
+ rider.sink = 0;
 }
 
 /**

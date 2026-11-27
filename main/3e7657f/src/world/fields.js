@@ -58,6 +58,7 @@ export function worldFacade(world) {
   slopeDeg: (px, py) => terrain.slopeDeg(px, py),     // degrees from horizontal at (px,py)
   layers: terrain.layers,                             // the terrain layers in use, in stack order (frozen)
   groomed: (px, py) => Math.round(terrain.groomed(px, py) * 255), // 0..255, how groomed (255 = groomed)
+  powder: (px, py) => terrain.powder(px, py), // m of loose snow over the firm base (0 on the piste; world/snow.js)
   noise: (px, py) => { // 0..1, the terrain's fractal noise (authored on the map's grid)
    const p = onGrid(px, py);
    return fbm(p.u, p.v);
