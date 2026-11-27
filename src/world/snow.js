@@ -15,10 +15,12 @@ export const POWDER = Object.freeze({
  DETAIL_M: 45,        // m, the smaller noise that breaks their edges
  PATCH_FROM: 0.5,     // 0..1 of the noise where a patch starts
  PATCH_TO: 0.66,      // 0..1 of the noise where it is fully deep
- HOLLOW_R_M: 9,       // m, how far around the snow the hollow test looks
- HOLLOW_GAIN: 0.35,   // m of depth per m the snow lies below its surroundings (a ridge gets as much less)
- SHED_FROM: 0.75,     // m/m (37 degrees), steeper slopes start to shed snow
- SHED_TO: 1.2,        // m/m (50 degrees), and hold only MIN_M
+ HOLLOW_R_M: 14,      // m, how far around the snow the hollow test looks
+ HOLLOW_GAIN: 0.2,    // m of depth per m the snow lies below its surroundings (a ridge gets as much less)
+ HOLLOW_MOST_M: 0.25, // m, the most a hollow adds
+ RIDGE_MOST_M: 0.07,  // m, the most a ridge takes away (the wind scours it, it is not bare)
+ SHED_FROM: 1,        // m/m (45 degrees), steeper slopes start to shed snow
+ SHED_TO: 1.8,        // m/m (61 degrees), and hold only MIN_M
  LIGHT_BELOW: 0.25,   // m, shallower than this is light powder (snowKind)
  DEEP_FROM: 0.35,     // m, deeper than this is deep powder (snowKind)
 });
@@ -53,7 +55,7 @@ export function powderDepth(height, gradient, groomed, bounds) {
   const across = height(x + ax, y + ay) + height(x - ax, y - ay);
   const down = height(x + bx, y + by) + height(x - bx, y - by);
   const around = (across + down) / 4;
-  d += POWDER.HOLLOW_GAIN * (around - h);
+  d += Math.max(-POWDER.RIDGE_MOST_M, Math.min(POWDER.HOLLOW_MOST_M, POWDER.HOLLOW_GAIN * (around - h)));
   gradient(x, y, g);
   const shed = smooth(POWDER.SHED_FROM, POWDER.SHED_TO, Math.hypot(g.gx, g.gy));
   d = d * (1 - shed) + POWDER.MIN_M * shed;

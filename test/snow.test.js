@@ -66,7 +66,7 @@ describe('H1 powder depth', () => {
    out.gy = 0;
    return out;
   };
-  assert.equal(at(flat, cliff), POWDER.MIN_M, 'a 63 degree face holds only the thinnest snow');
+  assert.equal(at(flat, cliff), POWDER.MIN_M, "a 63 degree face holds only the thinnest snow");
   assert.equal(at(flat, none, () => 1), 0, 'groomed');
   assert.ok(Math.abs(at(flat, none, () => 0.5) - at(flat) / 2) < 1e-12, 'half groomed, half the depth');
  });
