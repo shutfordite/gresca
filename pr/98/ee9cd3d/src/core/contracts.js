@@ -43,7 +43,9 @@ export const INPUT_FIELDS = Object.freeze([
  * @property {boolean} fromKicker this jump was launched by a kicker
  * @property {number} crashTimer s of wipeout left
  * @property {number} wipeoutSpin rad, tumble angle while crashed
- * @property {?object} grind null or {r: rail, t: m along it}
+ * @property {?object} grind null or {r: rail, t: m along it, seg: index of the rail's segment the rider is on, style:
+ *  the grind (GRIND_STYLES), balance: -1..1, how far off balance (0 centred; drop off at +-1)}: today a straight rail
+ *  has one segment, so seg is 0, style '5050' and balance 0 (K3 sets them, ADR 0012)
  * @property {number} grindDist m ground this grind
  * @property {number} landings count of touchdowns
  * @property {number} landingSpeed m/s downward at the last touchdown
@@ -77,9 +79,12 @@ export const RIDER_FIELDS = Object.freeze({
 
 /**
  * Something that happened in one sim step. t: s, session time of the step. Other fields by type:
- * land {speed m/s down, airTime s}; crash {cause 'tree' | 'landing'}; grindStart {rail (index), kind 'rail' | 'box'};
- * grindEnd {rail, kind, dist m, jumped}; flip {} (declared, not emitted yet); brakeStart {}; brakeEnd {};
- * score {points, kind 'air' | 'rail' | 'box', degrees (air: spin rounded to 180)}; finish {time s, score, crashes}.
+ * land {speed m/s down, airTime s}; crash {cause 'tree' | 'landing'}; grindStart {rail (index), kind 'rail' | 'box',
+ * style?}; grindEnd {rail, kind, dist m, jumped, style?, kinks?}; flip {} (declared, not emitted yet); brakeStart {};
+ * brakeEnd {}; score {points, kind 'air' | 'rail' | 'box', degrees (air: spin rounded to 180)}; finish {time s, score,
+ * crashes}. Declared, not emitted yet (ADR 0012; K3 emits them, when it re-records the golden trace): style, the grind
+ * (GRIND_STYLES; absent means '5050') at the start, and at the end the style it ended in; kinks, the count of kinks
+ * ridden over (absent means 0). When present they must have these types.
  * @typedef {{type: string, t: number}} SimEvent
  */
 
@@ -100,6 +105,92 @@ const EVENT_FIELDS = Object.freeze({
  score: { points: 'number', kind: 'string', degrees: 'number' },
  finish: { time: 'number', score: 'number', crashes: 'number' },
 });
+
+// The optional extra fields of a SimEvent type (declared ahead of their emitters), and their value types.
+const OPTIONAL_EVENT_FIELDS = Object.freeze({
+ grindStart: {
+  style: 'string',
+ },
+ grindEnd: {
+  style: 'string',
+  kinks: 'number',
+ },
+});
+
+// ---- park features (docs/adr/0012-park-features.md) ----
+
+/** The jump sizes (docs/ROADMAP.md K: lip height, angle, table and landing grow with the size). */
+export const JUMP_SIZES = Object.freeze(['xs', 's', 'm', 'l', 'xl']);
+/** What a rail feature's cross-section is: a round tube or a flat-topped box. */
+export const RAIL_PROFILES = Object.freeze(['rail', 'box']);
+/** How a rider gets onto a rail feature: ride on from an on-ramp, or ollie on from beside it. */
+export const RAIL_ENTRIES = Object.freeze(['ramp', 'side']);
+/** The grinds, from the board's angle to the rail: lined up, or across it from one side or the other. */
+export const GRIND_STYLES = Object.freeze(['5050', 'boardslide', 'lipslide']);
+/** The points of a jump's resolved world line: the takeoff's start, the lip, the knuckle and the landing's foot. */
+export const JUMP_WORLD_POINTS = 4;
+
+/** The ranges a park feature's fields keep to (m, m/s, rad), checked by checkParkFeatures. */
+export const PARK_LIMITS = Object.freeze({
+ designSpeed: Object.freeze({ min: 3, max: 40 }), // m/s at the lip
+ takeoffLength: Object.freeze({ min: 1, max: 40 }), // m of s, start of the transition to the lip
+ takeoffHeight: Object.freeze({ min: 0.2, max: 10 }), // m, the lip above the base snow
+ takeoffAngle: Object.freeze({ min: 0.1, max: 0.7 }), // rad above the horizontal at the lip (6 to 40 degrees)
+ takeoffWidth: Object.freeze({ min: 1, max: 30 }), // m across
+ tableLength: Object.freeze({ min: 0, max: 40 }), // m of s, lip to knuckle
+ landingHeight: Object.freeze({ min: 0, max: 10 }), // m, the knuckle above the base snow
+ landingAngle: Object.freeze({ min: 0.1, max: 0.7 }), // rad below the horizontal
+ landingLength: Object.freeze({ min: 3, max: 60 }), // m of s, knuckle to foot
+ railPoints: Object.freeze({ min: 2, max: 64 }), // points in a rail's line
+ railHeight: Object.freeze({ min: 0, max: 3 }), // m, the top above the base snow at a point
+ railStep: 0.1, // m, the least distance between consecutive points
+ railLength: Object.freeze({ min: 1, max: 60 }), // m, the line's length
+ railWidth: Object.freeze({ min: 0.03, max: 0.15 }), // m, a round rail's diameter
+ boxWidth: Object.freeze({ min: 0.2, max: 0.8 }), // m, a box's top width
+});
+
+/**
+ * A point of a feature resolved into the world (ADR 0012): ENU metres, z the absolute height (m above the datum).
+ * @typedef {{x: number, y: number, z: number}} WorldPoint
+ */
+
+/**
+ * A jump: a takeoff, a table (or a gap) and a landing, shaped into the snow (K1). Lengths are m of s along the course,
+ * at d across.
+ * @typedef {object} ParkJump
+ * @property {number} s m, s of the lip
+ * @property {number} d m across, the jump's centre line
+ * @property {string} size one of JUMP_SIZES
+ * @property {number} designSpeed m/s at the lip that the landing is sized for (its middle catches the rider)
+ * @property {{length: number, height: number, angle: number, width: number}} takeoff length m of s from the start of
+ *  the transition to the lip; height m, the lip above the base snow; angle rad above the horizontal at the lip; width
+ *  m across
+ * @property {{length: number, gap: boolean}} table length m of s from the lip to the knuckle; gap true when there is
+ *  no table (open air between lip and knuckle)
+ * @property {{height: number, angle: number, length: number}} landing height m, the knuckle above the base snow; angle
+ *  rad below the horizontal; length m of s from the knuckle to the foot
+ * @property {ReadonlyArray<WorldPoint>} [world] resolved when the world is built: JUMP_WORLD_POINTS points at d, s
+ *  minus takeoff.length, s, s plus table.length, and that plus landing.length, z the base snow plus 0, takeoff.height,
+ *  landing.height and 0
+ */
+
+/**
+ * A rail or box: a 3D line with a profile. Points are on the course: s, d m and h the top above the base snow (m).
+ * @typedef {object} ParkRail
+ * @property {ReadonlyArray<{s: number, d: number, h: number}>} points the top line, in riding order (a kink is a
+ *  change of slope between segments, a bend a change of direction in plan)
+ * @property {string} profile one of RAIL_PROFILES
+ * @property {number} width m, a rail's tube diameter or a box's top width
+ * @property {boolean} legs true on legs, false on a snow-buried base
+ * @property {string} entry one of RAIL_ENTRIES
+ * @property {ReadonlyArray<WorldPoint>} [world] resolved when the world is built: one point per points entry, z the
+ *  base snow under it plus h. sim/grind.js and the view read only these (docs/STREET.md N1)
+ */
+
+/**
+ * A course's park features (Course.features), frozen; every feature has its world points.
+ * @typedef {{jumps: ReadonlyArray<ParkJump>, rails: ReadonlyArray<ParkRail>}} ParkFeatures
+ */
 
 /**
  * The piste the rider follows, in along (s) and across (d) coordinates. Everything outside the map's own files asks the
@@ -126,6 +217,8 @@ const EVENT_FIELDS = Object.freeze({
  *  dx: number, dy: number, len: number, h: number, t: string}>} rails frozen rails and boxes: s0..s1 at d (m), and
  *  their world geometry (m, unit direction, length m, top height m, 'rail' | 'box')
  * @property {function(number, number): ?object} kickerAt (s, d m) -> the kicker whose launch zone holds (s, d), or null
+ * @property {ParkFeatures} features the park's jumps and rails (ADR 0012), resolved to world points; empty lists on
+ *  the procedural maps, whose kickers and rails stay as they are until K1 to K3
  */
 
 /** The Course members, by the type their value has. */
@@ -133,6 +226,7 @@ export const COURSE_FIELDS = Object.freeze({
  function: Object.freeze(['project', 'point', 'fallLine', 'widthAt', 'kickerAt']),
  number: Object.freeze(['length', 'startS', 'finishS']),
  list: Object.freeze(['kickers', 'rails']),
+ object: Object.freeze(['features']),
 });
 
 /**
@@ -153,6 +247,7 @@ export const COURSE_FIELDS = Object.freeze({
  * @property {number} flipRot rad, flip rotation this jump (RiderState.flipRot), + is a front flip
  * @property {number} sink m the equipment rides below the snow's surface (RiderState.sink): the rider leans back and
  *  the powder hides the board or skis
+ * @property {string} grindStyle the grind (GRIND_STYLES) while grinding, from RiderState.grind.style; '5050' otherwise
  */
 
 /** Every AnimInput field, by the type its value has. */
@@ -160,6 +255,7 @@ export const ANIM_INPUT_FIELDS = Object.freeze({
  number: Object.freeze(['speed', 'travelDir', 'facing', 'riderSide', 'impact', 'landings', 'edge', 'skid',
   'flipRot', 'sink']),
  boolean: Object.freeze(['wiped', 'grinding', 'braking', 'approach']),
+ string: Object.freeze(['grindStyle']),
 });
 
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -186,6 +282,18 @@ export function checkRiderState(rider) {
  for (const k of RIDER_FIELDS.number) if (!isNum(rider[k])) bad.push(k + ' is not a finite number');
  for (const k of RIDER_FIELDS.boolean) if (typeof rider[k] !== 'boolean') bad.push(k + ' is not a boolean');
  if (rider.grind !== null && typeof rider.grind !== 'object') bad.push('grind is not null or an object');
+ else if (rider.grind) bad.push(...checkGrind(rider.grind));
+ return bad;
+}
+
+// Problems with a RiderState.grind object: {r, t, seg, style, balance}.
+function checkGrind(g) {
+ const bad = [];
+ if (!(g.r && typeof g.r === 'object')) bad.push('grind.r is not a rail');
+ if (!isNum(g.t)) bad.push('grind.t is not a finite number');
+ if (!(Number.isInteger(g.seg) && g.seg >= 0)) bad.push('grind.seg is not a segment index');
+ if (!GRIND_STYLES.includes(g.style)) bad.push('grind.style is not one of ' + GRIND_STYLES.join(', '));
+ if (!(isNum(g.balance) && g.balance >= -1 && g.balance <= 1)) bad.push('grind.balance is not in -1..1');
  return bad;
 }
 
@@ -200,6 +308,18 @@ export function checkSimEvent(event) {
   const ok = fields[k] === 'number' ? isNum(v) : typeof v === fields[k];
   if (!ok) bad.push(event.type + '.' + k + ' is not a ' + fields[k]);
  }
+ const optional = OPTIONAL_EVENT_FIELDS[event.type] || {};
+ for (const k in optional) {
+  const v = event[k];
+  const ok = v === undefined || (optional[k] === 'number' ? isNum(v) : typeof v === optional[k]);
+  if (!ok) bad.push(event.type + '.' + k + ' is not a ' + optional[k]);
+ }
+ if (optional.style && event.style !== undefined && !GRIND_STYLES.includes(event.style)) {
+  bad.push(event.type + '.style is not a grind');
+ }
+ if (optional.kinks && event.kinks !== undefined && !(Number.isInteger(event.kinks) && event.kinks >= 0)) {
+  bad.push(event.type + '.kinks is not a count');
+ }
  return bad;
 }
 
@@ -211,7 +331,9 @@ export function checkCourse(course) {
  for (const k of COURSE_FIELDS.list) {
   if (!Array.isArray(course[k]) || !Object.isFrozen(course[k])) bad.push(k + ' is not a frozen list');
  }
+ if (!isFrozenFeatures(course.features)) bad.push('features is not frozen {jumps, rails} lists');
  if (bad.length) return bad;
+ bad.push(...checkParkFeatures(course.features, true));
  if (!(course.startS >= 0 && course.startS < course.finishS && course.finishS <= course.length)) {
   bad.push('startS, finishS and length are out of order');
  }
@@ -238,5 +360,108 @@ export function checkAnimInput(a) {
  const bad = [];
  for (const k of ANIM_INPUT_FIELDS.number) if (!isNum(a[k])) bad.push(k + ' is not a finite number');
  for (const k of ANIM_INPUT_FIELDS.boolean) if (typeof a[k] !== 'boolean') bad.push(k + ' is not a boolean');
+ if (!GRIND_STYLES.includes(a.grindStyle)) bad.push('grindStyle is not one of ' + GRIND_STYLES.join(', '));
  return bad;
+}
+
+const isFrozenList = (v) => Array.isArray(v) && Object.isFrozen(v);
+const isFrozenFeatures = (f) => !!f && Object.isFrozen(f) && isFrozenList(f.jumps) && isFrozenList(f.rails);
+const isRecord = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const inRange = (v, range) => isNum(v) && v >= range.min && v <= range.max;
+const rangeText = (range, unit) => 'must be ' + range.min + '..' + range.max + ' ' + unit;
+
+/**
+ * Problems with park features {jumps, rails} (ParkJump, ParkRail; an empty list when they meet the contract), each
+ * as '<field>: why', e.g. 'rails[2].points[1].h: must be 0..3 m'. resolved: every feature must also carry its world
+ * points (a Course's features); false for the course file's park layout, which has none. Never throws.
+ */
+export function checkParkFeatures(features, resolved = false) {
+ if (!isRecord(features)) return ['features: must be {jumps, rails}'];
+ const bad = [];
+ if (!Array.isArray(features.jumps)) bad.push('features.jumps: must be a list');
+ if (!Array.isArray(features.rails)) bad.push('features.rails: must be a list');
+ if (bad.length) return bad;
+ features.jumps.forEach((j, i) => checkJump(j, 'jumps[' + i + ']', resolved, bad));
+ features.rails.forEach((r, i) => checkRail(r, 'rails[' + i + ']', resolved, bad));
+ return bad;
+}
+
+// Pushes '<field>: why' onto bad for each of a record's numbers that is outside its range (unit: its unit's name).
+function checkRanges(rec, field, ranges, unit, bad) {
+ for (const k in ranges) {
+  if (!inRange(rec[k], ranges[k])) bad.push(field + '.' + k + ': ' + rangeText(ranges[k], unit));
+ }
+}
+
+function checkJump(j, field, resolved, bad) {
+ const L = PARK_LIMITS;
+ if (!isRecord(j)) return bad.push(field + ': must be {s, d, size, designSpeed, takeoff, table, landing}');
+ if (!isNum(j.s) || !isNum(j.d)) bad.push(field + ': s and d must be numbers of metres');
+ if (!JUMP_SIZES.includes(j.size)) bad.push(field + '.size: must be one of ' + JUMP_SIZES.join(', '));
+ if (!inRange(j.designSpeed, L.designSpeed)) bad.push(field + '.designSpeed: ' + rangeText(L.designSpeed, 'm/s'));
+ if (!isRecord(j.takeoff)) bad.push(field + '.takeoff: must be {length, height, angle, width}');
+ else {
+  checkRanges(j.takeoff, field + '.takeoff', { length: L.takeoffLength, height: L.takeoffHeight,
+   width: L.takeoffWidth }, 'm', bad);
+  checkRanges(j.takeoff, field + '.takeoff', { angle: L.takeoffAngle }, 'rad', bad);
+ }
+ if (!isRecord(j.table) || typeof j.table.gap !== 'boolean') bad.push(field + '.table: must be {length, gap}');
+ else checkRanges(j.table, field + '.table', { length: L.tableLength }, 'm', bad);
+ if (!isRecord(j.landing)) bad.push(field + '.landing: must be {height, angle, length}');
+ else {
+  checkRanges(j.landing, field + '.landing', { height: L.landingHeight, length: L.landingLength }, 'm', bad);
+  checkRanges(j.landing, field + '.landing', { angle: L.landingAngle }, 'rad', bad);
+ }
+ checkWorld(j.world, JUMP_WORLD_POINTS, field, resolved, bad);
+}
+
+function checkRail(r, field, resolved, bad) {
+ const L = PARK_LIMITS;
+ if (!isRecord(r)) return bad.push(field + ': must be {points, profile, width, legs, entry}');
+ const pts = r.points;
+ const isPointList = Array.isArray(pts) && pts.length >= L.railPoints.min && pts.length <= L.railPoints.max;
+ if (!isPointList) bad.push(field + '.points: must be ' + L.railPoints.min + '..' + L.railPoints.max + ' {s, d, h}');
+ else checkRailPoints(pts, field, bad);
+ if (!RAIL_PROFILES.includes(r.profile)) bad.push(field + '.profile: must be one of ' + RAIL_PROFILES.join(', '));
+ else {
+  const range = r.profile === 'box' ? L.boxWidth : L.railWidth;
+  if (!inRange(r.width, range)) bad.push(field + '.width: ' + rangeText(range, 'm') + ' for a ' + r.profile);
+ }
+ if (typeof r.legs !== 'boolean') bad.push(field + '.legs: must be true (on legs) or false (a buried base)');
+ if (!RAIL_ENTRIES.includes(r.entry)) bad.push(field + '.entry: must be one of ' + RAIL_ENTRIES.join(', '));
+ checkWorld(r.world, isPointList ? pts.length : -1, field, resolved, bad);
+}
+
+function checkRailPoints(pts, field, bad) {
+ const L = PARK_LIMITS;
+ const before = bad.length;
+ let length = 0;
+ pts.forEach((p, i) => {
+  const at = field + '.points[' + i + ']';
+  if (!isRecord(p) || !isNum(p.s) || !isNum(p.d)) return bad.push(at + ': must be {s, d, h} in metres');
+  if (!inRange(p.h, L.railHeight)) bad.push(at + '.h: ' + rangeText(L.railHeight, 'm'));
+  const q = pts[i - 1];
+  if (i === 0 || !isRecord(q) || !isNum(q.s) || !isNum(q.d) || !isNum(q.h) || !isNum(p.h)) return;
+  const step = Math.hypot(p.s - q.s, p.d - q.d, p.h - q.h);
+  if (!(step >= L.railStep)) bad.push(at + ': closer than ' + L.railStep + ' m to the point before');
+  length += step;
+ });
+ if (bad.length === before && !inRange(length, L.railLength)) {
+  bad.push(field + '.points: the line is ' + length + ' m long; ' + rangeText(L.railLength, 'm'));
+ }
+}
+
+// A feature's world points: required (count of them, ENU m) when resolved, absent otherwise.
+function checkWorld(world, count, field, resolved, bad) {
+ if (!resolved) {
+  if (world !== undefined) bad.push(field + '.world: is resolved when the world is built, not authored');
+  return;
+ }
+ const isList = isFrozenList(world) && (count < 0 || world.length === count);
+ if (!isList) return bad.push(field + '.world: must be a frozen list of ' + count + ' {x, y, z} (m)');
+ world.forEach((p, i) => {
+  if (!isRecord(p) || !isNum(p.x) || !isNum(p.y) || !isNum(p.z)) {
+   bad.push(field + '.world[' + i + ']: must be {x, y, z} in metres');
+  }
+ });
 }
