@@ -1,5 +1,4 @@
 // Entry point: builds the browser environment and starts one game. The only file that reads browser globals.
-import { applyCamSpike } from './core/config.js';
 import { createGame } from './app.js';
 import { loadMapSteps } from './world/map-loader.js';
 
@@ -65,8 +64,6 @@ const THREE = renderer === 'gl'
   return null;
  })
  : null;
-
-applyCamSpike(query('spike')); // SPIKE: camera framing variants
 
 const env = Object.freeze({
  scene: query('scene'),

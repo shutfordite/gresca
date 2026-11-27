@@ -1,5 +1,5 @@
 // The camera: its state, following the rider (heading, height, slope), the partial slope-follow tilt, compass heading.
-import { CAM_BACK, CAM_HEIGHT, HORIZON_FRAC, CAM_FOCAL_FRAC, CAM_TILT_EXTRA } from '../core/config.js';
+import { CAM_BACK, CAM_HEIGHT, HORIZON_FRAC, CAM_FOCAL_FRAC } from '../core/config.js';
 import { compassDeg } from '../world/map-frame.js';
 
 const START_HEADING = 1.57; // rad on the map's grid (clockwise from across, MapFrame): just short of straight down
@@ -125,7 +125,7 @@ export function followRider(camera, terrain, framing, pose, rider, renderW, rend
  const rel = camera.height - gR;
  const tilt = Math.max(cameraTilt(framing, camera.slope, rel, gR - terrain.height(x + dx * LA, y + dy * LA)),
   (rel / CAM_BACK * sc + hz - yMax) / sc);
- camera.tilt = tilt + CAM_TILT_EXTRA;
+ camera.tilt = tilt;
  camera.x = px;
  camera.y = py;
  camera.dirX = dx;
