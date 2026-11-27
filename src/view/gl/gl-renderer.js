@@ -12,7 +12,7 @@ import { createTrackRibbon, ribbonLook } from './track-ribbon.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
 import { camCompass } from '../camera.js';
-import { SPIKE_SKY_FRAGMENT, spikeSkyValues } from './spike-env.js';
+import { SPIKE_SKY_FRAGMENT, spikeSkyValues, spikePlant } from './spike-env.js';
 import { createTreeMesh, treeLook } from './tree-mesh.js';
 import { createParkMesh } from './park-mesh.js';
 import { sunVisibilityGrid } from './sun-visibility.js';
@@ -160,6 +160,15 @@ function addLevels(THREE, glScene, shared) {
  return materials;
 }
 
+// SPIKE: the ridge profile as a float texture (720 x 3, RGBA), read with texelFetch.
+function ridgeTexture(THREE, v) {
+ const t = new THREE.DataTexture(v.ridge, v.ridgeN, 3, THREE.RGBAFormat, THREE.FloatType);
+ t.minFilter = THREE.NearestFilter;
+ t.magFilter = THREE.NearestFilter;
+ t.needsUpdate = true;
+ return t;
+}
+
 // The sky: one screen-covering triangle at the far plane, drawn after the terrain where none is (depth test).
 function addSky(THREE, glScene, look, frame) {
  const s = skyLook(look.sky);
@@ -188,8 +197,7 @@ function addSky(THREE, glScene, look, frame) {
    uSunCol: { value: new THREE.Vector3(...v.sunCol) },
    uGlowCol: { value: new THREE.Vector3(...v.glowCol) },
    uMidCol: { value: new THREE.Vector3(...v.midCol) },
-   uPeak: { value: v.peaks },
-   uCapDepth: { value: v.caps },
+   uRidge: { value: ridgeTexture(THREE, v) },
    uLayerCol: { value: v.cols },
   });
  }
@@ -198,6 +206,12 @@ function addSky(THREE, glScene, look, frame) {
  mesh.renderOrder = CLIPMAP.levels;
  glScene.add(mesh);
  return material;
+}
+
+// SPIKE: with ?spike=env a seeded cluster of trees is planted along the course below the treeline (spec bands, m).
+function plantSpike(scene) {
+ if (!scene.look.spikeEnv) return scene.treeArr;
+ return scene.treeArr.concat(spikePlant(scene.course, scene.terrain, [2300, 2200, 1950]));
 }
 
 /**
@@ -224,7 +238,7 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const levels = addLevels(THREE, glScene, shared);
  const s = snowLook(scene.look, view.mapFrame);
  const ribbon = createTrackRibbon(THREE, glScene, shared, view.trail, ribbonLook(s.shade, s.lit));
- const trees = createTreeMesh(THREE, glScene, shared, scene.treeArr, scene.terrain, scene.look, view.mapFrame);
+ const trees = createTreeMesh(THREE, glScene, shared, plantSpike(scene), scene.terrain, scene.look, view.mapFrame);
  const treeStats = { drawCalls: trees.drawCalls, trianglesPerTree: trees.triangles, drawn: 0, triangles: 0 };
  const park = createParkMesh(THREE, glScene, shared, scene.course, scene.terrain, scene.look, view.mapFrame,
   scene.pistePoles);

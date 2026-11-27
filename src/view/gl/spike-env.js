@@ -21,8 +21,7 @@ uniform vec4 uSunPos;   // sun azimuth, elevation (deg), disc radius, glow radiu
 uniform vec3 uSunCol;
 uniform vec3 uGlowCol;
 uniform vec3 uMidCol;
-uniform vec4 uPeak[${MAX_PEAKS}]; // azimuth (deg), apex elevation (deg), half width (deg), layer (0 far .. 2 near)
-uniform float uCapDepth[${MAX_PEAKS}]; // deg
+uniform sampler2D uRidge; // 720 samples of 0.5 deg bearing by 3 layers: height, cap line (deg), light 0..1
 uniform vec3 uLayerCol[9];
 out vec4 outColour;
 const float FOV = ${FOV.toFixed(4)};
@@ -51,51 +50,70 @@ void main() {
  c = mix(c, uGlowCol, 0.6 * g * g);
  c = mix(c, uSunCol, clamp((uSunPos.z - d) / pxDeg + 0.5, 0.0, 1.0));
  // ridge layers, far to near, each over the last
+ float u = mod(az, 360.0) / 0.5;
+ int i0 = int(floor(u)) % 720;
+ int i1 = (i0 + 1) % 720;
  for (int layer = 0; layer < 3; layer++) {
-  float best = -90.0;
-  float bestApex = 0.0;
-  float bestDiff = 0.0;
-  float bestCap = 0.0;
-  for (int i = 0; i < ${MAX_PEAKS}; i++) {
-   if (int(uPeak[i].w + 0.5) != layer) continue;
-   float dz = angDiff(az, uPeak[i].x);
-   float h = uPeak[i].y - (uPeak[i].y + 1.0) * abs(dz) / uPeak[i].z;
-   if (h > best) { best = h; bestApex = uPeak[i].y; bestDiff = dz; bestCap = uCapDepth[i]; }
-  }
-  float cover = clamp((best - el) / pxDeg + 0.5, 0.0, 1.0);
+  vec4 r = mix(texelFetch(uRidge, ivec2(i0, layer), 0), texelFetch(uRidge, ivec2(i1, layer), 0), fract(u));
+  float cover = clamp((r.x - el) / pxDeg + 0.5, 0.0, 1.0);
   if (cover <= 0.0) continue;
-  float cell = az / 2.0;
-  float noise = mix(hash(floor(cell)), hash(floor(cell) + 1.0), fract(cell));
-  float capLine = bestApex - bestCap * (1.0 + 0.5 * (noise - 0.5));
-  float sunSide = sign(angDiff(uSunPos.x, az - bestDiff));
-  bool shaded = bestDiff * sunSide < 0.0;
-  vec3 fill = uLayerCol[layer * 3];
-  vec3 shade = uLayerCol[layer * 3 + 1];
-  vec3 cap = uLayerCol[layer * 3 + 2];
-  vec3 m = shaded ? shade : fill;
-  if (el > capLine) m = shaded ? mix(cap, shade, 0.3) : cap;
+  float lit = smoothstep(0.3, 0.7, r.z);
+  vec3 m = mix(uLayerCol[layer * 3 + 1], uLayerCol[layer * 3], lit);
+  if (el > r.y) m = mix(uLayerCol[layer * 3 + 2], uLayerCol[layer * 3 + 1], 0.3 * (1.0 - lit));
+  m = mix(m, uSkyCol[4], smoothstep(0.0, -2.5, el)); // the foot of the ridge fades into the horizon haze
   c = mix(c, m, cover);
  }
  outColour = vec4(c, 1.0);
 }
 `;
 
-/** The uniform values of the spike sky (plain numbers and arrays) for the Look's spikeEnv; rotationDeg: the map frame's. */
+const RIDGE_N = 720; // samples round the compass, 0.5 deg apart
+const CAP_FRAC = 0.35; // the snow cap is the top 35% of a lifted summit (art-directed)
+const nz = (x, seed) => {
+ const f = (k) => { const v = Math.sin(k * 127.1 + seed * 311.7) * 43758.5453; return v - Math.floor(v); };
+ const i = Math.floor(x);
+ const t = x - i;
+ return f(i) + (f(i + 1) - f(i)) * t * t * (3 - 2 * t);
+};
+const angDiff = (a, b) => ((a - b + 540) % 360 + 360) % 360 - 180;
+
+/** The uniform values of the spike sky for the Look's spikeEnv; rotationDeg: the map frame's. Ridge: Float32Array RGBA. */
 export function spikeSkyValues(env, rotationDeg) {
- const pk = env.backdrop.peaks;
  const layerIndex = { far: 0, mid: 1, near: 2 };
  const haze = rgb01(env.sky.haze);
- const peaks = new Float32Array(MAX_PEAKS * 4);
- const caps = new Float32Array(MAX_PEAKS);
- pk.slice(0, MAX_PEAKS).forEach((p, i) => {
-  const layer = env.backdrop.layers.find((l) => l.id === p.layer);
-  const exag = env.backdrop.ridge.verticalExaggeration;
-  peaks.set([p.bearingCompassDeg - rotationDeg, p.elevDeg * exag, Math.atan(p.halfWidthM / p.distM) / DEG,
-   layerIndex[p.layer]], i * 4);
-  const depthM = Math.min(layer.capRule.depthM, p.altM - layer.capRule.snowlineM);
-  caps[i] = depthM / p.distM / DEG; // the cap's depth in true degrees (not lifted by the exaggeration)
- });
- for (let i = pk.length; i < MAX_PEAKS; i++) peaks[i * 4 + 3] = -1;
+ const exag = env.backdrop.ridge.verticalExaggeration;
+ const floor = env.backdrop.ridge.floorElevDeg;
+ const sunAz = env.sun.azimuthDeg - rotationDeg;
+ const ridge = new Float32Array(RIDGE_N * 3 * 4);
+ const rough = { far: 0.8, mid: 0.5, near: 0.3 };
+ for (const L of env.backdrop.layers) {
+  const row = layerIndex[L.id];
+  const peaks = env.backdrop.peaks.filter((p) => p.layer === L.id).map((p) => ({
+   az: p.bearingCompassDeg - rotationDeg, apex: p.elevDeg * exag, half: Math.atan(p.halfWidthM / p.distM) / DEG,
+  }));
+  for (let i = 0; i < RIDGE_N; i++) {
+   const az = i * 0.5;
+   let h = -0.7 + rough[L.id] * (nz(az / 6, row + 1) + 0.5 * nz(az / 1.5, row + 7) - 0.4);
+   let apex = h;
+   let flank = 0;
+   let lit = 0.5;
+   for (const p of peaks) {
+    const d = angDiff(az, p.az);
+    if (Math.abs(d) >= p.half) continue;
+    const shape = Math.pow(1 - Math.abs(d) / p.half, 1.35) * (1 + 0.14 * (nz(az * 1.3, row + 3) - 0.5));
+    const v = floor + (p.apex - floor) * shape;
+    if (v > h) {
+     h = v;
+     apex = p.apex;
+     flank = d;
+     const normalAz = p.az + (d > 0 ? 135 : 225);
+     lit = Math.cos((sunAz - normalAz) * DEG) * 0.5 + 0.5;
+    }
+   }
+   const capLine = apex - CAP_FRAC * (apex - floor) + 0.12 * apex * (nz(az * 2, row + 5) - 0.5);
+   ridge.set([h, apex === h && flank === 0 ? 99 : capLine, lit, 0], (row * RIDGE_N + i) * 4);
+  }
+ }
  const cols = new Float32Array(9 * 3);
  for (const l of env.backdrop.layers) {
   [l.fill, l.shade, l.cap].forEach((hex, k) => {
@@ -106,8 +124,28 @@ export function spikeSkyValues(env, rotationDeg) {
  return {
   skyCol: new Float32Array(s.stops.flatMap((st) => rgb01(st.colour))),
   sunPos: [env.sun.azimuthDeg - rotationDeg, env.sun.elevationDeg, s.sun.discDiameterDeg / 2, s.sun.glow.radiusDeg],
-  sunCol: rgb01(s.sunColour), glowCol: rgb01(s.glowColour), midCol: rgb01(s.skyMid), peaks, caps, cols,
+  sunCol: rgb01(s.sunColour), glowCol: rgb01(s.glowColour), midCol: rgb01(s.skyMid), ridge, cols, ridgeN: RIDGE_N,
  };
+}
+
+/** Spike-only trees along the course edges below the treeline: [{x, y}] world m, seeded (density bands of the spec, per ha). */
+export function spikePlant(course, terrain, treeline) {
+ const out = [];
+ const h = (a, b) => { const v = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return v - Math.floor(v); };
+ const step = 5; // m of course between planting rows
+ for (let s = Math.max(0, course.startS - 100); s < course.finishS; s += step) {
+  for (const side of [-1, 1]) {
+   for (let k = 0; k < 4; k++) {
+    const off = course.widthAt(s) / 2 + 9 + h(s, side * (k + 1)) * 70;
+    const p = course.point(s, side * off, {});
+    const z = terrain.height(p.x, p.y);
+    const perHa = z > treeline[0] ? 0 : z > treeline[1] ? 20 : z > treeline[2] ? 100 : 350;
+    // each row covers step x 70 m = 0.35 ha shared by 4 candidates
+    if (h(s * 1.7 + k, side * 3.1) < perHa * (step * 70 / 1e4) / 4) out.push({ x: p.x, y: p.y });
+   }
+  }
+ }
+ return out;
 }
 
 // ---- trees: the spec's profile as tiered cones, in the species' own lit / body / shade roles with snow on each tier ----
