@@ -63,6 +63,8 @@ describe('riding physics', () => {
     assert.ok(g.speed() > 6, `speed only ${g.speed()}`);
   });
 
+  // H2 (owner, 27 Nov): braking respects momentum, a snow-friction stop of about 13.5 m/s² across the motion against
+  // the slope's pull (was a 4.7 g stop): from 20 m/s it takes 2.3 s, so after 1.5 s the rider is still at about 8 m/s.
   it('brake slows the rider hard', () => {
     g.place({ vy: 20 });
     g.sim(1.5);
@@ -72,7 +74,8 @@ describe('riding physics', () => {
     g.sim(1.5);
     const braked = g.speed();
     assert.ok(free > 15, `unbraked speed ${free}`);
-    assert.ok(braked < 5, `braked speed ${braked}`);
+    assert.ok(braked < 10, `braked speed ${braked}`);
+    assert.ok(braked < free - 10, `braked ${braked}, free ${free}`);
   });
 
   it('holding brake brings the rider to a stop', () => {
@@ -82,15 +85,17 @@ describe('riding physics', () => {
     assert.ok(g.speed() < 1, `still moving at ${g.speed()}`);
   });
 
+  // H2 (owner, 27 Nov: too sensitive): a held steer tips the edge over about half a second, so the turn builds; 0.5
+  // rad takes 0.6 to 0.7 s from a standing start of the steer (it took under 0.5 s).
   it('steers right and left', () => {
     g.place({ vy: 10 });
     const a0 = st().heading;
     g.input({ right: 1 });
-    g.sim(0.5);
-    assert.ok(st().heading > a0 + 0.5);
+    g.sim(0.8);
+    assert.ok(st().heading > a0 + 0.5, `turned ${st().heading - a0}`);
     g.place({ vy: 10 });
     g.input({ left: 1 });
-    g.sim(0.5);
+    g.sim(0.8);
     assert.ok(st().heading < a0 - 0.5);
   });
 

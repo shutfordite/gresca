@@ -11,13 +11,19 @@
 - World frame (ADR 0005): ENU metres, headings counter-clockwise from east, right turns clockwise; yaw rates and
   `rider.edge` are counter-clockwise + (a left turn). No "+y is downhill" and no fixed axes: ask the terrain
   (`terrain.gradient`), the course and `world.frame`. There is no heading clamp (gone in F6): measure from the fall line.
-- The edge and carve (F6) is `edge.js`: the steer sets a target edge, `rider.edge` follows at the rig's `edgeRate`;
-  the carve turns at speed / R with R = `sidecut` / sin(edge); a turn asking more than the rig's `edgeGrip` washes out
-  into a skid (`rider.skid`, m/s) that the sideways friction (`rig.grip`) wears off as speed. Rig data is in `RIGS`.
-- Tunables go in `core/config.js`, or in `sim/tuning.js` for sim feel (the brake, the edge), each with its unit.
-- The brake (F5) is `brake.js`: `input.brake` is analog 0..1; it yaws the board across the fall line (`rider.fallLine`'s
-  source, `course.fallLine`) and wears the sideways slip off as speed, so `travelHeading` keeps its direction while
-  `boardHeading` turns. There is no fixed brake deceleration and no brake gravity cut.
+- The edge and carve (F6, H2) is `edge.js`: the steer sets a target edge, capped where the carve would ask more than the
+  snow holds (`edgeCap`); `rider.edge` tips toward it at the rig's `edgeRate` and flattens at its `releaseRate`, so a
+  held steer builds the turn. The carve wants speed / R with R = `sidecut` / sin(edge); `rider.yawRate` follows that
+  over the rig's `yawLag` (inertia), slower sunk in powder.
+- The snow contact (H2) is `contact.js`: powder ploughs the sideways slip, then the edge holds up to `edgeGrip` times
+  `edgeBite(edge)` (less sunk in powder) or slides, taking only `skidGrip` of that. Nothing is turned into speed along
+  the equipment: gravity across it is held, not banked. Loose snow (`terrain.powder`, `rider.snowDepth`) sinks the
+  equipment (`rider.sink`, planing up toward `rig.float`) and drags it. Rig data is in `RIGS`.
+- Tunables go in `core/config.js`, or in `sim/tuning.js` for sim feel (the brake, the edge, the snow), each with its unit.
+- The brake (F5, H2) is `brake.js`: `input.brake` is analog 0..1; it yaws the board across the fall line
+  (`rider.fallLine`'s source, `course.fallLine`), slower at speed, and wears the sideways slip off at a snow friction
+  that does not grow with speed (momentum: about v² / 2a to stop), so `travelHeading` keeps its direction while
+  `boardHeading` turns. Powder weakens the edge but adds its wall. No brake gravity cut.
 - Keep the empty piste between s 460 and 740 empty: `test/physics.test.js` measures there.
 - A feel change says in the PR what changed, measured through the façade at a fixed `dt`, and what to try.
 
@@ -26,10 +32,11 @@
 |---|---|---|
 | Riding physics: steer, grip, trees, finish, events | `step.js` | `physics`, `sim`, `events` |
 | The brake (yaw across the fall line, skid friction) and its tunables | `brake.js`, `tuning.js` | `brake`, `physics`, `golden` |
-| The edge and carve (edge angle, carve radius from the sidecut, skid past the edge's grip); rig data in `RIGS` (`core/config.js`) | `edge.js`, `tuning.js` | `edge`, `physics`, `park`, `golden` |
+| The edge and carve (edge angle and its cap, carve radius from the sidecut, turn-rate inertia); rig data in `RIGS` (`core/config.js`) | `edge.js`, `tuning.js` | `edge`, `snow-ride`, `physics`, `park`, `golden` |
+| The snow contact: edge hold and skid, powder sink, plough and drag (`SNOW`) | `contact.js`, `tuning.js` | `snow-ride`, `edge`, `brake`, `golden` |
 | Jumps, air, landing, crash, air scoring; flips (`flipRot`, the ±40° landing window, trick names) | `jump.js`, `tuning.js` (`FLIP`) | `physics`, `park`, `sim`, `flip` |
 | Rails and boxes | `grind.js` | `park`, `sim` |
-| Snow spray | `particles.js` | `features`, `sim` |
+| Snow spray (puff size `r` and life; powder plumes are emitted in `step.js`) | `particles.js` | `features`, `sim`, `snow-ride` |
 | Fixed timestep and interpolation | `timestep.js` | `timestep`, `facade` |
 | Rider and session state fields (+ `fields.js` to expose them to tests) | `state.js`, `fields.js` | `facade`, `sim` |
 | What the rider animation reads from the sim (`AnimInput`) | `anim-input.js` | `course`, `rider-anim` |
