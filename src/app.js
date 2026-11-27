@@ -1,5 +1,6 @@
 // createGame(env): makes one game's state objects, wires the modules together, runs the boot and the frame loop.
-import { SIM_DT, SIM_MAX } from './core/config.js';
+import { SIM_DT, SIM_MAX, CAM_MODES } from './core/config.js';
+import { cameraModeIndex } from './core/camera-modes.js';
 import { createRng, reseed } from './core/rng.js';
 import { createWorld, buildWorld } from './world/build.js';
 import { createEventBus, onStep } from './core/events.js';
@@ -26,6 +27,7 @@ import { createFacade } from './debug.js';
 
 const START_SPEED = 2;  // m/s down the map at the drop
 const MENU_HEADING = 1.57; // rad on the map's grid: just short of straight down
+const CAM_KEY = 'gresca-cam'; // localStorage: the id of the camera mode last used
 const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
 
 // The menu text on a real map: its run and its data credits (ODbL attribution must show with real map data).
@@ -33,9 +35,29 @@ function mapMenuText(world) {
  return 'Ride ' + world.name + ' from the top to the finish. Data: ' + world.credits.join(' ');
 }
 
+// The camera mode to start in (an index): the ?cam= id if it names a mode, else the one saved last visit, else 0 (A).
+function startCameraMode(env) {
+ const fromPage = env.cam ? cameraModeIndex(env.cam) : -1;
+ if (fromPage >= 0) return fromPage;
+ try {
+  return Math.max(0, cameraModeIndex(env.localStorage.getItem(CAM_KEY)));
+ } catch (_) {
+  return 0; // storage blocked (private browsing): the default
+ }
+}
+
+// Saves the mode at index where the browser allows it.
+function saveCameraMode(env, index) {
+ try {
+  env.localStorage.setItem(CAM_KEY, CAM_MODES[index].id);
+ } catch (_) {
+  // storage blocked: the choice lasts this visit only
+ }
+}
+
 /**
  * Builds one independent game. env: {document, window (resize and key events), localStorage, devicePixelRatio,
- * requestAnimationFrame, setTimeout, HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
+ * requestAnimationFrame, setTimeout, cam (optional id: the camera mode to start in, core/camera-modes.js), HANGA, RiderAnim, mapRotationRad (optional, rad counter-clockwise: places the
  * procedural map at that heading, for the rotated-map tests; default 0), map (optional: 'test' (default) builds the
  * test slope, 'play' the steep play mountain; world/build.js MAPS), world (optional: a real map's world from
  * world/map-loader.js, which main.js loads before the game; replaces map), scene (optional name: open that scene after
@@ -57,6 +79,7 @@ export function createGame(env) {
  resize();
 
  const camera = createCamera(mapFrame);
+ const camMode = { index: startCameraMode(env) }; // which CAM_MODES entry the camera frames the rider with
  const rider = createRider();
  const session = createSession();
  const input = createInput();
@@ -93,8 +116,23 @@ export function createGame(env) {
   frame: mapFrame,
   treeArr: world.treeArr,
   pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
-  particles: spray.particles, timestep, look, riderAnim: env.RiderAnim,
+  particles: spray.particles, timestep, look, riderAnim: env.RiderAnim, camMode,
  };
+
+ // Picks the camera mode at index (0 to the last) and remembers it. Returns the mode's id.
+ function pickCameraMode(index) {
+  camMode.index = index;
+  saveCameraMode(env, index);
+  return CAM_MODES[index].id;
+ }
+ // The next camera mode, A to B to C and round to A (what tapping the rider does). Returns the new mode's id.
+ const cycleCamera = () => pickCameraMode((camMode.index + 1) % CAM_MODES.length);
+ // Picks the camera mode with this id; throws on an unknown id. Returns the id.
+ function setCameraMode(id) {
+  const index = cameraModeIndex(id);
+  if (index < 0) throw new Error('Gresca: unknown camera mode ' + id);
+  return pickCameraMode(index);
+ }
 
  // The rider on the course's centreline at its start (m).
  function placeAtStart() {
@@ -209,7 +247,7 @@ export function createGame(env) {
 
  const facade = createFacade({
   rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun,
-  frame,
+  frame, camMode, cycleCamera, setCameraMode,
  });
  return facade;
 }

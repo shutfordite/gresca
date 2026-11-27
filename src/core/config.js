@@ -34,11 +34,20 @@ export const MAX_PARTICLES = 160; // particles alive at once, at most
 export const SWIPE_PX = 36; // CSS px a finger must move down to brake
 
 // ---- camera: behind and well above the rider, looking steeply down the slope ----
-export const FOV = 1.15;     // rad, horizontal field of view
+// The framings the player can switch between (CV1, tap the rider). back: m behind the rider; height: m above the
+// rider's ground; fov: rad, horizontal field of view; focalFrac: focal length as a fraction of the render height;
+// horizonFrac: untilted horizon row as a fraction of the render height (A today; B and C from the closed spike #87).
+export const CAM_MODES = Object.freeze([
+ Object.freeze({ id: 'A', label: 'Classic cam', back: 10, height: 7.6, fov: 1.15, focalFrac: 0.75, horizonFrac: 0.14 }),
+ Object.freeze({ id: 'B', label: 'Chase cam', back: 14, height: 2.5, fov: 1.43, focalFrac: 0.6, horizonFrac: 0.455 }),
+ Object.freeze({ id: 'C', label: 'High cam', back: 20, height: 3, fov: 0.86, focalFrac: 1.0, horizonFrac: 0.535 }),
+]);
+// Mode A's values (the default and today's camera): what code that does not follow the mode reads.
+export const FOV = CAM_MODES[0].fov;     // rad, horizontal field of view
 export const RAY_SAMPLES = 152; // terrain samples along each screen column
-export const CAM_BACK = 10;  // m behind the rider
-export const CAM_HEIGHT = 7.6; // m above the rider's ground
-export const HORIZON_FRAC = 0.14; // untilted horizon row as a fraction of the render height
+export const CAM_BACK = CAM_MODES[0].back;  // m behind the rider
+export const CAM_HEIGHT = CAM_MODES[0].height; // m above the rider's ground
+export const HORIZON_FRAC = CAM_MODES[0].horizonFrac; // untilted horizon row as a fraction of the render height
 export const RIDER_SCALE = 0.55; // dimensionless, rider draw scale
 export const MAP_ID = 'procedural'; // picks the map's sun and sky in HANGA.maps
 // m, the raycaster samples the exact terrain surface this close to the camera, the fast path beyond

@@ -6,7 +6,8 @@
 // Gresca.world.frame converts to and from the map's own grid (u across, v down the piste).
 // Everything it returns is a copy: changing a returned value changes nothing in the game. Write with set().
 // Nothing in the game calls it.
-import { MAX_PARTICLES, CAM_BACK, RIDER_SCALE, SIM_DT, SIM_MAX } from './core/config.js';
+import { MAX_PARTICLES, CAM_MODES, CAM_BACK, RIDER_SCALE, SIM_DT, SIM_MAX } from './core/config.js';
+import { field } from './core/facade-fields.js';
 import { reseed } from './core/rng.js';
 import { SIM_EVENT_TYPES, INPUT_FIELDS } from './core/contracts.js';
 import { on, publish, afterStep } from './core/events.js';
@@ -83,6 +84,8 @@ export function createFacade(g) {
   ...uiFields(g.hud),
   ...inputFields(input),
   ...viewFields(g.camera),
+  // the camera mode's id ('A', 'B', 'C'); writing it picks and saves the mode like Gresca.setCameraMode(id)
+  cameraMode: field(() => CAM_MODES[g.camMode.index].id, (id) => g.setCameraMode(id)),
  });
  const state = () => {
   const o = {};
@@ -152,6 +155,8 @@ export function createFacade(g) {
    afterStep(g.bus, dt);
   },
   stepParticles(dt) { stepParticles(spray.particles, dt); }, // one spray step only
+  cycleCamera: () => g.cycleCamera(),   // the next camera mode (A, B, C, A); returns its id, saved under gresca-cam
+  setCameraMode: (id) => g.setCameraMode(id), // pick the camera mode by id; throws on an unknown id
   frame(dt) { g.frame(dt, 1); },        // move the camera and draw one frame (terrain, rider, HUD), dt in s
   start() { g.startRun(); },            // what the Drop in button does
   input(o) { set({ input: o }); },      // {left,right,brake,jump}, any subset; bypasses touch and keyboard

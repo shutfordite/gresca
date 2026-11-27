@@ -41,6 +41,7 @@ Shared files (the coordinator's):
 | Tunables (speeds, grip, camera distances, render size) | `src/core/config.js` | `physics`, `camera`, `sim` |
 | Seeded randomness | `src/core/rng.js` | `sim`, `timestep` |
 | Contracts: InputState, RiderState, SimEvent, Course, AnimInput (always their own PR, merged first) | `src/core/contracts.js` | `contracts`, `events` |
+| Camera modes (A classic, B chase, C high: `CAM_MODES` in `config.js`; `gresca-cam`, `?cam=`) | `src/core/camera-modes.js`, `src/app.js` | `camera-modes` |
 | Event bus, input recording | `src/core/events.js`, `src/core/input-log.js` | `contracts`, `events` |
 | State wiring, boot, frame loop | `src/app.js` | `games`, `facade`, `timestep` |
 | What tests can read and set: each area's `fields.js`, composed by the façade | `src/debug.js` | `facade` |

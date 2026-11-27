@@ -147,6 +147,7 @@ export async function load(opts = {}) {
     renderer: opts.renderer, // ?renderer=gl in the browser; Node has no WebGL, so the game falls back to the CPU
     THREE: opts.THREE,
     warn: opts.warn,
+    cam: opts.cam, // ?cam=<id> in the browser: the camera mode to start in (core/camera-modes.js)
     world: opts.world, // a loaded real map (world/map-loader.js), as main.js passes for ?map=<id>
   };
   const raw = createGame(env);
