@@ -26,6 +26,7 @@ const PURE = new RegExp('^src/(core|world|sim)/|^src/input/input\\.js$|^src/view
   '|^src/view/gl/(gl-budget|context-loss|sun-shadow|rider-shadow|tree-mesh|park-mesh|sun-visibility)\\.js$' +
   '|^src/view/colour-map\\.js$' + // E2: paintTrees takes a context and a tree list (pure)
   '|^src/view/fps-meter\\.js$' +
+  '|^src/view/paint-window\\.js$' + // C4b: the real map's paint window, from a loaded world (pure)
   // T1: the equipment's track ring and the ribbon's look and shader text (pure: no GL, no DOM, no game state)
   '|^src/view/track-trail\\.js$|^src/view/gl/track-ribbon\\.js$');
 const ONLY_FOR = { 'src/view/look/lab.js': 'lab.test.js' };

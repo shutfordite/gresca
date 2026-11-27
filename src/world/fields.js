@@ -39,13 +39,13 @@ function frameFacade(frame) {
 
 /** Gresca.world for a built world {terrain, course, frame, treeArr}: positions in world m, slopes in m/m. */
 export function worldFacade(world) {
- const bump = world.layout.bump;
+ const bump = world.layout ? world.layout.bump : () => 0; // a real map has no procedural ramps
  const terrain = world.terrain;
  const course = world.course;
  const frame = world.frame;
  const onGrid = (x, y) => frame.toGrid(x, y, { u: 0, v: 0 });
  return Object.freeze({
-  map: world.layout.id, // which procedural map is built: 'test' (the test slope) or 'play' (the play mountain)
+  map: world.layout ? world.layout.id : world.id, // 'test', 'play', or a real map's id ('el-tarter')
   frame: frameFacade(frame),
   bounds: terrain.bounds, // the map's rectangle: x0, y0, ax, ay, bx, by, width, length, minX..maxY (m; frozen)
   // The terrain (world/terrain.js) the physics, camera, renderer and rider all sample, kicker ramps included.
