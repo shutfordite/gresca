@@ -101,7 +101,8 @@ src/
   package.json   {"type": "module"} so Node loads src/*.js as ES modules (the browser ignores it)
   core/          config.js (tunables, units in comments), rng.js (seeded mulberry32 on an {seed, state} object)
                  contracts.js  InputState, RiderState, SimEvent (B2b), Course and AnimInput (B2c): typedefs, field
-                               lists, validators
+                               lists, validators; the park features (Course.features: jumps and rails, each resolved
+                               to world points) and checkParkFeatures (K0, ADR 0012)
                  events.js     the event bus: SimEvent subscribers by type, per-step hooks
                  input-log.js  input recorded per sim step, for exact replays
                  facade-fields.js  how an area registers its façade fields
@@ -113,6 +114,8 @@ src/
                  play-slope.js the play mountain: PLAY_LAYOUT, a steep map with big kickers (M1, ADR 0009)
                  polyline-course.js  the polyline Course (arc-length s, perpendicular d) and Course.fromRun(ways) (C1)
                  run-geometry.js     join ways, resample, curvature-limited smoothing (R4)
+                 park-features.js    resolveFeatures(): a course's jumps and rails in (s, d, h) to world points
+                                     (ENU m, z absolute) when the world is built (K0, ADR 0012)
                  noise.js     value noise, fbm, row-wise fbm
                  build.js     createWorld({rotationRad}) (frame, grids, trees and their lookup, terrain, course)
                               and buildWorld() (fills them)
@@ -173,6 +176,7 @@ Rules the layers keep:
 - `sim` talks outwards only through returned events (`land`, `crash`, `grindStart`, `grindEnd`, `finish`, `score`). `ui` and `view` subscribe.
 - `view` reads sim state and never writes it. The camera is updated in the app loop, not inside `draw()`.
 - All positions are ENU metres in one world frame (x east, y north, z up). Headings are radians counter-clockwise from east internally and compass degrees only at the spec boundary. Each map is authored on its own grid and placed by a `MapFrame` (origin, rotation); the procedural map's default placement runs downhill to the south (ADR 0005). `npm run test:rotated` runs the whole suite with the procedural map turned 37°.
+- Park features (ADR 0012) are authored in (s, d, h) on the course and resolved to world points (ENU m, z absolute) when the world is built; the sim and the view read only the world points, so street features (no course) fit the same seam.
 - The course is the only thing that knows about "along the piste" (s) and "across the piste" (d). Kickers, the finish, the HUD's "m to go", corduroy and the piste edge all ask it (`world.course`, the `Course` in `core/contracts.js`). Only the procedural maps (`world/course.js`, `world/build.js`, `world/play-slope.js`, `view/colour-map.js`) may use `cx()`, the park constants or the height array, and nothing may assume +y is downhill: `test/frame.test.js` checks (ADR 0004).
 
 Decisions to record as ADRs: (1) multi-file static site, no build step (done: `docs/adr/0001-multi-file-site.md`); ES modules with state made by `createGame(env)` (done: `docs/adr/0002-es-modules-and-create-game.md`); (2) ENU world frame (done: `docs/adr/0005-enu-frame.md`); (3) course as polyline (s, d) (the interface and the procedural s = y: `docs/adr/0004-course-interface.md`; the polyline course and `Course.fromRun` in C1: `world/polyline-course.js`, `world/run-geometry.js`); (4) per-pixel shading, no baked colour image; (5) fixed-step sim; (6) the `window.Gresca` test façade; the baked terrain file `gresca-map-1` (done: `docs/adr/0006-map-terrain-format.md`).

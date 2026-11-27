@@ -19,7 +19,8 @@
 | Building the world (grids, trees) | `build.js` | `build`, `terrain` |
 | The baked terrain file `gresca-map-1` (fields, height encoding, limits; ADR 0006) | `map-file/format.js` | `map-compiler`, `map-validate` |
 | Map validators (terrain and course) | `map-file/validate.js` | `map-validate`, `map-course` |
-| The course file (ADR 0010) and the run behind it | `map-file/course-format.js`, `map-file/course-run.js` | `map-course` |
+| Park features (ADR 0012): a course's jumps and rails resolved to world points (`resolveFeatures`, `NO_FEATURES`); the checks are `checkParkFeatures` in `core/contracts.js` | `park-features.js`, `map-loader.js` | `park-features`, `map-loader`, `contracts` |
+| The course file (ADR 0010; version 2 adds `features`, ADR 0012) and the run behind it | `map-file/course-format.js`, `map-file/course-run.js` | `map-course` |
 | Loading a real map (C4a, ADR 0011): files to a world, progress per chunk (`loadMapSteps`) | `map-loader.js`, `map-trees.js` | `map-loader` |
 | The corridor detail layer (2 m tiles within 150 m of the piste, LRU, 60 MB budget) | `corridor-layer.js` | `map-loader` |
 | What tests can read of the world | `fields.js` | `facade` |

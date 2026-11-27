@@ -13,6 +13,7 @@ import { createRider, createSession } from '../src/sim/state.js';
 import { createInput } from '../src/input/input.js';
 import { step } from '../src/sim/step.js';
 import { SIM_DT } from '../src/core/config.js';
+import { parkAt } from './park-fixtures.js';
 
 const CENTRE = Object.freeze({ lat: 42.58, lon: 1.65 });
 const CONFIG = Object.freeze({ id: 'slope-map', name: 'Slope Map', centre: CENTRE, widthM: 1400, lengthM: 2600,
@@ -44,8 +45,9 @@ function pisteLine() {
  return line;
 }
 
-// {terrain, course}: fresh parsed objects every call, so a test may break them.
-function makePair() {
+// {terrain, course}: fresh parsed objects every call, so a test may break them. features: the course file's park
+// features (a version 2 file, ADR 0012), or none (version 1).
+function makePair(features) {
  const dem = { heightAt: (lat, lon) => surface(...enuOf(lat, lon)), fixes: { voids: 0, spikes: 0 } };
  const piste = { id: 'run-1', osm: ['way/1'], name: 'Curve', difficulty: 'intermediate', grooming: 'classic',
   area: false, lines: [pisteLine()] };
@@ -56,6 +58,7 @@ function makePair() {
   terrain, run, finishS: Math.floor(length - 40), sun: { azimuthDeg: 200, elevationDeg: 20 }, treeSet: 'pine',
   kickers: [{ s: 600, d: -9, halfWidth: 3, depth: 6, big: false }],
   rails: [{ s0: 900, s1: 915, d: 9, h: 0.4, t: 'rail' }],
+  features,
  });
  return { terrain: JSON.parse(JSON.stringify(terrain)), course: JSON.parse(JSON.stringify(course)), length };
 }
@@ -246,6 +249,45 @@ describe('the course and the park', () => {
   assert.equal(course.kickers[0].s, 600);
   const rail = course.rails[0];
   assert.ok(Math.abs(rail.len - 15) < 0.5 && Math.abs(Math.hypot(rail.dx, rail.dy) - 1) < 1e-9);
+ });
+});
+
+describe('park features (ADR 0012)', () => {
+ const pair = makePair(parkAt(300));
+ const parked = loadMap(pair.terrain, pair.course);
+
+ it('a version 1 file has none; a version 2 file is written only when there are features', () => {
+  assert.equal(PAIR.course.version, undefined);
+  assert.equal('features' in PAIR.course, false);
+  assert.deepEqual(world.course.features, { jumps: [], rails: [] });
+  assert.equal(pair.course.version, 2);
+  assert.deepEqual(pair.course.features, parkAt(300));
+ });
+
+ it('resolves each feature to frozen world points: ENU m on the course, z the snow plus the feature\'s height', () => {
+  const { course, terrain } = parked;
+  assert.deepEqual(checkCourse(course), []);
+  const rail = course.features.rails[0];
+  assert.equal(rail.world.length, 4);
+  assert.ok(Object.isFrozen(rail) && Object.isFrozen(rail.world) && Object.isFrozen(rail.world[0]));
+  rail.points.forEach((p, i) => {
+   const at = course.point(p.s, p.d, {});
+   const w = rail.world[i];
+   assert.ok(Math.hypot(w.x - at.x, w.y - at.y) < 1e-9, 'on the course at (s, d)');
+   assert.ok(Math.abs(w.z - (terrain.height(w.x, w.y) + p.h)) < 1e-9, 'z is absolute: the snow plus h');
+   assert.ok(Math.abs(w.z - (surface(w.x, w.y) + p.h)) < SURFACE_TOL_M, 'z is metres of altitude');
+  });
+  const jump = course.features.jumps[0];
+  const lip = jump.world[1];
+  const lipAt = course.point(300, -3, {});
+  assert.ok(Math.hypot(lip.x - lipAt.x, lip.y - lipAt.y) < 1e-9);
+  assert.ok(Math.abs(lip.z - (terrain.height(lip.x, lip.y) + 2)) < 1e-9, 'the lip is 2 m above the snow');
+  assert.ok(jump.world[0].z > jump.world[3].z, 'the takeoff starts above the landing\'s foot: downhill');
+ });
+
+ it('keeps today\'s kickers and rails as they were', () => {
+  assert.deepEqual(parked.course.kickers, world.course.kickers);
+  assert.deepEqual(parked.course.rails, world.course.rails);
  });
 });
 
