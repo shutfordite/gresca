@@ -1,6 +1,6 @@
-// Snow spray as a fixed pool of typed arrays (no object per particle, nothing allocated after createSpray()): emit() adds
-// particles drawn from the seeded RNG, stepParticles() moves them and compacts the dead ones out; clearSpray(),
-// sprayCount() and sprayCopies() are how the game and the façade reach it, sprayPool() how the view draws it.
+// Snow spray as a fixed pool of typed arrays (nothing allocated after createSpray()): emit() adds particles drawn from
+// the seeded RNG, stepParticles() moves them and compacts the dead ones out; clearSpray(), sprayCount() and
+// sprayCopies() are how the game and the façade reach it, sprayPool() how the view draws it.
 import { MAX_PARTICLES } from '../core/config.js';
 import { rnd } from '../core/rng.js';
 
