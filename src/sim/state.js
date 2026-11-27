@@ -8,7 +8,8 @@
  * wipeoutSpin (rad), grind (null or {r: rail, t: m along it}), grindDist (m ground this grind), landings (count),
  * landingSpeed (m/s); derived after each step: travelHeading, boardHeading (rad), skid (m/s), spinRot (rad), isSwitch,
  * isBraking, fallLine (rad), downhillSide (+1, -1, 0); edge (rad, + turns left, sim/edge.js); pre-added for S2 (0):
- * flipRot (rad), yawRate (rad/s, counter-clockwise +), snowDepth (m of loose snow under the rider), sink (m the equipment rides below the snow's surface).
+ * flipRot (rad), yawRate (rad/s, counter-clockwise +), snowDepth (m of loose snow under the rider), sink (m the
+ * equipment rides below the snow's surface).
  * Values before the first run are placeholders (0); the boot and start() set them.
  */
 export function createRider() {
