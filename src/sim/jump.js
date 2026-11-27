@@ -24,7 +24,7 @@ const newWhere = () => ({ s: 0, d: 0, tx: 0, ty: 1 });
  * one-shot request it uses up), session (crashes, score, events: land, crash, score) and spray (landing snow).
  * course: the Course whose kickers launch the rider; where: a {s,d,tx,ty} scratch object for it.
  * Flips (F3): in the air input.flip (-1..1, + front flip) turns rider.flipRot at FLIP.RATE (rad/s), held keeps
- * turning, alongside the spin in rider.rotation. One SimEvent 'flip' ({}) goes out on each clean landing of one or
+ * turning, alongside the spin in rider.rotation. One SimEvent 'flip' ({flips}) goes out on each clean landing of one or
  * more whole rotations, before its 'score' (the count is in the points; trickName names it). Landing within
  * FLIP.LAND_WINDOW of a whole number of rotations is clean, otherwise a crash (cause 'landing'). A clean flip scores
  * FLIP.POINTS * n * (n + 1) / 2 on top of the air score; trickName(n, degrees) names it ('Backflip 360'). flipRot is
@@ -117,10 +117,10 @@ function land(rider, session, spray) {
   pushEvent(session, 'crash', { cause: 'landing' });
  } else if (rider.airTime > MIN_SCORED_AIR) {
   const n = Math.abs(flipTurns);
-  if (n > 0) pushEvent(session, 'flip', {});
+  if (n > 0) pushEvent(session, 'flip', { flips: flipTurns });
   const flipPts = FLIP.POINTS * n * (n + 1) / 2;
   const pts = Math.round(rider.airTime * 60 + (rider.fromKicker ? 20 : 0) + rt / 180 * 40 + flipPts);
   session.score += pts;
-  pushEvent(session, 'score', { points: pts, kind: 'air', degrees: rt });
+  pushEvent(session, 'score', { points: pts, kind: 'air', degrees: rt, flips: flipTurns });
  }
 }

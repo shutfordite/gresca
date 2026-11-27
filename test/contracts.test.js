@@ -82,7 +82,9 @@ describe('core/contracts.js', () => {
   assert.ok(checkSimEvent({ type: 'jump', t: 0 }).length > 0, 'unknown type');
   assert.ok(checkSimEvent({ type: 'land', t: 1 }).length > 0, 'missing fields');
   assert.ok(checkSimEvent({ type: 'brakeStart', t: -1 }).length > 0, 'bad time');
-  assert.deepEqual(checkSimEvent({ type: 'flip', t: 0 }), []);
+  assert.deepEqual(checkSimEvent({ type: 'flip', t: 0, flips: -1 }), []);
+  assert.ok(checkSimEvent({ type: 'flip', t: 0 }).length > 0, 'a flip event names its flips');
+  assert.ok(checkSimEvent({ type: 'score', t: 0, points: 5, kind: 'air', degrees: 0 }).length > 0, 'score has flips');
  });
 });
 
