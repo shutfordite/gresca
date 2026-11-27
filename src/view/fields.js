@@ -4,6 +4,7 @@ import { nested, prop } from '../core/facade-fields.js';
 import { cameraTilt, camCompass } from './camera.js';
 import { fogAt, sunDisc, sunAzimuthDeg } from './sky.js';
 import { project } from './sprites.js';
+import { riderScreenBox } from './touch-box.js';
 import { riderPose } from './draw.js';
 import { animTick } from './rider-animation.js';
 import { STAGE, GL_STAGE } from './view-state.js';
@@ -49,6 +50,7 @@ export function viewDebug(g) {
    const P = project(camera, wx, wy, h);
    return P && { ...P };
   },
+  riderBox: () => ({ ...riderScreenBox(view, camera, { x: 0, y: 0, w: 0, h: 0 }) }), // {x, y, w, h}: CSS px, as drawn
   cameraTilt: (s, rel, drop) => cameraTilt(look.camera, s, rel, drop, camera.back),
   camCompass: () => camCompass(camera), // camera heading, compass degrees
   sunDisc: () => ({ ...sunDisc(look.sky, camera, view.W, view.Hh, world.frame) }), // {X,Y,r,on}, canvas pixels
