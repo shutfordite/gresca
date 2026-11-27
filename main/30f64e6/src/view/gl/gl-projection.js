@@ -26,6 +26,7 @@ export function setProjection(p, camera, W, Hh) {
  p.dirY = camera.dirY;
  p.focalC = camera.focalPx * kx;
  p.rowC = (camera.horizonPx - camera.pitchPx) * kx;
+ p.fov = camera.fov;
  p.W = W;
  p.Hh = Hh;
  return p;

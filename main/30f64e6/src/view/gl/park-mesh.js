@@ -10,7 +10,6 @@ import { hexRgb } from '../look/look.js';
 import { KICKER_FLAG_D, RAMP_FLAG_BACK_M, KICKER_RAMP_M, RAIL_FLAG_D } from '../sprites.js';
 import { treeLook } from './tree-mesh.js';
 import { PISTE_POLE } from '../piste-poles.js';
-import { FOV } from '../../core/config.js';
 
 // The sprites' flag and ramp placement, which the mesh keeps (tests read them from here).
 export { KICKER_FLAG_D, KICKER_RAMP_M };
@@ -339,10 +338,10 @@ export function buildParkMesh(course, terrain, look, frame, poles = []) {
 /**
  * Copies the triangles of the features in view from indices to the front of out (a Uint32Array of at least
  * indices.length) and returns how many indices. In view: not behind the near plane, not past PARK_FAR_M and inside the
- * field of view across, each with its radius. camera: {x, y, dirX, dirY}. Allocates nothing.
+ * field of view across, each with its radius. camera: {x, y, dirX, dirY, fov (rad)}. Allocates nothing.
  */
 export function cullPark(features, indices, camera, out) {
- const half = FOV / 2;
+ const half = camera.fov / 2;
  const tanHalf = half < Math.PI / 2 ? Math.tan(half) : Infinity;
  let n = 0;
  for (let o = 0; o < features.length; o += FEATURE_STRIDE) {
