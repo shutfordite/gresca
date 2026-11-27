@@ -50,8 +50,8 @@ The freeze is about four PRs (B2a, B2b, B2c and C2), plus the P1 docs PR between
 | **S1** controls and UI | `src/input`, `src/ui`, `styles/` | F4 bindings table → controls screen and pause → F3 flip input and air hints → stance picker |
 | **S2** sim feel | `src/sim` (+ `sim/tuning.js`) | F5 brake as a skid across the fall line → F6 edge and carve model, remove the heading clamp, ollie preload → F3 flip physics and scoring → (optional) gravity slope-law A/B |
 | **S3** rider animation | `art/gresca-rider-anim.js`, `src/view/rider` | body twist → F5 brake counter-rotation → F6 edge-driven lean and unweighting → F7 fakie look-over-shoulder (goggles wait for spec v1.4) → F3 flip tuck |
-| **S4** look, camera, render | `src/view/look`, `src/view/camera`, render | **D1** frame-time harness → **E0** GPU terrain renderer test (three.js, ADR 0008; accepted) → **E1** GPU renderer by default (`?renderer=cpu` as the fallback), lost-context handling, texture memory budget, softer corduroy, the shared ray constants in `core/config.js` → **E2** light: soft sun shadows from the terrain, rider and tree shadows drawn on the GPU (replacing the blocky painted ones) → **E3** trees, rails, flags and kickers as GPU objects → **E4** post: tilt-shift, dawn haze. F1 sizing and D3 data-driven trees fold into E1 and E3; D2 is replaced by E0 |
-| **S6** design and visual | `art/gresca-hanga-spec.js` versions, with their notes and boards in `docs/art/` | **V1** art spec v1.5, environment: trees, rocks, bushes, treeline, sky, sun and backdrop peaks for real maps (Pyrenees set first, El Tarter), with boards → **V2** park look in the spec (snow kickers, tables, landings, groomed sidewalls, lip and knuckle dye lines, rail and box materials and colours), before K4 → **V3** visual review: every PR touching `view/` or `art/` gets a check of its screenshots against the spec, findings as spec fixes or S4 issues → **V4** design canvas re-synced to each spec version |
+| **S4** look, camera, render | `src/view/look`, `src/view/camera`, render | **D1** frame-time harness → **E0** GPU terrain renderer test (three.js, ADR 0008; accepted) → **E1** GPU renderer by default (`?renderer=cpu` as the fallback), lost-context handling, texture memory budget, softer corduroy, the shared ray constants in `core/config.js` → **E2** light: soft sun shadows from the terrain, rider and tree shadows drawn on the GPU (replacing the blocky painted ones) → **E3** trees, rails, flags and kickers as GPU objects → **E4** post: tilt-shift, dawn haze → **TD2** the Look and shadows follow a chosen sun. F1 sizing and D3 data-driven trees fold into E1 and E3; D2 is replaced by E0 |
+| **S6** design and visual | `art/gresca-hanga-spec.js` versions, with their notes and boards in `docs/art/` | **V1** art spec v1.5, environment: trees, rocks, bushes, treeline, sky, sun and backdrop peaks for real maps (Pyrenees set first, El Tarter), with boards → **V2** park look in the spec (snow kickers, tables, landings, groomed sidewalls, lip and knuckle dye lines, rail and box materials and colours), before K4 → **V3** visual review: every PR touching `view/` or `art/` gets a check of its screenshots against the spec, findings as spec fixes or S4 issues → **V4** design canvas re-synced to each spec version → **TD1** time-of-day looks (spec v1.6) |
 | **S5** maps | `src/world`, `tools/`, `maps/` | **C1** polyline `Course.fromRun` (R4) → C3 course half (`<id>.course.json`) → **C4** map loading, corridor detail, load-your-own file, slope and data-defect rules (R5) |
 
 S2 and S3 meet only through `RiderState`, `AnimInput` and `SimEvent`. S1 and S2 meet only through `InputState`. S4 and
@@ -94,6 +94,23 @@ coordinator, behaviour change none:
    daily try list and merge batch for the owner, a Debt table in STATUS cleared one row per stream package, owner
    chores become workflows, lessons go into the skill or AGENTS.md.
 6. **Order**: C4b runs alongside K instead of after it; F1 rider scale returns as an S4 package after a framing spike.
+
+### TD: time of day (owner asked 27 Nov; after K and C4b)
+Today each map has one fixed sun (`maps[id].sun` in the art spec, the course file's `sun`), the Look reads it once,
+and the GPU terrain shadows are baked from it when the map loads. The owner wants the sun to sit in different places
+in the sky. Order:
+1. **TD0 sun from time and place** (Shared, ADR 0013): the sun is a date and a local time, not fixed angles. A pure
+   `sunPosition(latDeg, lonDeg, dateUtc)` in `src/world/` (solar position; compass degrees only at the art spec, an
+   ENU unit vector in the world frame). The course file's `sun` may carry `{date, localTime}` beside the angles, which
+   stay as an override (ADR 0010 amended). El Tarter defaults to a February morning, which also settles its 110° vs
+   76° question with the real sun.
+2. **TD1 time-of-day looks** (S6, spec v1.6): presets beyond Hanga Dawn (morning, midday, late afternoon): sky stops,
+   snow tones, haze and shadow tint, chosen by sun elevation, with boards per preset.
+3. **TD2 the Look and shadows follow the sun** (S4): the Look takes a preset and a sun; the shadow bake reruns at load
+   for the chosen sun, with its load time on the iPad measured and budgeted in the PR.
+4. **TD3 a time-of-day picker** (S1): in the menu, remembered under a new `gresca-time` storage key.
+5. **TD4 a sun that moves during a ride** (S4, optional, its own ADR): needs shadows updated a little each frame or
+   computed differently; only if the owner wants it once TD2's bake time is known.
 
 ## Where this differs from the feedback plan, and why
 - **The `Course` seam and the ENU frame (C2) move into the freeze.** In the feedback plan they sat in S5. F5, F6 and F7
@@ -144,6 +161,8 @@ coordinator, behaviour change none:
    trees, rocks, sky, backdrops and the look of park features. S6 designs, S4 builds: S6 writes specs, boards and the
    spec's data; all render code stays with S4. UI and menu visual design stay with S1; brand and store art are not
    planned yet.
+4. **The sun can sit in different places later** (TD above): a date and time of day per course or chosen by the
+   player, after K and C4b. Until TD0, El Tarter keeps one fixed sun (V1, #80, asks the owner which).
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
