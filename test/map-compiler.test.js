@@ -14,7 +14,7 @@ import {
  createTerrariumDem, decodePng, decodeTerrarium, mercatorX, mercatorY, tilesCovering, tileUrl,
 } from '../tools/map-compiler/sources/terrarium.js';
 import {
- parseOpenSkiMapLifts, parseOpenSkiMapRuns, parseOverpass,
+ eachFeature, parseOpenSkiMapLifts, parseOpenSkiMapRuns, parseOverpass,
 } from '../tools/map-compiler/sources/openskimap.js';
 import { decodeHeights } from '../tools/map-compiler/format.js';
 import { validateTerrain } from '../tools/map-compiler/validate.js';
@@ -222,6 +222,29 @@ describe('compiling a terrain file', () => {
   assert.deepEqual(runs[0].osm, [], 'a bad OSM id is dropped');
   assert.equal(runs[0].lines[0].length, 2, 'a bad point is dropped');
   assert.throws(() => parseOpenSkiMapRuns({ type: 'Feature' }), /FeatureCollection/);
+ });
+
+ it('reads raw bytes feature by feature, as the parsed file, keeping only features near the box', () => {
+  const run = (id, lon, lat, name) => ({ type: 'Feature', properties: { type: 'run', id, uses: ['downhill'], name,
+   features: [{ fake: '}]' }] },
+   geometry: { type: 'LineString', coordinates: [[lon, lat], [lon + 0.001, lat + 0.001]] } });
+  const across = { type: 'Feature', properties: { type: 'run', id: 'c', uses: ['downhill'] },
+   geometry: { type: 'LineString', coordinates: [[1.5, 42.58], [1.8, 42.58]] } }; // crosses the box, no point in it
+  const collection = { type: 'FeatureCollection', name: 'runs "with" \\ escapes',
+   features: [run('a', 1.65, 42.58, 'Àliga {x}'), run('b', 7.0, 46.0, 'far away'), across] };
+  const bytes = new TextEncoder().encode(JSON.stringify(collection, null, 1));
+  assert.deepEqual(parseOpenSkiMapRuns(bytes), parseOpenSkiMapRuns(collection));
+  const box = { south: 42.55, west: 1.62, north: 42.6, east: 1.69 };
+  assert.deepEqual(parseOpenSkiMapRuns(bytes, box).map((r) => r.id), ['a', 'c']);
+  assert.deepEqual(parseOpenSkiMapRuns(collection, box).map((r) => r.id), ['a', 'c']);
+  const seen = [];
+  eachFeature(bytes, 'runs', (f) => seen.push(f.properties.id));
+  assert.deepEqual(seen, ['a', 'b', 'c']);
+  const text = JSON.stringify(collection);
+  const enc = (s) => new TextEncoder().encode(s);
+  assert.throws(() => eachFeature(enc(text.slice(0, -40)), 'runs', () => {}), /not a complete/);
+  assert.throws(() => eachFeature(enc('{"type":"Feature","features":[]}'), 'runs', () => {}), /not a complete/);
+  assert.throws(() => eachFeature(enc('[1,2]'), 'runs', () => {}), /not a complete/);
  });
 });
 
