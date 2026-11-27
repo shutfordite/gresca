@@ -1,4 +1,4 @@
-// One physics step: steering, gravity, the snow contact, braking, jumps, rails, trees, spray and the finish; its events.
+// One physics step: steering, gravity, the snow contact, braking, jumps, rails, trees, spray, the finish; its events.
 import { RIGS, GRAVITY, GRAVITY_GAIN } from '../core/config.js';
 import { DEFAULT_COURSE } from '../world/course.js';
 import { emit } from './particles.js';
@@ -230,9 +230,9 @@ function hitTrees(rider, session, trees, near, s) {
  }
 }
 
-// On the snow: spray when skidding or braking (slip: sideways slip, m/s), a thin spray off the edge of a hard carve, and
-// in powder all the while: the equipment throws up snow for how deep it is sunk, how fast it goes and how hard it turns,
-// out of the turn; a slow, big plume in deep powder, a light dust in light powder. The ski tracks are the view's
+// On the snow: spray when skidding or braking (slip: sideways slip, m/s), a thin spray off the edge of a hard carve,
+// and in powder all the while: the equipment throws up snow for how deep it is sunk, how fast it goes and how hard it
+// turns, out of the turn; a slow, big plume in deep powder, a light dust in light powder. The ski tracks are the view's
 // (view/ski-tracks.js), drawn from rider.skid, rider.edge, rider.sink and rider.isBraking after each step. dt: s.
 function spraySnow(rider, input, spray, slip, dt) {
  const sn = Math.hypot(rider.vx, rider.vy);

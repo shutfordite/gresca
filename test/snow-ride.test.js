@@ -150,7 +150,7 @@ describe('H2 loose snow', () => {
   assert.ok(deep < groomed - 2, `deep ${deep.toFixed(1)} m, groomed ${groomed.toFixed(1)} m`);
  });
 
- it('powder throws up snow all the while, bigger puffs in deep powder; running straight on groomed snow throws none', () => {
+ it('powder sprays all the while, bigger puffs in deep powder; running straight on groomed snow throws none', () => {
   const sprayOf = (depth) => {
    const r = ride(plane(depth, 0.4), { speed: 12 });
    let most = 0;

@@ -61,7 +61,7 @@ export function edgeSlip(rig, side, hold, dt) {
  return side - Math.sign(side) * hold * rig.skidGrip * dt;
 }
 
-/** m/s, the speed along the equipment along (m/s, signed) after a carve's drag for held (m/s²) of edge force. dt: s. */
+/** m/s, the speed along the equipment, along (m/s, signed), after a carve's drag for held (m/s²) of edge force (dt: s). */
 export function carveDrag(along, held, dt) {
  const drag = EDGE.CARVE_DRAG * held * dt;
  return along > 0 ? Math.max(0, along - drag) : Math.min(0, along + drag);

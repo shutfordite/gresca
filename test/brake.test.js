@@ -1,6 +1,7 @@
 // @areas sim
 // F5, H2: the brake yaws the skis or board across the fall line (a hockey stop) and slows the rider by sideways skid
-// friction that does not grow with speed (momentum: a fast rider needs room to stop). Measured on the procedural map's empty stretch (s 460 to 740), from 15 m/s, through the façade at a fixed
+// friction that does not grow with speed (momentum: a fast rider needs room to stop). Measured on the procedural
+// map's empty stretch (s 460 to 740), from 15 m/s, through the façade at a fixed
 // dt; the numbers are the same on a rotated map (npm run test:rotated runs this file at 37 and 300 degrees too).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -77,7 +78,8 @@ describe('F5 brake: a skid across the fall line', () => {
   const slow = await brakeRun(1);
   const fast = await brakeRun(1, { speed: 25 });
   assert.ok(fast.time !== null, 'stops from 25 m/s');
-  assert.ok(fast.dist > slow.dist * MOMENTUM, `${fast.dist.toFixed(1)} m from 25 m/s, ${slow.dist.toFixed(1)} m from 15`);
+  const why = `${fast.dist.toFixed(1)} m from 25 m/s, ${slow.dist.toFixed(1)} m from 15`;
+  assert.ok(fast.dist > slow.dist * MOMENTUM, why);
  });
 
  it('the direction of travel stays put while the equipment turns', async () => {

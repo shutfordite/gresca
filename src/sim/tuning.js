@@ -1,5 +1,5 @@
 // Sim feel tunables that live next to the sim (core/config.js keeps the shared ones): the brake, the edge, the snow,
-// flips; each with its unit. The rig-specific data (sidecut, edge rates, grip, swing, float) is in RIGS (core/config.js).
+// flips; each with its unit. The rig data (sidecut, edge rates, grip, swing, float) is in RIGS (core/config.js).
 
 /**
  * The brake (F5, H2): a hockey stop or heel-side skid, the equipment yawed across the fall line. The slip is worn off
@@ -7,7 +7,7 @@
  * and the swing across the motion is slower the faster the rider goes (more momentum to turn against).
  */
 export const BRAKE = Object.freeze({
- YAW_RATE: 5,         // rad/s, how fast full brake (input.brake 1) turns the equipment toward across the fall line, at rest
+ YAW_RATE: 5,         // rad/s, how fast full brake turns the equipment toward across the fall line, at rest
  YAW_SPEED: 18,       // m/s, at this speed the swing is half as fast (YAW_RATE / (1 + speed / YAW_SPEED))
  TARGET_ANGLE: Math.PI / 2, // rad, angle from the fall line the equipment turns to at full brake (across it)
  SKID_DECEL: 13.5,    // m/s², deceleration at full brake with the equipment square across the motion, on firm snow
