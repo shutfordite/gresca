@@ -1,0 +1,284 @@
+<!doctype html>
+<!-- Hanga Dawn v1.6 park board: a design tool (S6), not game code. Reads art/gresca-hanga-spec.js (HANGA.park and the
+     new palette roles) and draws the 1600 x 1000 park board. Every colour is a palette role. Make the PNG with
+     Playwright: see docs/art/HANGA-v1.6.md. -->
+<meta charset="utf-8">
+<title>Hanga Dawn v1.6 park board</title>
+<style>html, body { margin: 0; background: #888; } canvas { display: block; }</style>
+<canvas id="c" width="1600" height="1000"></canvas>
+<script src="../../../art/gresca-hanga-spec.js"></script>
+<script>
+'use strict';
+const H = window.HANGA;
+const P = H.park;
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1600;
+const HT = 1000;
+const FONT = 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif';
+const RAD = Math.PI / 180;
+
+const hexOf = (role) => H.palette[role];
+const toRgb = (role) => [1, 3, 5].map((i) => parseInt(hexOf(role).slice(i, i + 2), 16));
+const lum = (role) => toRgb(role).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); })
+  .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+const contrast = (a, b) => { const hi = Math.max(lum(a), lum(b)), lo = Math.min(lum(a), lum(b)); return (hi + 0.05) / (lo + 0.05); };
+function poly(points, fill, stroke, lw) {
+  ctx.beginPath();
+  points.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.lineJoin = 'round'; ctx.stroke(); }
+}
+function text(s, x, y, size, role, align, weight) {
+  ctx.font = (weight || 400) + ' ' + size + 'px ' + FONT;
+  ctx.fillStyle = hexOf(role || 'key');
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(s, x, y);
+}
+function panel(x, y, w, h, fill) {
+  ctx.fillStyle = hexOf(fill || 'pisteLit'); ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = hexOf('pisteEdge'); ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+function swatch(role, x, y, w, h) {
+  ctx.fillStyle = hexOf(role); ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+
+// ---- a jump from the spec's reference profile -------------------------------------------------------------------
+// Side view in metres (x downhill to the right, y up), the run-in falling at runDeg. Returns the surface points
+// [{x, y, part}] : run-in, takeoff arc to the lip, table, knuckle, landing slope until it meets the ground again.
+function jumpProfile(size, runDeg) {
+  const s = P.sizes[size];
+  const pts = [];
+  const g = (x) => -Math.tan(runDeg * RAD) * x; // the ground under the jump
+  const rampLen = s.lipHeightM / Math.sin(s.lipAngleDeg * RAD) * 1.5; // the takeoff arc, m along
+  const lipX = 6 + rampLen * Math.cos(s.lipAngleDeg * RAD * 0.6);
+  for (let x = 0; x <= 6; x += 1) pts.push({ x, y: g(x), part: 'run' });
+  const n = 14;
+  for (let i = 1; i <= n; i++) {
+    const t = i / n; // a circular arc from the run-in angle up to the lip angle
+    const a = (-runDeg + (s.lipAngleDeg + runDeg) * t) * RAD;
+    const prev = pts[pts.length - 1];
+    const step = rampLen / n;
+    pts.push({ x: prev.x + step * Math.cos(a), y: prev.y + step * Math.sin(a), part: 'take' });
+  }
+  const lip = pts[pts.length - 1];
+  const tableTop = lip.y;
+  for (let x = lip.x + 1; x <= lip.x + s.tableM; x += 1) pts.push({ x, y: tableTop, part: 'table' });
+  const k = pts[pts.length - 1];
+  let x = k.x;
+  let y = k.y;
+  for (let i = 0; i < 200 && y > g(x) + 0.05; i++) {
+    x += 0.5 * Math.cos(s.landingDeg * RAD);
+    y -= 0.5 * Math.sin(s.landingDeg * RAD);
+    pts.push({ x, y, part: 'land' });
+  }
+  pts.push({ x: x + 6, y: g(x + 6), part: 'out' });
+  return { pts, lip, knuckle: k, ground: g, endX: x + 6 };
+}
+
+function drawJump(size, ox, oy, scale, label) {
+  const runDeg = 9;
+  const J = jumpProfile(size, runDeg);
+  const X = (x) => ox + x * scale;
+  const Y = (y) => oy - y * scale;
+  const partOf = { run: 'table', take: 'take', table: 'table', land: 'land', out: 'land' };
+  const colourFor = { take: 'parkTakeLit', table: 'parkTableLit', land: 'parkLandLit' };
+  const sw = P.jumps.sidewalls.byClass[size];
+  // the sidewall behind: the jump's profile raised by the wall height (tapering to nothing at the end), shade tone
+  const front = J.pts.map((p) => [X(p.x), Y(p.y)]);
+  const tableY = J.lip.y;
+  const wall = J.pts.map((p, i) => {
+    const taper = 1 - Math.max(0, (p.x - J.knuckle.x)) / Math.max(1, J.endX - J.knuckle.x);
+    const rise = p.part === 'run' ? 0 : sw.heightOverTableM * (p.part === 'take' ? (i - 6) / 14 : 1) * taper;
+    return [X(p.x), Y(p.y + rise)];
+  });
+  poly(wall.concat([[X(J.endX), Y(J.ground(J.endX))], [X(0), Y(J.ground(0))]]), hexOf('parkWallMid'));
+  ctx.strokeStyle = hexOf('parkWallLit'); ctx.lineWidth = 3; ctx.beginPath();
+  wall.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke();
+  // the snow body in front, part by part
+  const groundPoly = (list, role) => {
+    const a = list[0], b = list[list.length - 1];
+    poly(list.map((p) => [X(p.x), Y(p.y)]).concat([[X(b.x), Y(J.ground(b.x) - 2)], [X(a.x), Y(J.ground(a.x) - 2)]]),
+      hexOf(role));
+  };
+  const parts = [['run', 'parkTableLit'], ['take', 'parkTakeLit'], ['table', 'parkTableLit'], ['land', 'parkLandLit'],
+    ['out', 'parkLandLit']];
+  let from = 0;
+  for (let i = 1; i <= J.pts.length; i++) {
+    if (i === J.pts.length || J.pts[i].part !== J.pts[from].part) {
+      const seg = J.pts.slice(Math.max(0, from - 1), i);
+      groundPoly(seg, parts.find((q) => q[0] === J.pts[from].part)[1]);
+      from = i;
+    }
+  }
+  // surface line
+  ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 1.4; ctx.beginPath();
+  front.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.stroke();
+  // dye lines, as bands along the surface, with the paper halo each side
+  const dye = (atX, role, haloW, w) => {
+    const i = J.pts.findIndex((p) => p.x >= atX);
+    const a = J.pts[Math.max(0, i - 1)], b = J.pts[i];
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    const band = (wm, col) => {
+      poly([[X(mx - dx * wm / 2), Y(my - dy * wm / 2)], [X(mx + dx * wm / 2), Y(my + dy * wm / 2)],
+        [X(mx + dx * wm / 2), Y(my + dy * wm / 2) - 14], [X(mx - dx * wm / 2), Y(my - dy * wm / 2) - 14]], hexOf(col));
+    };
+    band(w + haloW * 2, 'paper');
+    band(w, role);
+  };
+  dye(J.lip.x, P.jumps.dyeLines.lip.role, P.jumps.dyeLines.lip.haloWidthM, P.jumps.dyeLines.lip.widthByClassM[size]);
+  dye(J.knuckle.x + 0.6, P.jumps.dyeLines.knuckle.role, P.jumps.dyeLines.knuckle.haloWidthM,
+    P.jumps.dyeLines.knuckle.widthByClassM[size]);
+  text(label, ox, oy + 36, 15, 'key', 'left', 700);
+  const s = P.sizes[size];
+  text('lip ' + s.lipHeightM + ' m at ' + s.lipAngleDeg + ' deg, table ' + s.tableM + ' m, landing ' + s.landingDeg
+    + ' deg over ' + s.landingLengthM + ' m', ox, oy + 54, 12, 'indigo');
+  text('lip line ' + P.jumps.dyeLines.lip.widthByClassM[size] + ' m, knuckle line '
+    + P.jumps.dyeLines.knuckle.widthByClassM[size] + ' m, wall ' + sw.heightOverTableM + ' m high', ox, oy + 70, 12, 'indigo');
+  return J;
+}
+
+// ---- a rail from the spec ---------------------------------------------------------------------------------------
+// A flat-down rail, side view: height h above the snow, legs every legs.everyM, the foot plate and skid buried.
+function drawRail(ox, oy, scale) {
+  const R = P.rails;
+  const X = (x) => ox + x * scale, Y = (y) => oy - y * scale;
+  const snowY = (x) => -Math.max(0, x - 5) * Math.tan(18 * RAD) * 0; // the base snow is level here
+  const tubeY = (x) => 0.9 - Math.max(0, x - 5) * Math.tan(15 * RAD) * 0.0 - Math.max(0, x - 6) * 0.22 * (x < 11 ? 1 : 0)
+    - (x >= 11 ? 5 * 0.22 : 0);
+  // snow
+  poly([[X(-1), Y(0)], [X(19), Y(0)], [X(19), Y(-0.9)], [X(-1), Y(-0.9)]], hexOf('pisteMid'));
+  // legs, foot plates and wooden skids (mostly buried)
+  const xs = [0.2, 2.5, 5, 7.5, 10, 12.5, 15, 17.5];
+  xs.forEach((x) => {
+    const top = tubeY(x);
+    ctx.fillStyle = hexOf(R.base.role);
+    ctx.fillRect(X(x - R.base.widthM / 2), Y(R.base.heightM - R.base.buriedM), R.base.widthM * scale, R.base.heightM * scale);
+    ctx.fillStyle = hexOf(R.legs.role);
+    ctx.fillRect(X(x - R.legs.diameterM / 2), Y(top), R.legs.diameterM * scale, (top - 0.02) * scale);
+    ctx.fillStyle = hexOf(R.legs.shadeRole);
+    ctx.fillRect(X(x), Y(top), R.legs.diameterM * scale / 2, (top - 0.02) * scale);
+    ctx.fillStyle = hexOf(R.legs.role);
+    ctx.fillRect(X(x - R.legs.footPlateM / 2), Y(0.03), R.legs.footPlateM * scale, 0.03 * scale);
+  });
+  // the tube, with its shade underside, highlight on top and a tape band at each leg
+  const d = R.tube.diameterM.standard * scale;
+  const line = (colour, width, dy) => {
+    ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineCap = 'butt'; ctx.lineJoin = 'round'; ctx.beginPath();
+    [0, 5, 6, 11, 18].forEach((x, i) => { const px = X(x), py = Y(tubeY(x)) + dy; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+    ctx.stroke();
+  };
+  line(hexOf(R.tube.shadeRole), d, 0);
+  line(hexOf(R.tube.role), d * 0.7, -d * 0.1);
+  line(hexOf(R.tube.highlightRole), d * R.tube.highlightWidthFrac, -d * 0.3);
+  xs.forEach((x) => {
+    ctx.fillStyle = hexOf(R.tube.gripTape.role);
+    ctx.fillRect(X(x - R.tube.gripTape.bandLengthM / 2), Y(tubeY(x)) - d * 0.55, R.tube.gripTape.bandLengthM * scale, d * 1.1);
+  });
+  text('Rail: tube ' + R.tube.diameterM.min + ' to ' + R.tube.diameterM.max + ' m (shown ' + R.tube.diameterM.standard
+    + ' m), leg every ' + R.legs.everyM + ' m', ox, oy + 36, 14, 'key', 'left', 700);
+  text('Foot plate ' + R.legs.footPlateM + ' m and a ' + R.base.widthM + ' m wooden skid under each leg, '
+    + R.base.buriedM + ' m of it buried', ox, oy + 54, 12, 'indigo');
+}
+
+// ---- a box: end view and side view ------------------------------------------------------------------------------
+function drawBox(ox, oy, scale) {
+  const B = P.boxes;
+  const wM = B.widthM.standard, hM = 0.6;
+  const X = (x) => ox + x * scale, Y = (y) => oy - y * scale;
+  poly([[X(-0.6), Y(0)], [X(2.4), Y(0)], [X(2.4), Y(-0.6)], [X(-0.6), Y(-0.6)]], hexOf('pisteMid'));
+  // end view: skid, plinth, side panels, end colour, deck with edge strips
+  const cx = 0.9;
+  ctx.fillStyle = hexOf(B.base.role); ctx.fillRect(X(cx - B.base.widthM / 2 - 0.1), Y(B.base.heightM - B.base.buriedM), (B.base.widthM + 0.2) * scale, B.base.heightM * scale);
+  ctx.fillStyle = hexOf(B.legs.role); ctx.fillRect(X(cx - B.legs.widthM / 2), Y(hM * 0.45), B.legs.widthM * scale, hM * 0.45 * scale);
+  ctx.fillStyle = hexOf(B.sides.endRole); ctx.fillRect(X(cx - wM / 2 + B.sides.insetM), Y(hM - B.top.thicknessM), (wM - B.sides.insetM * 2) * scale, (hM * 0.55 - B.top.thicknessM) * scale);
+  ctx.fillStyle = hexOf(B.top.role); ctx.fillRect(X(cx - wM / 2), Y(hM), wM * scale, B.top.thicknessM * scale);
+  ctx.fillStyle = hexOf(B.top.edgeRole);
+  ctx.fillRect(X(cx - wM / 2), Y(hM), B.top.edgeWidthM * scale, B.top.thicknessM * scale);
+  ctx.fillRect(X(cx + wM / 2 - B.top.edgeWidthM), Y(hM), B.top.edgeWidthM * scale, B.top.thicknessM * scale);
+  text('End', X(cx), Y(-0.25) + 16, 12, 'indigo', 'center');
+  // side view: a 6 m box on plinths
+  const sx = 3.0, len = 6;
+  const SX = (x) => ox + (sx + x) * scale;
+  poly([[SX(-0.4), Y(0)], [SX(len + 0.4), Y(0)], [SX(len + 0.4), Y(-0.6)], [SX(-0.4), Y(-0.6)]], hexOf('pisteMid'));
+  [0.2, 2.7, 5.2, 5.8].forEach((x) => {
+    ctx.fillStyle = hexOf(B.base.role); ctx.fillRect(SX(x - 0.2), Y(B.base.heightM - B.base.buriedM), 0.4 * scale, B.base.heightM * scale);
+    ctx.fillStyle = hexOf(B.legs.role); ctx.fillRect(SX(x - B.legs.widthM / 2), Y(hM * 0.45), B.legs.widthM * scale, hM * 0.45 * scale);
+  });
+  ctx.fillStyle = hexOf(B.sides.role); ctx.fillRect(SX(0), Y(hM - B.top.thicknessM), len * scale, (hM * 0.55 - B.top.thicknessM) * scale);
+  ctx.fillStyle = hexOf(B.sides.shadeRole); ctx.fillRect(SX(0), Y(hM * 0.45 + 0.07), len * scale, 0.07 * scale);
+  ctx.fillStyle = hexOf(B.top.role); ctx.fillRect(SX(0), Y(hM), len * scale, B.top.thicknessM * scale);
+  ctx.fillStyle = hexOf(B.top.edgeRole); ctx.fillRect(SX(0), Y(hM), len * scale, B.top.edgeWidthM * scale * 0.6);
+  text('Box: deck ' + B.widthM.min + ' to ' + B.widthM.max + ' m (shown ' + B.widthM.standard + ' m), plinth every '
+    + B.legs.everyM + ' m', ox, oy + 36, 14, 'key', 'left', 700);
+  text('Dark deck with an orange edge strip, blue sides, darker end, wooden skid', ox, oy + 54, 12, 'indigo');
+}
+
+// ---- pole -------------------------------------------------------------------------------------------------------
+function drawPole(role, topRole, x, y, scale) {
+  const p = P.pistePoles;
+  ctx.fillStyle = hexOf(role); ctx.fillRect(x - p.halfWidthM * scale, y - p.heightM * scale, p.halfWidthM * 2 * scale, p.heightM * scale);
+  if (topRole) { ctx.fillStyle = hexOf(topRole); ctx.fillRect(x - p.halfWidthM * scale, y - p.heightM * scale, p.halfWidthM * 2 * scale, p.topM * scale); }
+  ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 0.8; ctx.strokeRect(x - p.halfWidthM * scale, y - p.heightM * scale, p.halfWidthM * 2 * scale, p.heightM * scale);
+}
+
+// ---- the board --------------------------------------------------------------------------------------------------
+ctx.fillStyle = hexOf('paper'); ctx.fillRect(0, 0, W, HT);
+text('Park look', 40, 46, 30, 'key', 'left', 700);
+text('Jump snow, dyed lines, rails, boxes, legs, bases and piste poles from HANGA.park', 40, 72, 16, 'indigo');
+text('Hanga Dawn v' + H.version + ' - park', W - 40, 46, 16, 'indigo', 'right');
+
+// left column: swatches
+panel(30, 90, 480, 880);
+text('Colour roles', 46, 116, 15, 'key', 'left', 700);
+let y = 130;
+const row = (label, roles, note) => {
+  text(label, 46, y + 12, 12, 'key', 'left', 700);
+  if (note) text(note, 46, y + 26, 10, 'indigo');
+  roles.forEach((r, i) => {
+    swatch(r, 170 + i * 66, y, 60, 30);
+    text(r, 170 + i * 66, y + 44, 9, 'key');
+  });
+  y += 62;
+};
+const S = P.jumps.surfaces;
+text('Jump snow (lit / mid / shade)', 46, y + 4, 12, 'indigo', 'left', 700); y += 14;
+for (const name of ['takeoff', 'table', 'landing', 'sidewall']) row(name, [S[name].lit, S[name].mid, S[name].shade], S[name].finish);
+text('Dyed lines (lit / shade)', 46, y + 4, 12, 'indigo', 'left', 700); y += 14;
+row('lip line', [P.jumps.dyeLines.lip.role, P.jumps.dyeLines.lip.shadeRole]);
+row('knuckle line', [P.jumps.dyeLines.knuckle.role, P.jumps.dyeLines.knuckle.shadeRole]);
+text('Rails and boxes', 46, y + 4, 12, 'indigo', 'left', 700); y += 14;
+row('rail tube', [P.rails.tube.role, P.rails.tube.shadeRole, P.rails.tube.highlightRole, P.rails.tube.gripTape.role]);
+row('box', [P.boxes.top.role, P.boxes.top.edgeRole, P.boxes.sides.role, P.boxes.sides.shadeRole, P.boxes.sides.endRole]);
+row('legs, skid', [P.rails.legs.role, P.rails.legs.shadeRole, P.rails.base.role, P.rails.base.shadeRole]);
+
+// right: jumps
+panel(520, 90, 1050, 360, 'powderLit');
+text('Side view: the same snow body, the wall behind, dye lines across', 536, 114, 15, 'key', 'left', 700);
+ctx.save(); ctx.beginPath(); ctx.rect(521, 91, 1048, 358); ctx.clip();
+drawJump('M', 545, 300, 12, 'M jump');
+drawJump('S', 1110, 300, 15, 'S kicker');
+ctx.restore();
+// right: rail and box
+panel(520, 460, 1050, 280, 'powderLit');
+drawRail(545, 600, 20);
+drawBox(1000, 600, 52);
+// poles
+panel(520, 750, 1050, 220);
+text('Piste poles (2.3 m, a 0.5 m orange top on the right-hand ones going down)', 536, 774, 15, 'key', 'left', 700);
+const toneOrder = ['green', 'blue', 'red', 'black', 'yellow'];
+toneOrder.forEach((tone, i) => {
+  const x = 590 + i * 150;
+  drawPole(P.pistePoles.roles[tone], null, x, 930, 38);
+  drawPole(P.pistePoles.roles[tone], P.pistePoles.roles.rightTop, x + 56, 930, 38);
+  text(tone, x + 28, 950, 12, 'key', 'center', 700);
+  const d = Object.entries(P.pistePoles.difficultyTone).filter(([, t]) => t === tone).map(([k]) => k).join(', ');
+  text(d, x + 28, 964, 9, 'indigo', 'center');
+});
+text('each pair: left edge, right edge going down', 1560, 780, 11, 'indigo', 'right');
+document.title = 'board park';
+</script>
