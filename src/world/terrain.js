@@ -1,4 +1,5 @@
 // Terrain interface: a stack of height layers (base, sculpt, features, detail) sampled as one smooth surface.
+import { powderDepth } from './snow.js';
 // ---- terrain ----
 // Everything that needs the ground (physics, camera, renderer, sprites, the rider's feet, the façade) asks a Terrain,
 // never the height array (docs/REAL-WORLD-DATA.md R1). Pure: no DOM, canvas or HANGA colours, so it loads in Node
@@ -170,12 +171,13 @@ function grid(data, nx, ny, cellM = 1, frame = UNPLACED) {
 
 /**
  * A Terrain from a layer stack. o: {base (required, usually Terrain.grid), sculpt, features, detail (optional
- * layers), groomed (optional: (x,y) -> 0..1)}. bounds are the base grid's extent in the world (see mapBounds).
+ * layers), groomed (optional: (x,y) -> 0..1), powder (optional: (x,y) -> m; by default world/snow.js powderDepth
+ * from this terrain's shape and groomed)}. bounds are the base grid's extent in the world (see mapBounds).
  */
 function create(o) {
  const base = o.base;
  if (!base || typeof base.cell !== 'function') throw new Error('Terrain.create: base must be a Terrain.grid');
- for (const k in o) if (!LAYERS.includes(k) && k !== 'groomed') throw new Error('Terrain.create: unknown layer ' + k);
+ for (const k in o) if (!LAYERS.includes(k) && k !== 'groomed' && k !== 'powder') throw new Error('Terrain.create: unknown layer ' + k);
  const extra = LAYERS.slice(1).map((k) => o[k]).filter(Boolean);
  const n = extra.length;
  const g0 = { gx: 0, gy: 0 };
@@ -195,9 +197,11 @@ function create(o) {
   for (let k = 0; k < n; k++) extra[k].gradient(x, y, o2);
   return o2;
  }
+ const bounds = mapBounds(base.frame, base.nx * base.cellM, base.ny * base.cellM);
+ const powder = o.powder || powderDepth(height, gradient, groomed, bounds);
  return Object.freeze({
   layers: Object.freeze(LAYERS.filter((k) => o[k])), // names of the layers in use, in stack order
-  bounds: mapBounds(base.frame, base.nx * base.cellM, base.ny * base.cellM), // the base grid's rectangle (m)
+  bounds,             // the base grid's rectangle (m), mapBounds
   cellM: base.cellM,   // m, spacing of the base grid's samples
   height,              // (x,y) -> m, altitude of the composed surface; smooth (C1) for physics and the camera
   gradient,            // (x,y,out?) -> {gx,gy}, m/m, the exact derivative of height()
@@ -228,6 +232,9 @@ function create(o) {
   },
   // (x,y) -> 0..1, surface: how groomed the snow is (1 = groomed piste, 0 = off-piste powder). Not a height layer.
   groomed,
+  // (x,y) -> m, surface: loose snow over the firm base, 0 on the groomed piste; light powder under
+  // POWDER.LIGHT_BELOW, deep from POWDER.DEEP_FROM (world/snow.js). Not a height layer: the rider sinks into it.
+  powder,
  });
 }
 
