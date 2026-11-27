@@ -70,6 +70,11 @@ Updated 27 Nov 2026, main after PR #72 (X1), with X2 open. Only the coordinator 
 | S5 maps | **C4b** waits for El Tarter's bake, now one tap (below) | none |
 
 ## Next, in order
+- **G, whole mountains and a lighter frame (owner, 27 Nov; `docs/ROADMAP.md`, "G")**, the next items taken:
+  **G1** spray pool (S2), **G2** parallel load (Shared) and **G3** idle frames (Shared) now, alongside K and C4b; the
+  **G4** decision on the CPU renderer (ADR 0014, owner) before **G5** features without the colour map and **G6** the
+  rider and spray on the GPU (S4, S3); **G7** the whole mountain, lifting the 1000 × 2450 m paint window (ADR 0015,
+  S5 and S4), right after C4b; **G8** bakes in a worker with G7.
 - **Real mountains first (X2):** the El Tarter bake (one tap, "Waiting on the owner"), then **C4b** (S5, with its
   Shared `app.js` prep PR) runs **alongside K**, not after it. K's acceptance is ridden on the play mountain and, once
   C4b is in, on El Tarter's park.
@@ -110,7 +115,7 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 
 | Item | Stream | From | Trigger |
 |---|---|---|---|
-| A few very slow frames in Chrome (mean frame time about 6× the median, on main too) | S4 | D1 #37 | before E4 |
+| A few very slow frames in Chrome (mean frame time about 6× the median, on main too); likely garbage collection from the spray (about 3.6 MB per 10 s) | S4, S2 | D1 #37 | G1, then re-measure |
 | F1 rider scale: one scale for the rider, flags, rails and trees, with the ratio test from the feedback plan (folded into E1/E3 and never closed) | S4 | 20 Nov plan | now, own package after a framing spike |
 | Scenes `ride-board` and `ride-ski` never ride straight (scene inputs merge step to step, so "straight" still turns); fixing it changes their shots | S4 | X1 | next S4 package |
 | Pose tuning: ski tuck reads as a blob from behind, ski brake legs look short, board toe-side brake looks like kneeling at yaw 90 | S3 | #69, #51 | K5 or sooner |
