@@ -158,6 +158,15 @@ the cost; revisit if the iPad's first load is still slow after G2. An offline se
 the per-commit preview folders make its scope and cache names a design of their own (its own ADR if the owner wants
 home-screen play).
 
+### U: street, real city streets (owner idea 27 Nov; later, after K, C4b, G7 and TD0)
+Street skiing in real cities (Helsinki first, then a snowy Japanese city) and a map search that takes the player to
+a place. The plan is in `docs/STREET.md`: a Shared seam package **U0** (ADR 0016: `Zone` and an optional course,
+a `Solids` layer for stairs, ledges and buildings beside the snow heightfield, surface kinds, a procedural test
+block), then street packages in the existing streams S1–S6, starting with an S2 feel spike on the test block. It
+reuses K's polylines and world-height flight, G7's tiles, TD0's sun and the Bake map workflow. Done now: K0's rails
+are resolved to world points (N1, in the K0 row). Owner decisions are listed in `docs/STREET.md`, section 7;
+D0 decides whether search covers any place or only the baked catalog.
+
 ## Where this differs from the feedback plan, and why
 - **The `Course` seam and the ENU frame (C2) move into the freeze.** In the feedback plan they sat in S5. F5, F6 and F7
   need the fall line and headings independent of +y, and flipping the frame later would rewrite stream code.
@@ -269,7 +278,7 @@ fixed drag. K replaces this with park features that are part of the snow and phy
 
 | # | Package | Stream | What |
 |---|---|---|---|
-| K0 | park contract and format (ADR 0012) | Shared | `Course.features`: jumps `{s, d, size, designSpeed, takeoff, table, landing}` and rails `{points: [{s, d, h}], profile 'rail'│'box', width, legs, entry}` in `core/contracts.js`; the course file's park layout gains the same (an additive format version, old files still load); the jump gravity moves to `core/config.js` so `world/` can size landings with the sim's constant; `SimEvent` `grindStart`/`grindEnd` gain `style` and `kinks`; `RiderState.grind` gains `seg`, `style`, `balance`; `AnimInput` gains `grindStyle` |
+| K0 | park contract and format (ADR 0012) | Shared | `Course.features`: jumps `{s, d, size, designSpeed, takeoff, table, landing}` and rails `{points: [{s, d, h}], profile 'rail'│'box', width, legs, entry}` in `core/contracts.js`, each also resolved to `world: [{x, y, z}]` (ENU m, z absolute) when the world is built, so `sim/grind.js` and the view read only the world points (street features come with world points and no course: `docs/STREET.md`, N1); the course file's park layout gains the same (an additive format version, old files still load); the jump gravity moves to `core/config.js` so `world/` can size landings with the sim's constant; `SimEvent` `grindStart`/`grindEnd` gain `style` and `kinks`; `RiderState.grind` gains `seg`, `style`, `balance`; `AnimInput` gains `grindStyle` |
 | K1 | park shape library | S5 | `src/world/park/`: pure functions from a feature to its snow height (takeoff curve to the lip angle, table, knuckle, landing sized for `designSpeed`, run-out, sidewalls) and its rail polylines; the `features` layer stamps the jumps into the terrain; the play mountain's park layout. The test slope is unchanged (AGENTS.md "Do not break"). Tests: every size's landing catches a rider at its design speed between knuckle and bottom (a pure trajectory check) |
 | K2 | flight and landing over the snow | S2 | `sim/jump.js`: world-height flight, takeoff from the lip's shape, landing impact normal to the snow, knuckle and flat-bottom crashes. One flight model for every map: the test slope's physics assertions still pass unchanged; the golden hash is re-recorded once, with the trace differences measured in the PR |
 | K3 | grind physics | S2 | `sim/grind.js` on polylines: gravity along the segment, rail and box friction, kinks (carry speed, lift off over convex kinks), bends (lean, slide off the outside), styles from the board angle, balance, ollie-on entry, side and leg crashes. Tests per shape at fixed speeds |
