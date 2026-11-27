@@ -72,7 +72,8 @@ var RA = {
    hips: ['hipL', 'hipR', 'hipC'], knees: ['kneeL', 'kneeR'],
    upper: ['neck', 'head', 'shL', 'shR', 'elbL', 'elbR', 'hanL', 'hanR'],
    hands: { hanL: [-1, 1], hanR: [1, 1], elbL: [-1, 0.5], elbR: [1, 0.5] },
-   lead: [['ankL', 'skiLt', 'skiLn'], ['ankR', 'skiRt', 'skiRn']],  // the joints of the left and right ski that run ahead
+   // the left and right ski's joints that run ahead (skiLead)
+   lead: [['ankL', 'skiLt', 'skiLn'], ['ankR', 'skiRt', 'skiRn']],
    fwd: 2, hipsBack: 0.3
   },
   board: {
