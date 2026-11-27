@@ -113,6 +113,8 @@ The one-file rule is gone (ADR 0001); what is still open is runtime fetching. Ke
 runtime" (resorts are baked and shipped in `maps/`, or loaded from a file), **or** let the hosted build on GitHub Pages fetch elevation (Mapterhorn) and a Gresca-hosted weekly piste extract at start.
 Nothing in phases B and C depends on the answer; it matters from C4 on. Recommendation: keep the rule until El Tarter
 rides well from a baked file, then decide with real frame-time and file-size numbers.
+Street (`docs/STREET.md`, 27 Nov) adds a reason to say yes: a map search that reaches any city needs a hosted
+geocoder and baking on demand. Without runtime fetching, the search covers the baked catalog only.
 
 ## 4. Open questions for the owner
 0. D0 above: keep the no-runtime-fetch rule, or allow a hosted live build?
