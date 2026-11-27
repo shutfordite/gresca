@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 27 Nov 2026, main after PR #72 (X1), with X2 open. Only the coordinator edits this file (AGENTS.md).
+Updated 27 Nov 2026, main after PR #84 (H0), with #90 landing H1–H3. Only the coordinator edits this file (AGENTS.md).
 
 ## Done
 | Package | PR |
@@ -62,6 +62,8 @@ Updated 27 Nov 2026, main after PR #72 (X1), with X2 open. Only the coordinator 
 | S4/E3b rails, flags and kickers as GPU objects; every GPU object lit by the baked sun visibility | #67 |
 | STATUS after #69, X1 in the roadmap; K, a real snow park, planned in the roadmap | #70, #71 |
 | X1 conflict-proofing: test areas from `// @areas` tags, golden split into sim and anim hashes, carve scenes, one property per line at the seams | #72 |
+| H0 contract: `RiderState.yawRate`, `snowDepth`, `sink`; `AnimInput.sink` | #84 |
+| H1–H3 handling rework (owner, 27 Nov): `terrain.powder` light and deep snow (S5); the snow contact: edge builds over half a second and is capped to what the snow holds, turn-rate inertia, kinetic skid, no slip banked as speed, momentum braking, powder sink, plough and drag (S2); the powder look: deep snow pillows, rider sunk with a snow mound, trench, plumes (S4). Merged into the stack, landed on main by #90 | #85, #88, #89, #90 |
 
 ## In progress
 | Stream | Package | Branch |
@@ -108,6 +110,10 @@ Verdicts and one-tap jobs only; everything else is the agents'. The coordinator 
 | **Bake El Tarter** (C4b's acceptance waits on it) | After X2 merges: enable Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests". Then Actions → **Bake map** → Run workflow with map `el-tarter`. It opens a PR with the terrain and lists the piste names in the run summary. Run it again with the run name (exact, accents included) to add the course. | 21 Nov |
 | **The first real course** (owner, 25 Nov) | El Tarter's snow park if OpenSkiMap maps it as a piste; otherwise Àliga. Its kickers and rails go in the course file's park layout (ADR 0010) until K. | decided |
 | Play mountain framing (#48 "looks flat") | Verdict on a feel spike with two or three camera framings (S4) | 22 Nov |
+| **Merge #90** (H1–H3 never reached main: #85, #88 and #89 merged into their stacked bases) | Merge #90, nothing else to review: it is the tip of the stack with main merged in | 27 Nov |
+| **Handling feel** (H2): does the edge ride the snow, is the sensitivity right, is the brake's stopping distance right? | Ride the main preview after #90. One number per answer: `RIGS.*.edgeRate` (sensitivity), `BRAKE.SKID_DECEL` (stop) | 27 Nov |
+| **Powder look** (H3): do light and deep powder read as different snow; the sunk rider and the plume? | Same ride, off the piste. Sizes: `draw.js` `SINK_SCREEN`, `COLLAR_*`, `SPRAY_NEAR_SCALE`; the shader's `POWDER_*` | 27 Nov |
+| **G4: the CPU renderer's role** (before G5 and G6) | Is a device without WebGL2 still worth drawing for, or is the CPU raycaster a frozen fallback that gets no new looks? One answer in #93 or the daily list | 27 Nov |
 
 ## Debt
 Known issues and review notes left for later. Each stream's next package clears one of its rows or says why not in
@@ -123,6 +129,14 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 | C2 leftovers: `START_HEADING`/`MENU_HEADING` grid headings until C4b starts the rider on the course tangent; minimap in grid orientation (north-up for real maps?) | S5, S1 | #26 | C4b |
 | The view keeps the spec's clockwise sign for `pathTurn` and `riderYaw` (#58); tidy it | S3 | #58 | optional |
 | The design canvas copy of the art spec (claude.ai "Gresca Rider Style Prototypes") must be re-synced after every spec version | S6 | #18 | each spec version |
+| Deep powder pose: lean back and lower stance from `AnimInput.sink` (H0 added it; nothing reads it yet) | S3 | #84, #89 | next S3 package |
+| The CPU colour map has no powder look (only the GPU shader shades light and deep snow); the rider, spray and trench work on both | S4 | #89 | before CPU fallback is shown to players, or E4 |
+| Analog steer on touch: the edge now builds with the steer held, but touch sends 0 or 1, so a light touch can't ask for a gentle edge | S1 | #88 | after the handling verdict |
+| Golden and `events.test.js` autopilots aim 8 m ahead with bang-bang steering, tuned to H2's edge rate: a sensitivity change can send them off the piste again. A proportional pilot would make them robust | S5 (tools), S2 | #88 | next feel change to `edgeRate` or `yawLag` |
+| `rotated.test.js` tolerance raised from 1e-9 to 1e-8 (turn-rate inertia grows rounding faster); a more stable comparison (shorter run, or s/d at checkpoints) could restore 1e-9 | S2 | #88 | next sim package |
+| Brake travel in `brake.test.js` is measured only while faster than 5 m/s (the 16 m stop crosses the test slope's bending fall line) | S2 | #88 | if the brake is retuned |
+| Real snow data: `terrain.powder` is a shape model (hollows, ridges, steepness, patches); a snow-depth raster at bake time could replace it through `Terrain.create({ powder })` | S5 | #85 | after C4b |
+| `course.test.js` fall-line check moved to world metres (`g.raw`): through the map view, grid rounding of 1e-13 m swung it 1.3e-12 rad on a nearly level spot. Other map-view checks with 1e-12 tolerances may be as fragile | Shared (`test/map-view.js`) | #88 | next map-view change |
 
 `?rot=<deg>` places the procedural map rotated (debug).
 

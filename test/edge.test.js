@@ -8,7 +8,8 @@ import assert from 'node:assert/strict';
 import { load } from './harness.js';
 import { RIGS } from '../src/core/config.js';
 import { EDGE } from '../src/sim/tuning.js';
-import { steerOf, followEdge, carveRadius, yawRate, slipLeft } from '../src/sim/edge.js';
+import { steerOf, followEdge, carveRadius, yawRate, edgeCap, followYaw, edgeBite } from '../src/sim/edge.js';
+import { edgeSlip, plough, carveDrag } from '../src/sim/contact.js';
 
 const DT = 1 / 120;          // s, one sim step
 const START_S = 480;         // m along the course: the empty stretch
@@ -113,10 +114,11 @@ describe('F6 edge and carve', () => {
  });
 
  it('right turns clockwise and left counter-clockwise; the edge is + for a left turn', () => {
-  hold('board', 10, 1, 0.3, () => {});
+  // H2: the edge builds over about half a second (it was 0.2 s), so the turns are compared after 0.6 s
+  hold('board', 10, 1, 0.6, () => {});
   const right = g.raw.state();
   assert.ok(right.edge < -0.5, `edge ${right.edge}`);
-  hold('board', 10, -1, 0.3, () => {});
+  hold('board', 10, -1, 0.6, () => {});
   const left = g.raw.state();
   assert.ok(left.edge > 0.5, `edge ${left.edge}`);
   // world headings (counter-clockwise from east) through the raw façade
@@ -154,10 +156,11 @@ describe('sim/edge.js', () => {
   assert.ok(yawRate({ heading: 0, vx: 0, vy: 0, edge: 0 }, 1, RIGS.board) < 0, 'pivots right when standing still');
  });
 
- it('slipLeft is 0 within the hold and all of the slip beyond it (a washout)', () => {
-  assert.equal(slipLeft(0.1, 0.2), 0);
-  assert.equal(slipLeft(-0.1, 0.2), 0);
-  assert.equal(slipLeft(1, 0.2), 1);
-  assert.equal(slipLeft(-1, 0.2), -1);
+ it('edgeSlip is 0 within the hold, and past it the sliding edge takes only skidGrip of the hold', () => {
+  const rig = RIGS.board;
+  assert.equal(edgeSlip(rig, 0.1, 0.2 / DT, DT), 0);
+  assert.equal(edgeSlip(rig, -0.1, 0.2 / DT, DT), 0);
+  assert.ok(Math.abs(edgeSlip(rig, 1, 0.2 / DT, DT) - (1 - 0.2 * rig.skidGrip)) < 1e-12);
+  assert.ok(Math.abs(edgeSlip(rig, -1, 0.2 / DT, DT) + (1 - 0.2 * rig.skidGrip)) < 1e-12);
  });
 });

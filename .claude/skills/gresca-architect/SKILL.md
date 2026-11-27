@@ -101,6 +101,12 @@ Specs written ahead don't predict feel: one-finger flips (#60) were replaced aft
 ## Merging and keeping branches current (X1, 26 Nov: ten hand merges in one day)
 - No stacked PRs unless a package needs one that is still open. When the base merges, merge main into the
   dependent branch at once.
+- **A stacked PR must be retargeted to `main` before it is merged** (`gh api -X PATCH
+  repos/shutfordite/gresca/pulls/<n> -f base=main`, then merge `origin/main` into it). GitHub doesn't retarget it when
+  the base merges, so merging it as is lands it on the old base branch, not on `main` (H stack, #85/#88/#89). In the
+  merge order, a stacked PR is "after the coordinator retargets it", never in the same batch as its base.
+- After a merge batch, check that every PR in it is on `main` (`git log origin/main --oneline -20`) before updating
+  STATUS.
 - Post the **merge order** with every review round: contract and Shared PRs first, then by fewest conflicts.
 - After each merge, update every open branch (`update-branch`, or a merge of main where it conflicts) before the
   owner merges the next, so CI is green on what will actually land.
