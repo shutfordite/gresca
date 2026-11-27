@@ -52,3 +52,4 @@ park, sun, widths and finish by hand. Fields, in this order:
   finishS, kickers, rails})`, turning `widths` into a per-point array. The validator imports `src/world/`; if the
   game must import it, C4 moves `tools/map-compiler/{format,validate}.js` or adds `tools/` to the preview's `SITE`.
 - Any change that breaks a reader is `gresca-map-2`; new optional fields are additive.
+- Amended by ADR 0012: `version: 2` (absent is 1) adds `features`, the park's jumps and rails.
