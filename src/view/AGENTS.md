@@ -39,7 +39,7 @@
 | Sky, sun, fog | `sky.js` | `look` |
 | Flags, poles, rails on the CPU raycaster and after a lost GL context | `sprites.js` | `park` |
 | A real run's edge poles: in its difficulty colour, orange-topped on the right going down (CPU `drawPistePoles`, GPU `gl/park-mesh.js`; colours `sprites.pistePole` in the Look) | `piste-poles.js` | `real-map`, `gl-park` |
-| Where the rider is on the screen, in CSS px (the tap-the-rider hit box; the input pads it) | `rider-box.js` | `tap-rider` |
+| Where the rider is on the screen, in CSS px (the tap-the-rider hit box; the input pads it) | `touch-box.js` | `tap-rider` |
 | Rider pose input and body motion (S3) | `rider-animation.js` (with `art/gresca-rider-anim.js`) | `rider-anim`, `rider-lean`, `rider-twist`, `rider-brake-twist`, `rider-flip` |
 | Drawing the rider (S3) | `rider-draw.js` | `rider-anim` |
 | What tests can read of the view (`Gresca.debug`) | `fields.js` | `facade`, `look` |
