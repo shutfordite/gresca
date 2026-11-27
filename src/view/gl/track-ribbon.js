@@ -165,7 +165,8 @@ void main() {
  float depth = vDepth * mix(1.0, 1.0 - STREAK_VARIATION * lane * laneFade, vSmear);
  float edgeFrom = clamp(min(mix(EDGE_CARVE, EDGE_SMEAR, vSmear), 1.0 - EDGE_AA_PX * fwidth(vSide)), 0.0, 0.95);
  float cover = 1.0 - smoothstep(edgeFrom, 1.0, a);
- float bowl = (1.0 - smoothstep(FLOOR_FROM, FLOOR_TO, a)) * depth;
+ // a powder trench (depth > 1) keeps the floor's tone and gets steeper walls
+ float bowl = (1.0 - smoothstep(FLOOR_FROM, FLOOR_TO, a)) * min(1.0, depth);
  float e = 0.05;
  float slope = GROOVE_M * depth * (profile(vSide + e) - profile(vSide - e)) / (2.0 * e) / vHalf;
  vec3 n = normalize(vec3(-slope * vAcross, 1.0));
