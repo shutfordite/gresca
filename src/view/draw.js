@@ -1,6 +1,6 @@
 // draw(): one frame of the behind-the-rider view: terrain raycast, sky and sun, trees, rails, flags, spray and the
 // rider; updateCamera() moves the camera before it, in the loop. Reads the simulation's state and never writes it.
-import { FOV, RAY_SAMPLES, RAY_EXACT_M, RAY_START_M, RAY_SPREAD, CAM_BACK, RIDER_SCALE } from '../core/config.js';
+import { CAM_MODES, RAY_SAMPLES, RAY_EXACT_M, RAY_START_M, RAY_SPREAD, RIDER_SCALE } from '../core/config.js';
 import { followRider } from './camera.js';
 import { fogAt, drawSky, drawSun } from './sky.js';
 import { projectInto, drawFlags, drawRails, drawPistePoles } from './sprites.js';
@@ -56,7 +56,8 @@ export function updateCamera(view, scene, dt, alpha) {
   view.lo.width = RW;
   view.lo.height = RH;
  }
- view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt, scene.input.lookBack);
+ view.groundM = followRider(camera, terrain, look.camera, view.drawn, rider, RW, RH, W, dt, scene.input.lookBack,
+  CAM_MODES[scene.camMode.index]);
  if (view.timer !== null) view.timer.lap(STAGE.CAMERA);
 }
 
@@ -161,7 +162,7 @@ function raycast(view, camera, terrain, fog, D, RW, RH) {
  const rayZ = view.rayZ;
  const rayFog = view.rayFog;
  for (let c = 0; c < RW; c++) {
-  const ph = (c / RW - 0.5) * FOV;
+  const ph = (c / RW - 0.5) * camera.fov;
   const cs = Math.cos(ph);
   // columns run left to right, clockwise in the world (headings grow counter-clockwise)
   const rx = Math.cos(camA - ph);
@@ -358,13 +359,13 @@ function drawRiderOnSnow(ctx, view, scene, gR, dt) {
  const jz = view.drawn.z;
  const sc = camera.focalPx;
  const kx = camera.pixelScale;
- const mf = sc / CAM_BACK * kx;
+ const mf = sc / camera.back * kx;
  const m = mf * RIDER_SCALE;
  const list = animTick(view, scene, dt);
  const shd = list[0];
  const ss = 1 / (1 + jz * 0.25);
  ctx.save();
- ctx.translate(view.W / 2, ((camera.height - gR) / CAM_BACK * sc + camera.horizonPx - camera.pitchPx) * kx);
+ ctx.translate(view.W / 2, ((camera.height - gR) / camera.back * sc + camera.horizonPx - camera.pitchPx) * kx);
  if (view.renderer.name !== 'gl') { // the GPU terrain shades the rider's shadow itself (gl/rider-shadow.js)
   ctx.globalAlpha = SHADOW_ALPHA;
   ctx.fillStyle = look.colour(shd.colour);

@@ -15,12 +15,14 @@ export function viewFields(c) {
   camera: nested('camera', {
    heading: prop(c, 'heading'),     // rad, direction the camera looks along the ground (counter-clockwise from east)
    height: prop(c, 'height'),       // m, camera altitude (absolute, same datum as world.height)
-   x: prop(c, 'x'), y: prop(c, 'y'), // m, camera position (east, north), CAM_BACK behind the rider
+   x: prop(c, 'x'), y: prop(c, 'y'), // m, camera position (east, north), back behind the rider
    dirX: prop(c, 'dirX'), dirY: prop(c, 'dirY'), // unit view direction (east, north)
    look: prop(c, 'look'),           // 0..1, how far the swing to look back uphill has got (input.lookBack asks for it)
    slope: prop(c, 'slope'),         // smoothed slope ahead, metres dropped per metre (full-tilt tan)
    tilt: prop(c, 'tilt'),           // view tilt (tan) after partial slope follow and the rider clamp
    pitchPx: prop(c, 'pitchPx'),     // view tilt in low-res render pixels (focalPx * tilt)
+   fov: prop(c, 'fov'),             // rad, horizontal field of view (eases to the camera mode's)
+   back: prop(c, 'back'),           // m, how far behind the rider the camera is (eases to the mode's)
    focalPx: prop(c, 'focalPx'),     // low-res render pixels per unit of (height / distance)
    horizonPx: prop(c, 'horizonPx'), // untilted horizon row, low-res render pixels from the top
    renderW: prop(c, 'renderW'), renderH: prop(c, 'renderH'), // low-res terrain render size, pixels
@@ -47,7 +49,7 @@ export function viewDebug(g) {
    const P = project(camera, wx, wy, h);
    return P && { ...P };
   },
-  cameraTilt: (s, rel, drop) => cameraTilt(look.camera, s, rel, drop),
+  cameraTilt: (s, rel, drop) => cameraTilt(look.camera, s, rel, drop, camera.back),
   camCompass: () => camCompass(camera), // camera heading, compass degrees
   sunDisc: () => ({ ...sunDisc(look.sky, camera, view.W, view.Hh, world.frame) }), // {X,Y,r,on}, canvas pixels
   sunAzimuthDeg: () => sunAzimuthDeg(look.sky, world.frame), // compass deg, the sun in the world (turned with the map)
