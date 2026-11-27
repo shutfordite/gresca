@@ -9,10 +9,11 @@ import { checkSimEvent, SIM_EVENT_TYPES } from '../src/core/contracts.js';
 const DT = 1 / 120;
 
 // One step's input from a simple autopilot: down the piste, 9 m left of the centre from y 1960 to 2040 (onto the
-// rail at y 2020), no steering in the air, braking from 3 s to 3.6 s.
+// rail at y 2020), no steering in the air, braking from 3 s to 3.6 s. It aims 8 m ahead (15 m until H2: the edge now
+// builds over half a second, so a pilot aiming further ahead swings wide of the rail).
 function pilot(s, W) {
  const off = s.y > 1960 && s.y < 2040 ? -9 : 0;
- const ty = s.y + 15;
+ const ty = s.y + 8;
  const ang = Math.atan2(ty - s.y, W.centre(ty) + off - s.x);
  let left = 0, right = 0;
  if (s.z <= 0.05) {
