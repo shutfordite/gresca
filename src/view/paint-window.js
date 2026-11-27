@@ -1,16 +1,17 @@
-// The paint window of a real map (C4b): the colour map's rectangle (width × length m), at 1 m per texel, that the colour map, the GPU
-// terrain and the minimap cover, placed along the course. A real map is far bigger than the procedural one (El Tarter
-// is 7 × 7 km), so until D2 the view draws the window around the run; outside it is the sky's horizon.
+// The paint window of a real map (C4b): the rectangle, at 1 m per texel, that the colour map, the GPU terrain and the
+// minimap cover, placed along the course. A real map is far bigger than the procedural one (El Tarter is 7 × 7 km),
+// so until D2 the view draws the window around the run; outside it is the sky's horizon.
 import { createMapFrame } from '../world/map-frame.js';
 import { mapBounds } from '../world/terrain.js';
 
 const SAMPLE_STEP_M = 10; // m of s between the course points that set the window
 
 /**
- * The width × length m window (the colour map's size, 1 m per texel) over a loaded world ({terrain, course}): frame (a MapFrame whose grid +v runs from the course's start
- * towards its finish, centred on the run), bounds (terrain.js mapBounds shape), heights (Float32Array, m, at each
- * texel's centre), groomed (Uint8Array, 0..255), cx (row -> the corduroy's reference column), fits (false when
- * the run is longer or wider than the window: the rest is cut off). Memory: 12.3 MB at 1000 × 2450, as the procedural map.
+ * The width × length m window (the colour map's size, 1 m per texel) over a loaded world ({terrain, course}):
+ * frame (a MapFrame whose grid +v runs from the course's start towards its finish, centred on the run), bounds
+ * (terrain.js mapBounds shape), heights (Float32Array, m, at each texel's centre), groomed (Uint8Array, 0..255), cx
+ * (row -> the corduroy's reference column), fits (false when the run is longer or wider than the window: the rest is
+ * cut off). Memory: 12.3 MB at 1000 × 2450, as the procedural map.
  */
 export function paintWindow(world, width, length) {
  const { terrain, course } = world;
