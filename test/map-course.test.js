@@ -11,6 +11,7 @@ import { compileCourse, lastPointS, stringifyMap, topS } from '../tools/map-comp
 import { runCli } from '../tools/map-compiler/cli.mjs';
 import { MEAN_SLOPE_TOLERANCE_DEG } from '../tools/map-compiler/course-format.js';
 import { validateCourse, validateTerrain, widthAtS } from '../tools/map-compiler/validate.js';
+import { parkAt } from './park-fixtures.js';
 
 const DIR = path.join(import.meta.dirname, 'fixtures', 'maps');
 const read = (name) => fs.readFileSync(path.join(DIR, name), 'utf8');
@@ -139,6 +140,38 @@ describe('validateCourse rejects', () => {
   const between = /kickers\[1\]\.s: the kicker .* between the start and the finish/;
   assert.match(errorsAfter((f) => { f.kickers[1].s = 430; }), between);
   assert.match(errorsAfter((f) => { f.finishS = 120; }), between);
+ });
+
+ it('park features (version 2, ADR 0012): a jump and a kinked rail load beside the old kickers and rails', () => {
+  const file = fresh();
+  assert.equal(file.version, undefined, 'the committed course is a version 1 file');
+  assert.ok(validateCourse(file, terrain()).ok, 'an old file still validates');
+  file.version = 2;
+  file.features = parkAt();
+  const alone = validateCourse(file);
+  assert.deepEqual(alone.errors, []);
+  assert.deepEqual(alone.warnings, []);
+  assert.deepEqual(validateCourse(file, terrain()).errors, []);
+  delete file.features;
+  assert.deepEqual(validateCourse(file).errors, [], 'version 2 with no features');
+ });
+
+ it('park features: the wrong version, outside the piste or the run, or malformed', () => {
+  const v2 = (change) => (f) => {
+   f.version = 2;
+   f.features = parkAt();
+   change(f);
+  };
+  assert.match(errorsAfter((f) => { f.features = parkAt(); }), /features: needs "version": 2/);
+  assert.match(errorsAfter((f) => { f.version = 3; }), /version: must be one of 1, 2/);
+  assert.match(errorsAfter(v2((f) => { f.features.jumps[0].d = 13; })),
+   /features\.jumps\[0\]: the feature reaches 16 m across, outside the piste width \(\+-15 m\)/);
+  assert.match(errorsAfter(v2((f) => { f.features.rails[0].points.forEach((p) => { p.s += 190; }); })),
+   /features\.rails\[0\]: the feature \(430 to 444 m\) must lie between the start and the finish/);
+  assert.match(errorsAfter(v2((f) => { f.features.jumps[0].size = 'huge'; })), /features\.jumps\[0\]\.size: must be/);
+  assert.match(errorsAfter(v2((f) => { f.features.rails[0].world = []; })),
+   /features\.rails\[0\]\.world: is resolved when the world is built/);
+  assert.match(errorsAfter(v2((f) => { f.features = []; })), /features: must be \{jumps, rails\}/);
  });
 
  it('malformed park items', () => {
