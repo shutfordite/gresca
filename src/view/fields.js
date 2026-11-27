@@ -73,7 +73,8 @@ export function viewDebug(g) {
   },
   mapId: look.map.specId, // the art spec's maps key the active look read (its sun and mean slope)
   lookMap: () => ({ ...look.map }), // {id, specId, sunFrom: 'spec' | 'course' | 'default'}
-  lookSun: () => ({ azimuthDeg: look.sky.sun.azimuthDeg, elevationDeg: look.sky.sun.elevationDeg }), // compass deg, unturned
+  // compass deg, before the map frame turns it
+  lookSun: () => ({ azimuthDeg: look.sky.sun.azimuthDeg, elevationDeg: look.sky.sun.elevationDeg }),
   // fog colour, distance of the last terrain sample (m), samples per column
   fog: () => ({ rgb: view.fog.slice(), far: RAY_FAR, samples: RAY_SAMPLES }),
   fogAt: (z) => fogAt(look.fog, z),
