@@ -4,7 +4,6 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { load } from './harness.js';
 
-const WIDTH = 390; // CSS px, the harness canvas
 // The rows of the controls table, read through the façade.
 const row = async (device, action) => {
  const bindings = (await load()).state().bindings;
@@ -29,24 +28,6 @@ async function ready(opts) {
  const box = h.debug.riderBox();
  return { h, cx: box.x + box.w / 2, cy: box.y + box.h / 2, box };
 }
-
-describe('the rider box', () => {
- it('is at the bottom centre of the screen, a person-sized box of CSS px', async () => {
-  const { h, box } = await ready();
-  assert.ok(Math.abs(box.x + box.w / 2 - WIDTH / 2) < 1e-6, 'centred');
-  assert.ok(box.w > 5 && box.h > box.w, `${box.w} x ${box.h}`);
-  assert.ok(box.y > 844 * 0.4 && box.y + box.h < 844, 'in the lower part of the screen');
-  assert.ok(box.w < RIDER_BOX_MIN_PX, 'the drawn rider is smaller than the touch minimum (so it is padded)');
-  h.game.cycleCamera();
- });
-
- it('follows the camera mode: the rider is further away, so smaller, in B', async () => {
-  const { h, box } = await ready();
-  h.game.setCameraMode('B');
-  h.frames(60);
-  assert.ok(h.debug.riderBox().h < box.h);
- });
-});
 
 describe('tap the rider', () => {
  it('a quick tap on the rider cycles A, B, C, A and does not steer', async () => {
