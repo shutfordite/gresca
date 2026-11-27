@@ -1,0 +1,476 @@
+<!doctype html>
+<!-- Hanga Dawn v1.5 boards: a design tool (S6), not game code. Reads art/gresca-hanga-spec.js and draws one 1600 x 1000
+     board per ?board=trees|rocks|sky|palette. Every colour is a palette role (HANGA.palette or
+     HANGA.environment.palette.roles). Make the PNGs with Playwright: see docs/art/HANGA-v1.5.md. -->
+<meta charset="utf-8">
+<title>Hanga Dawn v1.5 boards</title>
+<style>html, body { margin: 0; background: #888; } canvas { display: block; }</style>
+<canvas id="c" width="1600" height="1000"></canvas>
+<script src="../../../art/gresca-hanga-spec.js"></script>
+<script>
+'use strict';
+const H = window.HANGA;
+const E = H.environment;
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1600;
+const HT = 1000;
+const FONT = 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif';
+
+// ---- colour and drawing helpers -------------------------------------------------------------------------------
+const hexOf = (role) => H.palette[role] || E.palette.roles[role];
+const toRgb = (role) => { const h = hexOf(role); return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); };
+const mixRole = (a, b, t) => {
+  const x = toRgb(a), y = toRgb(b);
+  return 'rgb(' + x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',') + ')';
+};
+const rgba = (role, alpha) => 'rgba(' + toRgb(role).join(',') + ',' + alpha + ')';
+const lum = (role) => toRgb(role).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); })
+  .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+const contrast = (a, b) => { const hi = Math.max(lum(a), lum(b)), lo = Math.min(lum(a), lum(b)); return (hi + 0.05) / (lo + 0.05); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const table = (pairs, x) => { // linear lookup in [[x, y], ...] ascending in x
+  if (x <= pairs[0][0]) return pairs[0][1];
+  for (let i = 1; i < pairs.length; i++) if (x <= pairs[i][0]) return lerp(pairs[i - 1][1], pairs[i][1], (x - pairs[i - 1][0]) / (pairs[i][0] - pairs[i - 1][0]));
+  return pairs[pairs.length - 1][1];
+};
+function rng(seed) { // mulberry32
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function poly(points, fill, stroke, lw) {
+  ctx.beginPath();
+  points.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.lineJoin = 'round'; ctx.stroke(); }
+}
+function text(s, x, y, size, role, align, weight) {
+  ctx.font = (weight || 400) + ' ' + size + 'px ' + FONT;
+  ctx.fillStyle = hexOf(role || 'key');
+  ctx.textAlign = align || 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(s, x, y);
+}
+function title(main, sub) {
+  text(main, 40, 46, 30, 'key', 'left', 700);
+  text(sub, 40, 72, 16, 'indigo');
+  text('Hanga Dawn v' + H.version + ' - environment', W - 40, 46, 16, 'indigo', 'right');
+}
+function panel(x, y, w, h, fill) {
+  ctx.fillStyle = fill || hexOf('pisteLit');
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = hexOf('pisteEdge');
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+function swatch(role, x, y, w, h) {
+  ctx.fillStyle = hexOf(role); ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+
+// ---- a tree from its profile --------------------------------------------------------------------------------------
+// species: environment.trees.sets.<set>.species.<id>; (x, y) the foot in px; hM the tree height; s px per metre;
+// altM picks the snow load. The sun is on the left: left half lit, right half shade.
+function drawTree(species, x, y, hM, s, altM) {
+  const k = hM / species.reference.heightM;
+  const P = species.profile.map((p) => [p[0] * k, p[1] * k]);
+  const px = (p, side) => [x + side * p[0] * s, y - p[1] * s];
+  const r = species.roles;
+  const trunkTop = P[1][1];
+  ctx.fillStyle = hexOf(r.trunk);
+  ctx.fillRect(x - P[0][0] * s, y - trunkTop * s, P[0][0] * 2 * s, trunkTop * s);
+  const crown = P.slice(1).map((p) => px(p, 1)).concat(P.slice(1).reverse().map((p) => px(p, -1)));
+  poly(crown, hexOf(r.shade));
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x - 400, y - 800, 400, 900); ctx.clip();
+  poly(crown, hexOf(r.lit));
+  ctx.restore();
+  poly(crown, null, hexOf('key'), 1.1);
+  const cover = table(species.snowLoad.byAltM, altM) * (species.snowLoad.coverOfTierUpperSide.typical / 0.6);
+  const th = species.snowLoad.thicknessM * s * k * 3.5;
+  for (let i = 2; i + 1 < P.length - 1; i += 2) {
+    for (const side of [1, -1]) {
+      const melt = side < 0 ? 1 - species.snowLoad.sunSideMeltFrac : 1;
+      const tip = px(P[i], side), notch = px(P[i + 1], side);
+      const q = [lerp(tip[0], notch[0], clamp(cover, 0, 1)), lerp(tip[1], notch[1], clamp(cover, 0, 1))];
+      poly([tip, q, [q[0], q[1] - th * 0.5 * melt], [tip[0] - side * 0.5, tip[1] - th * melt]],
+        hexOf(side < 0 ? r.snow : r.snowShade), hexOf('key'), 0.6);
+    }
+  }
+}
+
+// ---- board 1: trees and treeline ----------------------------------------------------------------------------------
+function boardTrees() {
+  title('Trees and treeline', 'Pine (Pinus uncinata), fir and sugi from environment.trees; bands from environment.treeline and maps[el-tarter].treeline');
+  const sets = [
+    ['pine', 'uncinata', [6, 11, 18], 2100, 'Mountain pine'],
+    ['pine', 'fir', [14, 18, 28], 1750, 'Fir (sparse, below 1900 m)'],
+    ['sugi', 'sugi', [5, 8, 14], 1000, 'Sugi (procedural map)'],
+  ];
+  const S = 10.5; // px per metre
+  sets.forEach(([setId, id, heights, alt, label], i) => {
+    const sp = E.trees.sets[setId].species[id];
+    const x0 = 40 + i * 515, y0 = 90, w = 495, h = 410, ground = y0 + h - 58;
+    panel(x0, y0, w, h, mixRole('skyHorizon', 'pisteLit', 0.6));
+    ctx.fillStyle = hexOf('pisteLit'); ctx.fillRect(x0 + 1, ground, w - 2, y0 + h - ground - 1);
+    ctx.fillStyle = hexOf('pisteShade'); ctx.fillRect(x0 + 1, ground, w - 2, 3);
+    heights.forEach((hm, j) => drawTree(sp, x0 + 95 + j * 150, ground, hm, S, alt));
+    text(label, x0 + 14, y0 + 26, 18, 'key', 'left', 700);
+    text(sp.latin + ', ' + sp.heightM.min + '-' + sp.heightM.max + ' m (drawn ' + heights.join(', ') + ' m)', x0 + 14, y0 + 46, 13, 'indigo');
+    text('crown ' + sp.crownRatio.min + '-' + sp.crownRatio.max + ' x height, trunk clear ' + sp.trunkClearM.typical + ' m, snow ' + Math.round(table(sp.snowLoad.byAltM, alt) * 100) + '% of tier tops at ' + alt + ' m',
+      x0 + 14, ground + 22, 12, 'indigo');
+    ['lit', 'body', 'shade', 'trunk', 'snow'].forEach((k, j) => {
+      swatch(sp.roles[k], x0 + 14 + j * 62, ground + 30, 54, 14);
+      text(sp.roles[k], x0 + 14 + j * 62, ground + 56, 10, 'indigo');
+    });
+  });
+  // treeline section
+  const x0 = 40, y0 = 520, w = 1520, h = 460;
+  panel(x0, y0, w, h, mixRole('skyHorizon', 'skyDawn', 0.35));
+  const T = HANGA_TL();
+  const altLo = 1550, altHi = 2750, top = y0 + 34, bottom = y0 + h - 20, pxPerM = (bottom - top) / (altHi - altLo);
+  const yOf = (alt) => bottom - (alt - altLo) * pxPerM;
+  const groundAlt = (x) => altLo + (x - 180) / (x0 + w - 40 - 180) * (altHi - altLo) * 1.0 + 25 * Math.sin(x / 41) + 14 * Math.sin(x / 17);
+  const bandEdges = [[altLo, T.bandUpToM.forest, 'forest', 'forest'], [T.bandUpToM.forest, T.bandUpToM.thinning, 'thinning', 'thinning'],
+    [T.bandUpToM.thinning, T.bandUpToM.open, 'open', 'last trees'], [T.bandUpToM.open, T.bandUpToM.krummholz, 'krummholz', 'krummholz'], [T.bandUpToM.krummholz, altHi, 'alpine', 'alpine']];
+  bandEdges.forEach(([a, b, id, name], i) => {
+    ctx.fillStyle = i % 2 ? rgba('pisteLit', 0.28) : rgba('pisteLit', 0.12);
+    ctx.fillRect(x0 + 1, yOf(b), w - 2, yOf(a) - yOf(b));
+    const band = E.treeline.defaults.bandsRelativeToTreelineM.find((q) => q.id === id);
+    text(name + ' ' + (i === 0 ? 'below ' + b : a + '-' + b) + ' m', x0 + 12, yOf(b) + 16, 13, 'key', 'left', 700);
+    if (band) text(band.densityPerHa + ' trees/ha' + (band.bushDensityPerHa ? ', ' + band.bushDensityPerHa + ' bushes/ha' : ''), x0 + 12, yOf(b) + 32, 12, 'indigo');
+  });
+  // ground
+  const ground = [];
+  for (let x = 180; x <= x0 + w - 40; x += 4) ground.push([x, yOf(groundAlt(x))]);
+  poly([[180, bottom + 5]].concat(ground, [[x0 + w - 40, bottom + 5]]), hexOf('pisteLit'), hexOf('pisteEdge'), 1.5);
+  // vegetation on the ground, drawn at a scale 12 times that of the altitude axis
+  const R = rng(15), vs = 4.2;
+  const bands = E.treeline.defaults.bandsRelativeToTreelineM, cl = E.treeline.defaults.clustering;
+  const items = [];
+  for (let x = 190; x < x0 + w - 50; x += 3) {
+    const alt = groundAlt(x);
+    const bi = bandEdges.findIndex((b) => alt < b[1]);
+    const band = bands.find((b) => b.id === (bandEdges[bi >= 0 ? bi : 4][2]));
+    const noise = 0.5 + 0.5 * Math.sin(x / 23) * Math.cos(x / 61 + 1);
+    if (!band) { if (R() < 0.01) items.push({ x, alt, kind: 'rock' }); continue; }
+    if (band.id === 'krummholz') { if (R() < 0.07) items.push({ x, alt, kind: 'bush' }); continue; }
+    if (noise < (cl.patchThreshold[band.id] || 0.3) * 0.9 || R() > band.densityPerHa / 380 * 0.95) continue;
+    items.push({ x, alt, kind: 'tree', band });
+  }
+  items.sort((a, b) => b.alt - a.alt);
+  items.forEach((it) => {
+    const y = yOf(it.alt);
+    if (it.kind === 'tree') {
+      const fir = it.alt < 1900 && R() < table(E.trees.sets.pine.mix.firShareByAltM, it.alt);
+      const sp = E.trees.sets.pine.species[fir ? 'fir' : 'uncinata'];
+      const hm = lerp(sp.heightM.min, sp.heightM.typical, R()) * it.band.heightScale * (1.25 - 0.25 * R());
+      drawTree(sp, it.x, y, Math.max(hm, 3), vs, it.alt);
+    } else if (it.kind === 'bush') {
+      const kd = E.bushes.kinds.krummholz;
+      const bw = lerp(kd.widthM.min, kd.widthM.max, R()) * vs, bh = lerp(kd.heightM.min, kd.heightM.max, R()) * vs * 1.4;
+      ctx.fillStyle = hexOf('krummholzS'); ctx.beginPath(); ctx.ellipse(it.x, y - bh / 2 + 2, bw / 2, bh / 2, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = hexOf('krummholz'); ctx.beginPath(); ctx.ellipse(it.x - bw * 0.12, y - bh / 2 + 2, bw * 0.38, bh * 0.45, 0, 0, 7); ctx.fill();
+    } else {
+      const sz = (0.8 + R() * 2.5) * vs;
+      poly([[it.x - sz, y], [it.x - sz * 0.8, y - sz * 0.7], [it.x, y - sz], [it.x + sz * 0.8, y - sz * 0.5], [it.x + sz, y]], hexOf('rock'), hexOf('key'), 0.8);
+    }
+  });
+  // course markers
+  const A = H.maps['el-tarter'];
+  [[A.courseAltitudeM.start, 'course start ' + A.courseAltitudeM.start + ' m'], [A.courseAltitudeM.finish, 'course finish ' + A.courseAltitudeM.finish + ' m'],
+    [A.treeline.treelineM, 'treeline ' + A.treeline.treelineM + ' m']].forEach(([alt, label], i) => {
+    const y = yOf(alt);
+    ctx.setLineDash(i === 2 ? [3, 3] : [10, 5]); ctx.strokeStyle = hexOf(i === 2 ? 'key' : 'vermilion'); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x0 + 1, y); ctx.lineTo(x0 + w - 1, y); ctx.stroke(); ctx.setLineDash([]);
+    text(label, x0 + w - 12, y - 5, 13, i === 2 ? 'key' : 'vermilionS', 'right', 700);
+  });
+  text('Cross-section: altitude vertical, trees drawn about 12x the altitude scale. Seeded patch noise leaves clearings; krummholz replaces upright trees above the line.',
+    x0 + 12, y0 + 12 + 0, 12, 'indigo');
+}
+function HANGA_TL() { return H.maps['el-tarter'].treeline; }
+
+// ---- board 2: rocks, bushes and the snow rule ---------------------------------------------------------------------
+function blob(x, y, w, h, kind) { // a bush: two ellipses and a snow slab, base at (x, y)
+  const r = kind.roles, R = rng(Math.round(x + w));
+  ctx.fillStyle = hexOf(r.shade); ctx.beginPath(); ctx.ellipse(x, y - h * 0.45, w / 2, h * 0.5, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = hexOf(r.lit); ctx.beginPath(); ctx.ellipse(x - w * 0.12, y - h * 0.5, w * 0.36, h * 0.44, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(x, y - h * 0.45, w / 2, h * 0.5, 0, 0, 7); ctx.stroke();
+  if (kind.snowCover > 0) {
+    ctx.fillStyle = hexOf(r.snow); ctx.beginPath();
+    ctx.ellipse(x - w * 0.05, y - h * 0.86 + (1 - kind.snowCover) * h * 0.2, w * 0.3 * kind.snowCover + 2, h * 0.12, 0, 0, 7); ctx.fill();
+  }
+  return R;
+}
+function rockShape(x, y, size, pts, shade, cap) { // trees.rock polygons are fractions of size, y up from the base
+  const f = (p) => [x + p[0] * size, y - p[1] * size];
+  const rk = H.trees.rock;
+  poly(rk.shape.map(f), hexOf('rockLit'));
+  poly(rk.shadeShape.map(f), hexOf('rockS'));
+  poly(rk.shape.map(f), null, hexOf('key'), 1.2);
+  const th = clamp(size * 0.012, 2, 6);
+  poly(rk.capShape.map(f), hexOf('snowLoad'), hexOf('key'), 0.8);
+  void th; void pts; void shade; void cap;
+}
+function boardRocks() {
+  title('Bushes, rocks and the snow rule', 'environment.bushes, environment.rocks: kinds, sizes and where rock shows through snow');
+  // bushes
+  const kinds = Object.entries(E.bushes.kinds);
+  const S = 50, depthAt = [1.0, 0.4, 0.4, 0.1];
+  kinds.forEach(([id, kd], i) => {
+    const x0 = 40 + i * 385, y0 = 90, w = 365, h = 250, snowTop = y0 + h - 100, depth = depthAt[i];
+    panel(x0, y0, w, h, mixRole('skyHorizon', 'pisteLit', 0.6));
+    [kd.heightM.min, kd.heightM.max].forEach((hm, j) => {
+      const bx = x0 + 100 + j * 150, groundY = snowTop + depth * S;
+      const bw = lerp(kd.widthM.min, kd.widthM.max, j) * S * 0.5;
+      ctx.save(); ctx.beginPath(); ctx.rect(x0 + 1, y0, w - 2, snowTop - y0); ctx.clip();
+      blob(bx, groundY, bw, hm * S, kd);
+      ctx.restore();
+      if (hm <= depth) text('buried', bx, snowTop - 8, 12, 'indigo', 'center');
+      text(hm + ' m tall', bx, snowTop + depth * S + 18, 12, 'key', 'center');
+    });
+    ctx.fillStyle = hexOf('pisteLit'); ctx.fillRect(x0 + 1, snowTop, w - 2, y0 + h - snowTop - 1);
+    ctx.fillStyle = hexOf('pisteShade'); ctx.fillRect(x0 + 1, snowTop, w - 2, 2);
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = hexOf('pisteEdge'); ctx.beginPath();
+    ctx.moveTo(x0 + 2, snowTop + depth * S); ctx.lineTo(x0 + w - 2, snowTop + depth * S); ctx.stroke(); ctx.setLineDash([]);
+    text(id, x0 + 12, y0 + 24, 18, 'key', 'left', 700);
+    text(kd.latin, x0 + 12, y0 + 42, 12, 'indigo');
+    text('snow depth ' + depth + ' m (dashed: ground)', x0 + 12, y0 + h - 30, 12, 'indigo');
+    text((kd.altitudeM ? kd.altitudeM.min + '-' + kd.altitudeM.max + ' m' : 'bands ' + kd.altitudeBandIds.join(', ')) + ', slope under ' + (kd.maxSlopeDeg || (kd.slopeDeg && kd.slopeDeg.max)) + ' deg', x0 + 12, y0 + h - 12, 12, 'indigo');
+  });
+  // rock kinds
+  const ry = 360, rh = 290, rg = ry + rh - 50, sc = 38;
+  const rk = E.rocks.kinds, names = ['boulder', 'outcrop', 'screeField', 'cliffBand'];
+  names.forEach((id, i) => {
+    const x0 = 40 + i * 385, w = 365;
+    panel(x0, ry, w, rh, mixRole('skyHorizon', 'pisteLit', 0.6));
+    ctx.fillStyle = hexOf('powderLit'); ctx.fillRect(x0 + 1, id === 'screeField' ? ry + 120 : rg, w - 2, ry + rh - (id === 'screeField' ? ry + 120 : rg) - 1);
+    text(id, x0 + 12, ry + 24, 18, 'key', 'left', 700);
+    const k = rk[id], R = rng(i * 7 + 3);
+    if (id === 'boulder') {
+      [0.8, 1.8, 3.5].forEach((m, j) => { rockShape(x0 + 70 + j * 105 + (j ? 20 : 0), rg + 2, m * sc, null, null, null); text(m + ' m', x0 + 70 + j * 105 + (j ? 20 : 0), rg + 22, 12, 'key', 'center'); });
+    } else if (id === 'outcrop') {
+      const wm = 8, hm = 4, X = x0 + 40, Y = rg + 2, a = wm * sc * 0.6, b = hm * sc * 0.6;
+      const faces = [[[0, 0], [0.05, 0.5], [0.25, 0.55], [0.3, 1], [0.6, 0.9], [0.7, 0.55], [1, 0.6], [1, 0]]];
+      const P = faces[0].map((p) => [X + p[0] * a * 1.4, Y - p[1] * b * 1.4]);
+      poly(P, hexOf('rockLit')); poly([P[3], P[4], P[5], P[6], P[7], [P[3][0] + 40, Y]], hexOf('rockS'));
+      poly(P, null, hexOf('key'), 1.2);
+      poly([P[1], P[2], P[3], P[4], [P[4][0] - 10, P[4][1] + 9], [P[3][0] + 6, P[3][1] + 10], [P[2][0], P[2][1] + 8]], hexOf('snowLoad'), hexOf('key'), 0.8);
+      text(k.widthM.min + '-' + k.widthM.max + ' m wide, ' + k.heightM.min + '-' + k.heightM.max + ' m high', x0 + 12, rg + 22, 12, 'key');
+    } else if (id === 'screeField') {
+      for (let n = 0; n < 700; n++) {
+        const a = R() * Math.PI * 2, rr = Math.sqrt(R());
+        const x = x0 + w / 2 + Math.cos(a) * rr * 150, y = ry + 190 + Math.sin(a) * rr * 60;
+        const role = ['scree', 'screeS', 'rockLit', 'rock'][Math.floor(R() * R() * 4)];
+        if (R() < 0.3 + 0.5 * (1 - rr)) { ctx.fillStyle = hexOf(role); ctx.fillRect(Math.round(x), Math.round(y), 1 + (R() < 0.3 ? 2 : 1), 2); }
+      }
+      text(k.lengthM.min + '-' + k.lengthM.max + ' m long, slope ' + k.slopeDeg.min + '-' + k.slopeDeg.max + ' deg, speckle, no billboard', x0 + 12, rg + 22, 12, 'key');
+    } else {
+      const X = x0 + 50, W2 = w - 100;
+      poly([[X, rg + 2], [X, ry + 70], [X + W2 * 0.4, ry + 55], [X + W2, ry + 80], [X + W2, rg + 2]], hexOf('cliff'), hexOf('key'), 1.2);
+      poly([[X + W2 * 0.55, rg + 2], [X + W2 * 0.5, ry + 66], [X + W2, ry + 80], [X + W2, rg + 2]], hexOf('rockS'));
+      for (let ly = ry + 100; ly < rg - 10; ly += 48) {
+        const lx = X + R() * 90;
+        poly([[lx, ly], [lx + 110 + R() * 80, ly - 4], [lx + 120 + R() * 80, ly + 9], [lx + 10, ly + 12]], hexOf('snowLoad'), hexOf('key'), 0.8);
+      }
+      poly([[X, ry + 70], [X + W2 * 0.4, ry + 55], [X + W2, ry + 80], [X + W2, ry + 94], [X + W2 * 0.4, ry + 70], [X, ry + 86]], hexOf('snowLoad'), hexOf('key'), 0.8);
+      text(k.heightM.min + '-' + k.heightM.max + ' m high, slope over ' + k.slopeDeg.min + ' deg, a ledge every 6-10 m', x0 + 12, rg + 22, 12, 'key');
+    }
+    text('lit ' + k.roles.lit + ', shade ' + k.roles.shade, x0 + 12, ry + 42, 12, 'indigo');
+  });
+  // the slope rule
+  const sy = 670, sh = 310, slopes = [20, 30, 34, 38, 42, 48, 55];
+  const th = E.rocks.snowRule.slopeDeg, share = E.rocks.snowRule.rockShareAt;
+  const labels = (d) => (d < th.snowFull + 0.5 ? 'snow' : d < th.rockShows ? 'patchy' : d < th.mostlyRock ? 'rock shows' : d < th.bare ? 'mostly rock' : 'bare rock');
+  slopes.forEach((d, i) => {
+    const x0 = 40 + i * 218, w = 206, R = rng(100 + i), s = table(share, d);
+    panel(x0, sy, w, sh, hexOf('pisteLit'));
+    const cell = 7, gx = Math.floor((w - 16) / cell), gy = 24;
+    for (let cy = 0; cy < gy; cy++) {
+      for (let cx = 0; cx < gx; cx++) {
+        const n = 0.5 + 0.28 * Math.sin(cx / 3.1 + i) * Math.cos(cy / 2.7 + cx / 9) + 0.3 * (R() - 0.5);
+        const rock = n < s * 0.95 + (s >= 1 ? 1 : 0);
+        const shadeCell = Math.sin(cx / 4 + cy / 5) > 0.35;
+        ctx.fillStyle = hexOf(rock ? (shadeCell ? 'rockS' : R() < 0.25 ? 'rockLit' : 'rock') : (shadeCell ? 'powderLit' : 'pisteLit'));
+        ctx.fillRect(x0 + 8 + cx * cell, sy + 62 + cy * cell, cell, cell);
+      }
+    }
+    for (let b = 0; b < Math.round(s * 7); b++) rockShape(x0 + 22 + R() * (w - 44), sy + 62 + (0.2 + R() * 0.75) * gy * cell, 8 + R() * 10, null, null, null);
+    text(d + ' deg', x0 + 10, sy + 28, 20, 'key', 'left', 700);
+    text(labels(d) + ', rock ' + Math.round(s * 100) + '%', x0 + 10, sy + 48, 13, 'indigo');
+    // slope icon
+    const ix = x0 + w - 62, iy = sy + 36, a = d * Math.PI / 180;
+    poly([[ix, iy], [ix + 46, iy], [ix + 46, iy - 46 * Math.tan(a) * 0.55]], hexOf('powderMid'), hexOf('key'), 1);
+  });
+  text('Rock share by slope, laid out in 12 m patches of noise; ridge crests start 8 degrees lower (windScour). Top-down view, 1 cell = 1 m.', 40, sy + sh + 12, 12, 'indigo');
+}
+
+// ---- board 3: dawn sky and the Pyrenees backdrop ---------------------------------------------------------------------
+function skyColourAt(elev, az, sunAz) {
+  const f = E.sky.followsSun, d = Math.abs(((az - sunAz + 540) % 360) - 180);
+  const dawn = d <= f.warmSide.halfWidthDeg ? 14 + (f.warmSide.dawnStopElevationDeg - 14) * Math.cos(d * Math.PI / 180)
+    : 14 - (14 - f.coolSide.dawnStopElevationDeg) * (d - 90) / 90;
+  const cool = d > 90 ? f.coolSide.horizonMixToSkyMid * (d - 90) / 90 : 0;
+  const stops = [[90, 'skyTop'], [45, 'skyMid'], [dawn, 'skyDawn'], [0, 'skyHorizon'], [-4, 'fog']];
+  if (elev >= stops[0][0]) return mixRole('skyTop', 'skyTop', 0);
+  for (let i = 1; i < stops.length; i++) {
+    if (elev >= stops[i][0]) {
+      const t = (stops[i - 1][0] - elev) / (stops[i - 1][0] - stops[i][0]);
+      let a = stops[i - 1][1], b = stops[i][1];
+      if (b === 'skyHorizon' && cool) return mixRole(mixRole(a, b, t) ? a : a, b, t).replace(/.*/, () => mixTriple(a, b, t, 'skyMid', cool * t));
+      return mixRole(a, b, t);
+    }
+  }
+  return mixRole('fog', 'fog', 0);
+}
+function mixTriple(a, b, t, c, m) {
+  const x = toRgb(a), y = toRgb(b), z = toRgb(c);
+  return 'rgb(' + x.map((v, i) => Math.round(lerp(lerp(v, y[i], t), z[i], m))).join(',') + ')';
+}
+function hazeAt(distM) {
+  const s = E.sky.haze.stops;
+  for (let i = 1; i < s.length; i++) if (distM <= s[i].distM) return { mix: lerp(s[i - 1].mix, s[i].mix, (distM - s[i - 1].distM) / (s[i].distM - s[i - 1].distM)), role: s[i].role };
+  return { mix: s[s.length - 1].mix, role: s[s.length - 1].role };
+}
+const angDiff = (a, b) => ((a - b + 540) % 360) - 180; // signed degrees, a - b in (-180, 180]
+function skyPanel(y0, h, centre, hfov, caption) {
+  const sun = H.maps['el-tarter'].sun, bd = E.backdrops[H.maps['el-tarter'].backdrop], ridge = bd.ridge;
+  const ppd = W / hfov, horizon = y0 + Math.round(h * 0.74);
+  const xOf = (az) => W / 2 + angDiff(az, centre) * ppd;
+  ctx.save(); ctx.beginPath(); ctx.rect(0, y0, W, h); ctx.clip();
+  // sky by column strips
+  for (let x = 0; x < W; x += 8) {
+    const az = (centre + (x + 4 - W / 2) / ppd + 360) % 360;
+    const g = ctx.createLinearGradient(0, y0, 0, h + y0);
+    for (let k = 0; k <= 24; k++) {
+      const fy = k / 24, elev = (horizon - (y0 + fy * h)) / ppd;
+      g.addColorStop(fy, skyColourAt(elev, az, sun.azimuthDeg));
+    }
+    ctx.fillStyle = g; ctx.fillRect(x, y0, 8, h);
+  }
+  // sun and glow
+  const sx = xOf(sun.azimuthDeg), sy = horizon - clamp(sun.elevationDeg, E.sky.sun.elevationClampDeg.min, E.sky.sun.elevationClampDeg.max) * ppd;
+  const gl = E.sky.sun.glow, gr = gl.radiusDeg * ppd;
+  const rg = ctx.createRadialGradient(sx, sy, 0, sx, sy, gr);
+  for (let k = 0; k <= 8; k++) rg.addColorStop(k / 8, rgba(gl.role, gl.alphaCentre * Math.pow(1 - k / 8, 2)));
+  ctx.fillStyle = rg; ctx.fillRect(sx - gr, sy - gr, gr * 2, gr * 2);
+  const hb = E.sky.sun.horizonBand;
+  const bg = ctx.createLinearGradient(0, horizon - hb.heightDeg * ppd, 0, horizon);
+  bg.addColorStop(0, rgba(hb.role, 0)); bg.addColorStop(1, rgba(hb.role, hb.alpha));
+  const bx = xOf(sun.azimuthDeg) - hb.halfWidthDeg * ppd;
+  const bgx = ctx.createLinearGradient(bx, 0, bx + hb.halfWidthDeg * 2 * ppd, 0);
+  bgx.addColorStop(0, rgba(hb.role, 0)); bgx.addColorStop(0.5, rgba(hb.role, hb.alpha)); bgx.addColorStop(1, rgba(hb.role, 0));
+  ctx.fillStyle = bgx; ctx.fillRect(bx, horizon - hb.heightDeg * ppd, hb.halfWidthDeg * 2 * ppd, hb.heightDeg * ppd);
+  void bg;
+  ctx.fillStyle = hexOf(E.sky.sun.role); ctx.beginPath(); ctx.arc(sx, sy, E.sky.sun.discDiameterDeg * ppd / 2, 0, 7); ctx.fill();
+  // backdrop layers, far to near, each from the named peaks as triangles
+  const peaks = bd.peaks;
+  const labels = [];
+  [...bd.layers].reverse().forEach((layer) => {
+    const mine = peaks.filter((p) => p.layer === layer.id);
+    const mid = (layer.minM + layer.maxM) / 2, hz = hazeAt(Math.min(mid, layer.maxM)), mix = layer.hazeMix;
+    const fill = mixRole(layer.roles.fill, hz.role, mix), shade = mixRole(layer.roles.shade, hz.role, mix), cap = mixRole(layer.roles.cap, hz.role, mix * 0.6);
+    const baseY = horizon - ridge.floorElevDeg * ppd;
+    const tri = (p, x) => { // elevation in px above the floor at screen x
+      const half = Math.atan(p.halfWidthM / p.distM) * 180 / Math.PI * ppd;
+      const apex = (p.elevDeg * ridge.verticalExaggeration - ridge.floorElevDeg) * ppd;
+      return Math.max(0, apex * (1 - Math.abs(x - xOf(p.bearingCompassDeg)) / half));
+    };
+    const top = [];
+    for (let x = -4; x <= W + 4; x += 2) top.push([x, baseY - Math.max(0, ...mine.map((p) => tri(p, x)))]);
+    poly([[-4, baseY + 400], ...top, [W + 4, baseY + 400]], fill, hexOf('key'), 1);
+    mine.forEach((p) => {
+      const px = xOf(p.bearingCompassDeg), apexY = baseY - tri(p, px);
+      if (px < -50 || px > W + 50) return;
+      const half = Math.atan(p.halfWidthM / p.distM) * 180 / Math.PI * ppd;
+      const away = angDiff(sun.azimuthDeg, p.bearingCompassDeg) > 0 ? -1 : 1; // the face away from the sun
+      poly([[px, apexY], [px + away * half * 1.15, baseY + 2], [px + away * 2, baseY + 2]].map((q) => q), shade);
+      const capPx = Math.min(1, layer.cap.depthM / (p.altM - 1700)) * (baseY - apexY);
+      const glow = layer.id !== 'near' && Math.abs(angDiff(p.bearingCompassDeg, sun.azimuthDeg)) < E.sky.alpenglow.withinDegOfSunAzimuth && sun.elevationDeg < E.sky.alpenglow.fadesOutAboveSunElevationDeg;
+      const capFill = glow ? mixRole(layer.roles.cap, E.sky.alpenglow.role, E.sky.alpenglow.tintMix) : cap;
+      const f = capPx / (baseY - apexY);
+      const L = [px - half * f, apexY + capPx], Rr = [px + half * f, apexY + capPx];
+      const jag = [];
+      for (let k = 0; k <= 8; k++) jag.push([lerp(L[0], Rr[0], k / 8), L[1] + (k % 2 ? 1 : -0.3) * capPx * ridge.jag.depthFrac]);
+      poly([[px, apexY], ...jag.reverse()], capFill, hexOf('key'), 1);
+      labels.push([px, apexY, p, layer]);
+    });
+  });
+  // forest-mass strip and snow ground in front
+  const fg = ctx.createLinearGradient(0, horizon + 4, 0, y0 + h);
+  fg.addColorStop(0, hexOf('fog')); fg.addColorStop(0.18, hexOf('pisteLit')); fg.addColorStop(1, hexOf('pisteShade'));
+  ctx.fillStyle = fg; ctx.fillRect(0, horizon + 6, W, y0 + h - horizon);
+  const R = rng(9), sp = E.trees.sets.pine.species.uncinata;
+  for (let x = 10; x < W; x += 34 + R() * 40) drawTree(sp, x, horizon + 52 + R() * 26, 7 + R() * 7, 5.5, 2300);
+  // compass ticks
+  for (let d = Math.ceil((centre - hfov / 2) / 10) * 10; d <= centre + hfov / 2; d += 10) {
+    const az = (d + 360) % 360, x = xOf(az);
+    ctx.fillStyle = hexOf('key'); ctx.fillRect(x, y0 + h - 22, 1, 10);
+    text(az + '', x, y0 + h - 4, 11, 'key', 'center');
+  }
+  // labels, staggered
+  labels.sort((a, b) => a[0] - b[0]).forEach(([px, apexY, p], i) => {
+    const ly = Math.min(apexY - 16, horizon - 8) - (i % 4) * 22;
+    ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, apexY - 3); ctx.lineTo(px, ly + 4); ctx.stroke();
+    text(p.name, px, ly - 12, 13, 'key', 'center', 700);
+    text(p.altM + ' m, ' + (p.distM / 1000).toFixed(1) + ' km, ' + p.bearingCompassDeg.toFixed(0) + ' deg', px, ly + 2, 11, 'indigo', 'center');
+  });
+  text(caption, 14, y0 + 24, 17, 'key', 'left', 700);
+  ctx.restore();
+}
+function boardSky() {
+  title('Dawn sky and the Pyrenees backdrop', 'From the El Tarter course start (2462 m). Real peak bearings, distances and altitudes; ridge height lifted x'
+    + E.backdrops.pyrenees.ridge.verticalExaggeration + ' (ridge.verticalExaggeration)');
+  const A = H.maps['el-tarter'];
+  skyPanel(90, 440, A.fallLineCompassDeg, 150, 'Looking down the course, compass ' + A.fallLineCompassDeg + ' deg (the sky and sun follow maps[el-tarter].sun, azimuth ' + A.sun.azimuthDeg + ')');
+  skyPanel(540, 456, A.sun.azimuthDeg, 150, 'Looking toward the sun, compass ' + A.sun.azimuthDeg + ' deg, elevation ' + A.sun.elevationDeg + ' deg: glow, alpenglow on far and mid caps');
+}
+
+// ---- board 4: palette and contrast --------------------------------------------------------------------------------
+function boardPalette() {
+  title('New palette roles and contrast', 'environment.palette.roles (hex) and environment.contrastTargets: every pair measured as WCAG contrast');
+  const groups = [
+    ['Trees', ['pineLit', 'fir', 'firS', 'firLit', 'snowLoad', 'snowLoadS']],
+    ['Bushes', ['krummholz', 'krummholzS', 'scrub', 'scrubS', 'rhodo']],
+    ['Rock', ['rockLit', 'scree', 'screeS', 'cliff']],
+    ['Backdrop and sky', ['mtnMid', 'mtnMidS', 'mtnMidCap', 'alpenglow', 'sunGlow']],
+  ];
+  let y = 100;
+  const core = ['key', 'paper', 'indigo', 'vermilion', 'pine', 'pineS', 'trunk', 'rock', 'rockS', 'mtnFar', 'mtnNear', 'pisteLit', 'powderLit', 'skyHorizon'];
+  text('Existing roles used by the environment', 40, y, 14, 'indigo', 'left', 700);
+  core.forEach((r, i) => { swatch(r, 40 + i * 52, y + 10, 46, 30); text(r, 40 + i * 52 + 23, y + 54, 9, 'indigo', 'center'); });
+  y += 90;
+  groups.forEach(([name, roles]) => {
+    text(name, 40, y, 14, 'indigo', 'left', 700);
+    roles.forEach((r, i) => {
+      swatch(r, 40 + i * 118, y + 10, 108, 54);
+      text(r, 40 + i * 118, y + 80, 13, 'key', 'left', 700);
+      text(hexOf(r), 40 + i * 118, y + 95, 11, 'indigo');
+    });
+    y += 128;
+  });
+  text('Roles live in environment.palette; the top-level palette is unchanged.', 40, y + 4, 12, 'indigo');
+  // contrast table
+  const list = E.contrastTargets, colW = 430, x0 = 770;
+  const rows = Math.ceil(list.length / 2), rowH = 33;
+  text('Contrast targets: a on b, measured / minimum', x0, 100, 14, 'indigo', 'left', 700);
+  list.forEach((t, i) => {
+    const col = Math.floor(i / rows), row = i % rows, x = x0 + col * (colW + 20), yy = 112 + row * rowH;
+    const ratio = contrast(t.a, t.b);
+    ctx.fillStyle = hexOf(t.b); ctx.fillRect(x, yy, 62, 28);
+    ctx.fillStyle = hexOf(t.a); ctx.fillRect(x + 12, yy + 7, 38, 14);
+    ctx.strokeStyle = hexOf('key'); ctx.strokeRect(x + 0.5, yy + 0.5, 61, 27);
+    text(t.a + ' on ' + t.b, x + 70, yy + 12, 12, 'key', 'left', 700);
+    text(t.why, x + 70, yy + 26, 10, 'indigo');
+    text(ratio.toFixed(2) + ' / ' + t.min, x + colW, yy + 12, 12, ratio >= t.min ? 'indigo' : 'vermilionS', 'right', 700);
+    text(ratio >= t.min ? 'ok' : 'FAIL', x + colW, yy + 26, 10, ratio >= t.min ? 'indigo' : 'vermilionS', 'right');
+  });
+}
+
+const boards = { trees: boardTrees, rocks: boardRocks, sky: boardSky, palette: boardPalette };
+const which = new URLSearchParams(location.search).get('board') || 'trees';
+ctx.fillStyle = hexOf('paper'); ctx.fillRect(0, 0, W, HT);
+boards[which]();
+document.title = 'board ' + which;
+</script>
