@@ -226,7 +226,8 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const ribbon = createTrackRibbon(THREE, glScene, shared, view.trail, ribbonLook(s.shade, s.lit));
  const trees = createTreeMesh(THREE, glScene, shared, scene.treeArr, scene.terrain, scene.look, view.mapFrame);
  const treeStats = { drawCalls: trees.drawCalls, trianglesPerTree: trees.triangles, drawn: 0, triangles: 0 };
- const park = createParkMesh(THREE, glScene, shared, scene.course, scene.terrain, scene.look, view.mapFrame);
+ const park = createParkMesh(THREE, glScene, shared, scene.course, scene.terrain, scene.look, view.mapFrame,
+  scene.pistePoles);
  const parkStats = { drawCalls: park.drawCalls, triangles: park.triangles, kickers: park.counts.kickers,
   rails: park.counts.rails, flags: park.counts.flags, drawn: 0 };
  const sky = addSky(THREE, glScene, scene.look, view.mapFrame);

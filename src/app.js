@@ -11,6 +11,7 @@ import { bindInput } from './input/bind-input.js';
 import { createView, resizeScreen } from './view/view-state.js';
 import { createHangaLook } from './view/look/hanga.js';
 import { buildColourMap } from './view/colour-map.js';
+import { pistePoles } from './view/piste-poles.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
 import { updateCamera, draw } from './view/draw.js';
 import { chooseRenderer } from './view/renderer.js';
@@ -91,6 +92,7 @@ export function createGame(env) {
   canvas: ui.canvas, ctx: ui.ctx, camera, rider, session, input, terrain: world.terrain, course: world.course,
   frame: mapFrame,
   treeArr: world.treeArr,
+  pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
   particles: spray.particles, timestep, look, riderAnim: env.RiderAnim,
  };
 
@@ -162,6 +164,12 @@ export function createGame(env) {
  function boot() {
   if (world.layout) buildWorld(world); // a loaded real map comes built (world/map-loader.js)
   buildColourMap(view, world, ui.minimap, look, env.renderer === 'gl');
+  ui.msgT.textContent = 'Preparing the 3D view...';
+  env.setTimeout(bootView, BOOT_DELAY_MS); // let the page show it before the renderer's bakes block
+ }
+
+ // Picks the renderer (the GPU bakes its textures here), then shows the menu.
+ function bootView() {
   render.draw = chooseRenderer({
    want: env.renderer, THREE: env.THREE || null, document: env.document, screen: ui.canvas,
    warn: env.warn || (() => {}),

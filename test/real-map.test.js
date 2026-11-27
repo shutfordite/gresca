@@ -6,6 +6,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { loadMap } from '../src/world/map-loader.js';
 import { paintWindow } from '../src/view/paint-window.js';
+import { pistePoles, DIFFICULTY_TONE } from '../src/view/piste-poles.js';
+import { buildParkMesh } from '../src/view/gl/park-mesh.js';
+import { createHangaLook } from '../src/view/look/hanga.js';
+import { createRequire } from 'node:module';
 import { load } from './harness.js';
 
 const read = (kind) => fs.readFileSync(new URL('../maps/el-tarter.' + kind + '.json', import.meta.url), 'utf8');
@@ -32,6 +36,35 @@ test('the paint window holds the run, its +v from start to finish, with the terr
  assert.ok(Math.abs(along.u) < 1e-6 && along.v > 0, 'start to finish is grid +v');
  const w = area.frame.toWorld(400.5, 1200.5, { x: 0, y: 0 });
  assert.equal(area.heights[1200 * WINDOW_W + 400], Math.fround(world.terrain.height(w.x, w.y)));
+ const centre = c.point((c.startS + c.finishS) / 2, 0, {});
+ area.frame.toGrid(centre.x, centre.y, g);
+ assert.equal(area.groomed[Math.floor(g.v) * WINDOW_W + Math.floor(g.u)], 255, 'the piste is groomed');
+ const off = c.point((c.startS + c.finishS) / 2, c.widthAt((c.startS + c.finishS) / 2) / 2 + 10, {});
+ area.frame.toGrid(off.x, off.y, g);
+ assert.equal(area.groomed[Math.floor(g.v) * WINDOW_W + Math.floor(g.u)], 0, 'past the eased edge is not');
+});
+
+test('Àliga, a black run, is marked by black poles on both edges, orange-topped on the right going down', () => {
+ assert.equal(WORLD.piste.difficulty, 'advanced');
+ const poles = pistePoles(WORLD.course, WORLD.piste.difficulty);
+ const c = WORLD.course;
+ assert.ok(poles.length > 2 * (c.finishS - c.startS) / 30, poles.length + ' poles');
+ assert.ok(poles.every((p) => p.tone === 'black'));
+ for (const p of poles.slice(0, 40)) {
+  const at = c.project(p.x, p.y, {});
+  assert.ok(Math.abs(Math.abs(at.d) - (c.widthAt(at.s) / 2 + 1)) < 0.5, 'just outside the edge');
+  // right going down: the tangent turned clockwise (core/contracts.js: d > 0 is counter-clockwise of it)
+  assert.equal(p.right, at.d < 0);
+ }
+ assert.equal(poles.filter((p) => p.right).length, poles.length / 2);
+ assert.deepEqual(pistePoles(c, undefined), [], 'no poles where the difficulty is unknown (the procedural maps)');
+ assert.equal(DIFFICULTY_TONE.easy, 'blue');
+ assert.equal(DIFFICULTY_TONE.intermediate, 'red');
+ assert.equal(DIFFICULTY_TONE.novice, 'green');
+ const require = createRequire(import.meta.url);
+ const look = createHangaLook(require('../art/gresca-hanga-spec.js'), require('../art/gresca-rider-anim.js'));
+ const mesh = buildParkMesh(c, WORLD.terrain, look, WORLD.frame, poles);
+ assert.equal(mesh.poles, poles.length, 'the GPU park mesh has a feature per pole');
 });
 
 test('El Tarter loads into the game, shows its credits, and the autopilot rides Àliga to the finish', async () => {
@@ -39,6 +72,8 @@ test('El Tarter loads into the game, shows its credits, and the autopilot rides 
  assert.equal(g.raw.world.map, 'el-tarter');
  assert.match(g.el('t').textContent, /Àliga[\s\S]*OpenStreetMap contributors \(ODbL\)/);
  g.start();
+ g.frames(1);
+ assert.ok(g.debug.polesDrawn() > 4, 'edge poles are drawn ahead (CPU renderer)');
  const c = g.raw.world.course;
  const dt = 1 / 120;
  let s = g.raw.state();

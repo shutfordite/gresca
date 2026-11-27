@@ -17,3 +17,4 @@
 | Rider shapes, poses, palette: the spec (a new version only) | `gresca-hanga-spec.js`, `docs/art/HANGA-v<version>.md` | `hanga-v14`, `hanga-v15` |
 | The rider contact sheet (every pose for checking by eye) | `tools/rider-sheet.html`, `tools/rider-sheet.js` | none |
 | The v1.5 environment boards (trees, rocks, sky, palette PNGs from the spec's own data; a design tool) | `docs/art/v1.5/board.html` | none |
+| Recompute El Tarter's data-derived spec values and peak geometry after a rebake (a design tool) | `docs/art/v1.5/derive.mjs` | `hanga-v15` |

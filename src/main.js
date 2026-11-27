@@ -18,6 +18,11 @@ import { loadMapSteps } from './world/map-loader.js';
 const query = (name) => new URLSearchParams(window.location.search).get(name);
 const REAL_MAP_ID = /^[a-z0-9-]{1,40}$/; // a real map's id: the file names in maps/
 const LOAD_YIELD_MS = 0; // ms between load chunks: lets the page paint the progress
+// What each loader phase (world/map-loader.js LOAD_PHASES) is doing, for the menu while it runs.
+const PHASE_TEXT = Object.freeze({
+ validate: 'Checking the map', heights: 'Reading the heights', course: 'Laying out the run',
+ corridor: 'Detailing the piste', trees: 'Planting the trees',
+});
 
 // The loaded world of a real map, or null (with a warning) when its files are missing or invalid.
 async function loadRealMap(id) {
@@ -33,8 +38,12 @@ async function loadRealMap(id) {
   const steps = loadMapSteps(terrain, course);
   for (;;) {
    const step = steps.next();
-   if (step.done) return step.value;
-   text.textContent = 'Building ' + id + ': ' + Math.round(step.value.fraction * 100) + '%';
+   if (step.done) {
+    text.textContent = 'Painting the mountain...'; // the game's boot (app.js) takes it from here
+    return step.value;
+   }
+   const { phase, fraction } = step.value;
+   text.textContent = 'Loading ' + id + ': ' + (PHASE_TEXT[phase] || phase) + ' (' + Math.round(fraction * 100) + '%)';
    await new Promise((resolve) => window.setTimeout(resolve, LOAD_YIELD_MS));
   }
  } catch (e) {

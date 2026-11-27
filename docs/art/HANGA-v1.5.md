@@ -46,31 +46,31 @@ impostors; `lit` and `shade` are the two billboard halves (flip when the sun is 
 
 ## Pyrenees peaks (from the El Tarter course start)
 
-World position of the start: x 30.8, y -2085.5 m from the terrain origin (42.5775 N, 1.655 E), ground 2462 m.
+World position of the start: x 35.8, y -2056.5 m from the terrain origin (42.5775 N, 1.655 E), ground 2463.4 m (the course's high point, startS 30).
 ENU bearing is counter-clockwise from east (ADR 0005); compass is clockwise from north. `elevDeg` is the angle above
 the horizontal from the start, flat earth. All ten clear the terrain-grid horizon from the start
 (`horizonAtStartDeg` in the data). Bearings, distances and angles are recomputed from lat/lon in the test.
 
 | Peak | Layer | Alt m | Lat, lon | Compass | ENU | Dist m | Elev deg | Source |
 |---|---|---|---|---|---|---|---|---|
-| Pic de Casamanya | near | 2740 | 42.5841, 1.5655 | 290.9 | 159.1 | 7899 | 2.02 | peakbook.org 54931 (UTM converted) |
-| Pic de l'Estanyó | near | 2915 | 42.6085, 1.5926 | 317.0 | 133.0 | 7558 | 3.43 | peakbook.org 78414 (UTM converted) |
-| Pic de la Serrera | mid | 2912 | 42.626, 1.601 | 329.2 | 120.8 | 8704 | 2.96 | GeoNames, highest mountains of Andorra |
-| Coma Pedrosa | mid | 2943 | 42.59056, 1.44478 | 281.6 | 168.4 | 17648 | 1.56 | Wikipedia |
-| Pica d'Estats | far | 3143 | 42.66722, 1.39722 | 299.7 | 150.3 | 24370 | 1.60 | Wikipedia |
-| Alt del Griu | near | 2874 | 42.526, 1.652 | 184.4 | 265.6 | 3646 | 6.45 | GeoNames |
-| Pic dels Pessons | near | 2864 | 42.508, 1.665 | 172.0 | 278.0 | 5690 | 4.04 | GeoNames |
-| Pic Negre d'Envalira | near | 2823 | 42.51722, 1.72139 | 130.3 | 319.7 | 7118 | 2.90 | Wikipedia |
-| Pic d'Envalira | near | 2659 | 42.51879, 1.72485 | 127.8 | 322.2 | 7229 | 1.56 | aroundus.com 4041992 |
-| Pic del Maià | near | 2615 | 42.55384, 1.71889 | 95.9 | 354.1 | 5244 | 1.67 | altitude visitandorra.com; position komoot 3422136 |
+| Pic de Casamanya | near | 2740 |42.5841, 1.5655| 290.7 | 159.3 | 7894 | 2.01 | peakbook.org 54931 (UTM converted) |
+| Pic de l'Estanyó | near | 2915 |42.6085, 1.5926| 316.9 | 133.1 | 7540 | 3.43 | peakbook.org 78414 (UTM converted) |
+| Pic de la Serrera | mid | 2912 |42.626, 1.601| 329.0 | 121.0 | 8682 | 2.96 | GeoNames, highest mountains of Andorra |
+| Coma Pedrosa | mid | 2943 |42.59056, 1.44478| 281.5 | 168.5 | 17647 | 1.56 | Wikipedia |
+| Pica d'Estats | far | 3143 |42.66722, 1.39722| 299.7 | 150.3 | 24360 | 1.60 | Wikipedia |
+| Alt del Griu | near | 2874 |42.526, 1.652| 184.4 | 265.6 | 3675 | 6.37 | GeoNames |
+| Pic dels Pessons | near | 2864 |42.508, 1.665| 172.1 | 277.9 | 5718 | 4.01 | GeoNames |
+| Pic Negre d'Envalira | near | 2823 |42.51722, 1.72139| 130.6 | 319.4 | 7133 | 2.89 | Wikipedia |
+| Pic d'Envalira | near | 2659 |42.51879, 1.72485| 128.0 | 322.0 | 7243 | 1.55 | aroundus.com 4041992 |
+| Pic del Maià | near | 2615 |42.55384, 1.71889| 96.2 | 353.8 | 5242 | 1.66 | altitude visitandorra.com; position komoot 3422136 |
 
 GeoNames gives 3 decimals (about 100 m, under 1 degree of bearing here). Maià's position is a map-centre value and its
 altitude differs by 5 m between sources. `halfWidthM` (massif width) is art-directed, not measured.
 
 ## Data from the baked files
 
-`meanSlopeDegData` 14.89 is the course file's value, atan(drop / length) = atan((2462.0 - 1700.5) / 2864.7). The
-terrain height range is 1570.3-2749.1 m. The course starts at 2462 m, above the treeline, and first passes the
+`meanSlopeDegData` 15.06 is the course file's value, atan(drop / length) = atan((2463.4 - 1700.5) / 2834.7) from startS 30. The
+terrain height range is 1570.3-2749.1 m. The course starts at 2463 m, above the treeline, and first passes the
 krummholz limit at s 235 m, the last-tree line at 599, the thinning limit at 929 and the forest limit at 1989.
 The files carry no land cover, so the treeline itself stays art-directed.
 
@@ -94,3 +94,5 @@ The files carry no land cover, so the treeline itself stays art-directed.
 - **Ridge height.** Real peaks are 1.5-6.5 degrees up, so the ridge is lifted 2x; S4 may tune it.
 - **Treeline value.** 2300 m is a regional rule of thumb; real land cover (R6) would replace it.
 - El Tarter sun: spec 110 (real winter dawn, ESE) vs baked 76 (fall line + 90); the 60-120 degree side-light rule.
+
+After a rebake, `node docs/art/v1.5/derive.mjs` recomputes every value in this section and the peak geometry in place.
