@@ -13,6 +13,7 @@ import { placeTreesInTile } from './map-trees.js';
 import { decodeHeights } from './map-file/format.js';
 import { selectParts } from './map-file/course-run.js';
 import { validateTerrain, validateCourse, widthAtS } from './map-file/validate.js';
+import { NO_FEATURES, resolveFeatures } from './park-features.js';
 
 /** m, the corridor's width past the piste's edge on each side: where the 2 m detail applies (R1, C4). */
 export const CORRIDOR_MARGIN_M = 150;
@@ -48,15 +49,18 @@ function finishRail(r, base) {
  return { ...r, x0: a.x, y0: a.y, x1: b.x, y1: b.y, dx: (b.x - a.x) / len, dy: (b.y - a.y) / len, len };
 }
 
-// The course of the file's run: Course.fromRun's centreline, then widths per point, the start, finish and park.
-function buildCourse(terrainFile, courseFile, terrain) {
+// The course of the file's run: Course.fromRun's centreline, then widths per point, the start, finish and park. The
+// park's features (version 2 files, ADR 0012) get world points over the base snow (base: the terrain's base layer).
+function buildCourse(terrainFile, courseFile, terrain, base) {
  const ways = selectParts(terrainFile, courseFile.run).parts.map((p) => p.points);
  const first = Course.fromRun(ways, { terrain, width: PLACEHOLDER_WIDTH_M });
  const { xy, s } = first.centreline();
  const widths = Float64Array.from(s, (m) => widthAtS(courseFile.widths, m));
+ const baseSnow = (x, y) => base.height(x, y);
  return polylineCourseFromWorld(xy, {
   width: widths, terrain, startS: courseFile.startS, finishS: courseFile.finishS,
   kickers: courseFile.kickers, rails: courseFile.rails.map((r) => finishRail(r, first)),
+  features: courseFile.features ? resolveFeatures(courseFile.features, first, baseSnow) : NO_FEATURES,
  });
 }
 
@@ -89,7 +93,7 @@ export function* loadMapSteps(terrainInput, courseInput, opts = {}) {
  const terrain = Terrain.create({ base, detail: corridor.layer, groomed });
  yield { phase: 'heights', fraction: 0.4 };
 
- const course = buildCourse(terrainFile, courseFile, terrain);
+ const course = buildCourse(terrainFile, courseFile, terrain, base);
  hold.course = course;
  yield { phase: 'course', fraction: 0.55 };
 

@@ -3,7 +3,7 @@
 import {
  FORMAT, KIND_TERRAIN, PROJECTION, POINT_ROUND_M, encodeHeights, roundTo,
 } from './format.js';
-import { KIND_COURSE, DEFAULT_SUN_ELEVATION_DEG } from './course-format.js';
+import { KIND_COURSE, DEFAULT_SUN_ELEVATION_DEG, FEATURES_VERSION } from './course-format.js';
 import {
  compassBearingDeg, computeHorizon, difficultyOf, measureMeanSlopeDeg, runCourse, selectParts, terrainLayer,
 } from './course-run.js';
@@ -320,7 +320,8 @@ export function topS(course, layer) {
  return roundTo(best, POINT_ROUND_M);
 }
 
-export function compileCourse({ terrain, run, name, widthM, startS, finishS, kickers = [], rails = [], sun,
+// A course file (ADR 0010) for a run of a baked terrain; features (optional, ADR 0012): the park's jumps and rails.
+export function compileCourse({ terrain, run, name, widthM, startS, finishS, kickers = [], rails = [], features, sun,
  treeSet = 'pine', horizonStepDeg = 1 }) {
  const layer = terrainLayer(terrain);
  const { parts, problems } = selectParts(terrain, run);
@@ -337,7 +338,7 @@ export function compileCourse({ terrain, run, name, widthM, startS, finishS, kic
   (v) => roundTo(v, HORIZON_ROUND_DEG));
  const slope = measureMeanSlopeDeg(course, layer, start, end);
  const runName = name ?? (parts.find((p) => p.name)?.name || terrain.name);
- return {
+ const file = {
   format: FORMAT,
   kind: KIND_COURSE,
   id: terrain.id,
@@ -360,6 +361,8 @@ export function compileCourse({ terrain, run, name, widthM, startS, finishS, kic
   treeSet,
   horizon: { stepDeg: horizonStepDeg, source: 'terrain-grid', near: profile, far: profile.slice() },
  };
+ // the park's features make it a version 2 file (ADR 0012); without them the file is version 1, byte for byte
+ return features ? { ...file, version: FEATURES_VERSION, features } : file;
 }
 
 /**
