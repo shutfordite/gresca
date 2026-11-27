@@ -6,10 +6,10 @@
  * then draws on the CPU, after `warn`); `loadMap` resolves null itself when the map's files are missing or invalid.
  */
 export async function startLoads({ renderer, mapId, importThree, loadMap, warn }) {
-  const three = renderer === 'gl'
-    ? importThree().catch((e) => { warn('Gresca: three.js did not load (' + e.message + ')'); return null; })
-    : Promise.resolve(null);
-  const world = mapId ? loadMap(mapId) : Promise.resolve(null);
-  const [THREE, loaded] = await Promise.all([three, world]);
-  return { THREE, world: loaded };
+ const three = renderer === 'gl'
+  ? importThree().catch((e) => { warn('Gresca: three.js did not load (' + e.message + ')'); return null; })
+  : Promise.resolve(null);
+ const world = mapId ? loadMap(mapId) : Promise.resolve(null);
+ const [THREE, loaded] = await Promise.all([three, world]);
+ return { THREE, world: loaded };
 }

@@ -16,7 +16,6 @@ import { loadMapSteps } from './world/map-loader.js';
 // ?map=<id> for any other id loads the real map maps/<id>.terrain.json and maps/<id>.course.json (C4b, ADR 0011):
 // fetched here, built in chunks with the progress on the menu, then handed to the game. If either file fails, the
 // game warns and opens on the play mountain.
-// The three.js import starts before the map fetch and both are awaited together (core/boot-loads.js, G2).
 const query = (name) => new URLSearchParams(window.location.search).get(name);
 const REAL_MAP_ID = /^[a-z0-9-]{1,40}$/; // a real map's id: the file names in maps/
 const LOAD_YIELD_MS = 0; // ms between load chunks: lets the page paint the progress
