@@ -18,6 +18,7 @@ export const GESTURES = Object.freeze({
  DRAG_BOTH_UP_AIR: 'drag-both-up-air',     // a finger on each half dragged up in the air: a front flip
  DRAG_BOTH_DOWN_AIR: 'drag-both-down-air', // a finger on each half dragged down in the air: a backflip
  TAP_PAUSE: 'tap-pause',         // a tap on the pause button (top right)
+ TAP_RIDER: 'tap-rider',         // a quick tap on the rider (bottom centre): the next camera view
 });
 
 // Input slots a key drives (input.keys in input.js): left, right, brake, jump, look back.
@@ -55,6 +56,10 @@ export const BINDINGS = deepFreeze([
  { device: 'touch', action: 'flip-back', label: 'Backflip in the air: both fingers drag down (hold to keep rotating)',
   gesture: GESTURES.DRAG_BOTH_DOWN_AIR, minPx: FLIP_DEAD_PX, fullPx: FLIP_FULL_PX },
  { device: 'touch', action: 'pause', label: 'Pause', gesture: GESTURES.TAP_PAUSE },
+ // A touch that starts on the rider does not steer: it is a tap if it lifts within maxMs having moved under maxPx,
+ // otherwise it becomes the gesture it would have been. The rider's box is at least minBoxPx square.
+ { device: 'touch', action: 'camera', label: 'Change camera: tap the rider', gesture: GESTURES.TAP_RIDER, maxPx: 12,
+  maxMs: 250, minBoxPx: 64 },
  { device: 'keyboard', action: 'steer-left', label: 'Turn left', slot: SLOTS.LEFT, keys: ['ArrowLeft', 'a'] },
  { device: 'keyboard', action: 'steer-right', label: 'Turn right', slot: SLOTS.RIGHT, keys: ['ArrowRight', 'd'] },
  { device: 'keyboard', action: 'brake', label: 'Brake', slot: SLOTS.BRAKE, keys: ['ArrowDown', 's'] },
@@ -68,6 +73,8 @@ export const BINDINGS = deepFreeze([
  { device: 'keyboard', action: 'flip-back', label: 'Backflip in the air', slot: null, keys: ['ArrowDown', 's'] },
  // No slot: pause is not part of the InputState; bind-input.js hands these keys to the pause toggle (ui/pause.js).
  { device: 'keyboard', action: 'pause', label: 'Pause', keys: ['Escape', 'p'] },
+ // No slot either: the camera is not part of the InputState; bind-input.js hands this key to the game's cycleCamera().
+ { device: 'keyboard', action: 'camera', label: 'Change camera', keys: ['c'] },
 ]);
 
 /** The bindings of one device ('touch' | 'keyboard'), in table order. */
@@ -106,6 +113,16 @@ export const FLIP_FULL_RATE_PX = binding('touch', 'flip-front').fullPx;
 
 /** KeyboardEvent.key values that pause or resume the run (the keyboard pause row). */
 export const PAUSE_KEYS = binding('keyboard', 'pause').keys;
+
+/** KeyboardEvent.key values that switch the camera view (the keyboard camera row). */
+export const CAMERA_KEYS = binding('keyboard', 'camera').keys;
+
+/** A touch on the rider is a tap if it moves under RIDER_TAP_MAX_PX (CSS px) and lifts within RIDER_TAP_MAX_MS (ms). */
+export const RIDER_TAP_MAX_PX = binding('touch', 'camera').maxPx;
+export const RIDER_TAP_MAX_MS = binding('touch', 'camera').maxMs;
+
+/** CSS px, the smallest side of the rider's touch box: the drawn rider is small, a fingertip is not. */
+export const RIDER_BOX_MIN_PX = binding('touch', 'camera').minBoxPx;
 
 // Readable names for keys whose KeyboardEvent.key is not what the player sees on the keycap.
 const KEY_NAMES = Object.freeze({

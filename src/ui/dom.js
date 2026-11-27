@@ -39,5 +39,6 @@ export function getUi(doc) {
   pc: $('pc'),       // Controls, from the pause panel
   pm: $('pm'),       // Back to menu
   minimap: $('mc'),  // minimap canvas
+  camLabel: $('cam-label'), // the camera view's name, shown briefly after a switch
  };
 }

@@ -87,6 +87,7 @@ function makeEl(id, w, h) {
     fire(t, ev) { (el._l[t] || []).forEach((fn) => fn(Object.assign({ preventDefault() {}, pointerId: 1 }, ev))); },
     setPointerCapture() {},
     setAttribute(name, value) { el.attrs[name] = String(value); },
+    getBoundingClientRect() { return { left: 0, top: 0, width: el.clientWidth, height: el.clientHeight }; },
   };
   el._ctx = makeCtx(el);
   el.getContext = () => el._ctx;

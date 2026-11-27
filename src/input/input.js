@@ -1,17 +1,20 @@
 // Input state from touch and keys (the controls are listed in bindings.js): hold the left or right half of the screen
 // to turn (or spin in the air), both halves together jump, swipe down to brake, swipe up and hold to look back;
-// arrows or A/D steer, Down or S brakes, B looks back. In the air (setAirborne) a finger on each half dragged the same
-// way, and Up/W, Down/S, are flips instead: input.flip, -1..1, + front flip; brake and look back are ground-only.
+// arrows or A/D steer, Down or S brakes, B looks back. A touch that starts on the rider does not steer: a quick tap
+// there (pointerUp returns true) changes the camera view; moving further makes it the gesture it would have been.
+// In the air (setAirborne) a finger on each half dragged the same way, and Up/W, Down/S, are flips instead:
+// input.flip, -1..1, + front flip; brake and look back are ground-only.
 import {
- BRAKE_SWIPE_PX, LOOK_BACK_SWIPE_PX, KEY_SLOTS, FLIP_KEYS, FLIP_DEAD_ZONE_PX, FLIP_FULL_RATE_PX,
+ BRAKE_SWIPE_PX, LOOK_BACK_SWIPE_PX, KEY_SLOTS, FLIP_KEYS, FLIP_DEAD_ZONE_PX, FLIP_FULL_RATE_PX, RIDER_TAP_MAX_PX,
+ RIDER_TAP_MAX_MS, RIDER_BOX_MIN_PX,
 } from './bindings.js';
 
 /**
  * A new InputState (core/contracts.js): left, right, brake (0 or 1, what the rider is told), jump (0 or 1, a one-shot
  * request the physics clears), both (true while both sides are held); pre-added for S1: steer (-1..1), jumpHeld,
  * jumpPressed (0 or 1, set with jump, cleared by the sim with it), flip, spin (-1..1, 0 for now). Plus the
- * bookkeeping behind them: air, pointers (Map id -> {y0, y, side, brake, look}) and keys {L, R, B, J, K, U, D}
- * (1 while held; U and D are the flip keys).
+ * bookkeeping behind them: air, pointers (Map id -> {x0, y0, y, t0, side, brake, look, rider}) and keys
+ * {L, R, B, J, K, U, D} (1 while held; U and D are the flip keys).
  */
 export function createInput() {
  return {
@@ -39,6 +42,7 @@ function twoFingerFlip(input) {
  let downLeft = 0;
  let downRight = 0;
  for (const p of input.pointers.values()) {
+  if (p.rider) continue; // a finger on the rider is not part of a flip
   const dy = p.y - p.y0;
   if (p.side < 0) {
    if (-dy > upLeft) upLeft = -dy;
@@ -80,6 +84,7 @@ export function applyInput(input) {
  let b = air ? 0 : input.keys.B;
  let k = input.keys.K;
  for (const p of input.pointers.values()) {
+  if (p.rider) continue; // a finger on the rider only taps (or turns into a gesture once it moves): it does not steer
   if (p.look && !air) { // a look-back finger only turns the camera: steering it too would turn the rider all the while
    k = 1;
    continue;
@@ -103,21 +108,42 @@ export function applyInput(input) {
 // -1 for the left half of a screen halfWidth px wide, +1 for the right
 const sideOf = (px, halfWidth) => (px < halfWidth ? -1 : 1);
 
-/** A finger down at (px, py) CSS px; halfWidth: px, half the canvas width. */
-export function pointerDown(input, id, px, py, halfWidth) {
- input.pointers.set(id, { y0: py, y: py, side: sideOf(px, halfWidth), brake: false, look: false });
+/**
+ * Whether (px, py) CSS px is on the rider. box: the rider's drawn box {x, y, w, h} (CSS px, top left corner) or null;
+ * it counts as at least RIDER_BOX_MIN_PX square around its centre. Allocates nothing.
+ */
+export function onRider(box, px, py) {
+ if (!box) return false;
+ const halfW = Math.max(box.w, RIDER_BOX_MIN_PX) / 2;
+ const halfH = Math.max(box.h, RIDER_BOX_MIN_PX) / 2;
+ return Math.abs(px - (box.x + box.w / 2)) <= halfW && Math.abs(py - (box.y + box.h / 2)) <= halfH;
+}
+
+/**
+ * A finger down at (px, py) CSS px at time t (ms); halfWidth: px, half the canvas width. startsOnRider: the touch
+ * began on the rider (onRider()): it does not steer unless it moves further than RIDER_TAP_MAX_PX.
+ */
+export function pointerDown(input, id, px, py, halfWidth, t = 0, startsOnRider = false) {
+ input.pointers.set(id, {
+  x0: px, y0: py, y: py, t0: t, side: sideOf(px, halfWidth), brake: false, look: false, rider: startsOnRider,
+ });
  applyInput(input);
 }
 
 /**
  * A finger moved: it brakes once it has moved SWIPE_PX down, looks back once it has moved further up, and can slide
- * to the other half. False if unknown.
+ * to the other half. A finger that began on the rider is still only a possible tap until it has moved
+ * RIDER_TAP_MAX_PX; from then on it is the gesture it would have been. False if unknown, or if nothing changed.
  */
 export function pointerMove(input, id, px, py, halfWidth) {
  const p = input.pointers.get(id);
  if (!p) return false;
  const dy = py - p.y0;
  p.y = py;
+ if (p.rider) {
+  if (Math.hypot(px - p.x0, dy) < RIDER_TAP_MAX_PX) return false;
+  p.rider = false;
+ }
  p.brake = dy > BRAKE_SWIPE_PX;
  p.look = -dy > LOOK_BACK_SWIPE_PX;
  p.side = sideOf(px, halfWidth);
@@ -143,10 +169,17 @@ export function setAirborne(input, isAirborne) {
  input.brake = isAirborne ? 0 : input.keys.B || input.brake;
 }
 
-/** A finger lifted (or the touch cancelled). */
-export function pointerUp(input, id) {
+/**
+ * A finger lifted at time t (ms), or the touch cancelled (a cancelled touch is never a tap: do not act on the result).
+ * Returns true when it was a tap on the rider: it began there, moved under RIDER_TAP_MAX_PX and lifted within
+ * RIDER_TAP_MAX_MS.
+ */
+export function pointerUp(input, id, t = 0) {
+ const p = input.pointers.get(id);
+ const isTap = !!p && p.rider && t - p.t0 <= RIDER_TAP_MAX_MS;
  input.pointers.delete(id);
  applyInput(input);
+ return isTap;
 }
 
 /** A key pressed (KeyboardEvent.key). Which keys do what is in bindings.js. */
