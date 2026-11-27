@@ -1,8 +1,8 @@
 // The GL terrain's snow: its colours and sun from the Look (uniform values) and its shaders (GLSL ES 3.0).
 // Per pixel: the terrain's slope plus a tiling ripple and crust detail, sun from the spec's azimuth and elevation,
-// lavender shade and warm lit snow, bluer hollows, sparkle, corduroy on the groomed piste, rock where steep, light powder
-// (more glints) and deep powder (buried ripples, soft pillows, brighter, colder in shade), painted features from the
-// colour map, ski tracks and the Look's fog. Colours are only ever the Look's (ADR 0007).
+// lavender shade and warm lit snow, bluer hollows, sparkle, corduroy on the groomed piste, rock where steep, light
+// powder (more glints) and deep powder (buried ripples, soft pillows, brighter, colder in shade), painted features from
+// the colour map, ski tracks and the Look's fog. Colours are only ever the Look's (ADR 0007).
 import { RAY_FAR } from '../../core/config.js';
 import { hexRgb } from '../look/look.js';
 import { sunAzimuthDeg } from '../sky.js';
