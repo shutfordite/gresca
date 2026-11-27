@@ -85,6 +85,7 @@ export function createView(doc, look) {
   texel: { u: 0, v: 0 }, // scratch: a world point in colour map texels (draw.js, ski-tracks.js)
   rayTexel: { u: 0, v: 0 }, // scratch: a ray direction in texels (draw.js)
   flagsDrawn: 0,
+  polesDrawn: 0, // the piste's edge poles drawn last frame (CPU)
   railsDrawn: 0,
   loImage: null, // the low-res render's ImageData, made at its size and refilled every frame (draw.js)
   rayZ: new Float64Array(RAY_SAMPLES), // m, the distance of each terrain sample along a column (draw.js)
