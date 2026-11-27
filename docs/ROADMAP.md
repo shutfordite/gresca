@@ -112,6 +112,52 @@ in the sky. Order:
 5. **TD4 a sun that moves during a ride** (S4, optional, its own ADR): needs shadows updated a little each frame or
    computed differently; only if the owner wants it once TD2's bake time is known.
 
+### G: whole mountains and a lighter frame (owner asked 27 Nov; the next items taken)
+From an architecture and performance review of main at `f393adf` (27 Nov). Measured in Node 22 on the procedural
+maps unless stated; frame costs on the iPad are each package's to measure with the D1 harness and state in the PR.
+What the review found:
+- **A real map is cut to a 1000 × 2450 m window.** `view/paint-window.js` crops every loaded map to the procedural
+  map's grid, because the colour map and the GPU heights are each one map-sized texture: about 40 MB on the GPU and
+  the same again as CPU copies for that window (ADR 0008), with grids over about 2000 × 2000 m falling back to the
+  CPU renderer. El Tarter is about 7 × 7 km. The comments say "until D2", but D2 was folded into E0 and no package
+  lifts the limit. This is the one finding that blocks the game's promise.
+- **Two renderers, and the tests ride the one players don't see.** The GPU terrain is the default (E1a), yet the CPU
+  raycaster and the painted colour map are still built and extended; in GPU mode `buildColourMap` still paints the
+  whole map so `terrain-bake.js` `bakePaint` can diff it against plain snow to find the features. Node tests run the
+  CPU path; the GPU path has its bake unit tests and the two-scene `gl-smoke`. Every visual feature is paid twice or
+  left behind on the CPU (the powder look, #89).
+- **The rider and spray are a second full-screen layer.** They are drawn on a 2D canvas over the WebGL canvas, so the
+  iPad composites two full-screen layers every frame, and the rider can never be hidden by a tree, a kicker or a rail.
+- **The spray allocates every step.** `sim/particles.js` makes an object per particle and removes dead ones with
+  `splice`: about 3.6 MB of garbage per 10 s of riding (sim only, after H3). The likeliest cause of the Debt row "a few
+  very slow frames" (garbage collection pauses); it also breaks the "no per-frame allocations" rule.
+- **The page loads in series.** `src/main.js` starts the three.js import (r187, about 2.1 MB, about 420 KB gzipped;
+  r187 ships no minified build) only after a real map has finished loading, and the 82 modules are found one import
+  level at a time. Nothing is cached for a second visit or for offline play from the iPad home screen.
+- **Boot bakes block the page.** `bakeHeights` alone is about 95 ms in Node for the 2.45 M texel window (more on the
+  iPad), and the bakes grow with the map. They are pure functions over typed arrays, so they move to a worker as is.
+- The sim, the contracts and the course lookup (a spatial grid) are in good shape; nothing to change there.
+
+Packages, in order. G1, G2 and G3 are small, touch few files and run now, alongside K and C4b. G4 is a decision.
+G5 to G8 follow it; G7 waits for C4b so El Tarter rides in the game first.
+
+| # | Package | Stream | What | Done when |
+|---|---|---|---|---|
+| G1 | spray pool | S2 | `sim/particles.js` as a fixed pool of typed arrays (struct of arrays, `MAX_PARTICLES` long, a live count, swap-remove on death); the same RNG draws in the same order, so the sim hash is unchanged; view and façade read the pool through one accessor | a test that 10 s of spray-heavy riding allocates no particle objects; sim golden hash unchanged; the D1 harness re-run in Chrome, with the slow-frames Debt row closed or re-measured |
+| G2 | load in parallel | Shared (`src/main.js`, `index.html`) | start the three.js import at the top of `main.js`, before the real-map load, and await both; `<link rel="modulepreload">` for three.js and the entry's module tree, kept in step with the imports by `test/page.test.js` | the real-map boot no longer waits for one before starting the other (a page test checks the order); load times before and after on the iPad preview in the PR |
+| G3 | idle frames | Shared (`src/app.js`) | the loop draws only when something can change: no redraw while paused or behind the Controls screen; the menu keeps its frame rate only while its camera moves | a façade test counts draws while paused; tap-to-start, pause and resume unchanged on the iPad |
+| G4 | the CPU renderer's role (ADR 0014) | Shared, owner decision | the GPU is the game; the CPU raycaster is a fallback that is kept working (the suite still rides it in Node) but gets no new looks. Its Debt rows close as "won't do". Owner: is a device without WebGL2 still worth drawing for at all? | the ADR merged with the owner's answer; `src/view/AGENTS.md` and ADR 0008 amended |
+| G5 | features without the colour map | S4 | the lift line, village, finish and piste marks the colour map still paints become GPU meshes or decals from the course and world data, like E3b's rails and kickers; GPU mode stops calling `buildColourMap` and `bakePaint` | no colour map or `col`/`col0`/`colSnow` in GPU mode (a test of `view` after a GPU boot); the GPU memory figure in the PR; shots before and after match on the iPad |
+| G6 | the rider and spray on the GPU | S4 (projection, spray), S3 (the rider files) | the rider drawn into the WebGL scene (its 2D drawing rendered to a texture on a quad at the rider's depth, so the Hanga style is kept), the spray as one instanced draw; the 2D canvas keeps only the HUD-like overlays, or goes | one full-screen canvas in GPU mode; the rider hidden behind a tree in a new scene; owner verdict on the look (feel spike first if the quad changes how the rider reads) |
+| G7 | the whole mountain (ADR 0015) | S5 (tiles from the map file), S4 (clipmap sampling) | after C4b. Heights as tiles at a few levels of detail (the finest only near the rider and camera, like the corridor), sampled by the existing clipmap rings; slopes from the heights in the shader instead of a baked texture; CPU copies dropped after upload, with a lost context re-baking from the terrain; `paint-window.js` removed. The memory budget for El Tarter at 7 × 7 km stated in the ADR | El Tarter shown edge to edge with no window; GPU memory within the ADR's budget on the iPad; `gl-smoke` gains a real-map scene |
+| G8 | bakes off the main thread | S4 and S5, with a Shared prep PR (`env` gains a worker factory) | the terrain bakes and `loadMapSteps` run in a module worker, typed arrays transferred, the progress text kept; Node tests call the same pure functions directly | the page stays responsive while a map loads (no long task over 50 ms in the Chrome trace in the PR) |
+
+Not taken: replacing three.js with plain WebGL2. The game uses only a thin slice of it (raw shader materials, buffers,
+textures, one scene), so it could go later for load size, but G2's parallel load and the browser cache cover most of
+the cost; revisit if the iPad's first load is still slow after G2. An offline service worker is also left for later:
+the per-commit preview folders make its scope and cache names a design of their own (its own ADR if the owner wants
+home-screen play).
+
 ## Where this differs from the feedback plan, and why
 - **The `Course` seam and the ENU frame (C2) move into the freeze.** In the feedback plan they sat in S5. F5, F6 and F7
   need the fall line and headings independent of +y, and flipping the frame later would rewrite stream code.
@@ -174,6 +220,8 @@ in the sky. Order:
    C high). CV1 (Shared: `CAM_MODES` in config, game state, `gresca-cam` key, `?cam=`), CV2 (S4: the camera follows
    the mode, eased), CV3 (S1: tap the rider, `c` on keys). The default stays A until the owner picks one; the rider
    scale (F1) is set after, per mode if needed.
+8. **Whole mountains and a lighter frame (G above) are the next items taken:** G1 to G3 now, alongside K and C4b;
+   the G4 decision on the CPU renderer before G5 and G6; G7 (lifting the 1000 × 2450 m window) right after C4b.
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
