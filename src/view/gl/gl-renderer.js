@@ -11,6 +11,8 @@ import { SNOW_VERTEX, SNOW_FRAGMENT, snowLook, sunOnGrid } from './snow-material
 import { createTrackRibbon, ribbonLook } from './track-ribbon.js';
 import { SKY_VERTEX, SKY_FRAGMENT, skyLook } from './sky-material.js';
 import { sunDisc } from '../sky.js';
+import { camCompass } from '../camera.js';
+import { SPIKE_SKY_FRAGMENT, spikeSkyValues } from './spike-env.js';
 import { createTreeMesh, treeLook } from './tree-mesh.js';
 import { createParkMesh } from './park-mesh.js';
 import { sunVisibilityGrid } from './sun-visibility.js';
@@ -159,7 +161,7 @@ function addLevels(THREE, glScene, shared) {
 }
 
 // The sky: one screen-covering triangle at the far plane, drawn after the terrain where none is (depth test).
-function addSky(THREE, glScene, look) {
+function addSky(THREE, glScene, look, frame) {
  const s = skyLook(look.sky);
  const geo = new THREE.BufferGeometry();
  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
@@ -176,6 +178,21 @@ function addSky(THREE, glScene, look) {
   },
   depthWrite: false,
  });
+ if (look.spikeEnv) { // SPIKE (?spike=env): the spec v1.5 sky and Pyrenees ridge layers
+  const v = spikeSkyValues(look.spikeEnv, frame.rotation * 180 / Math.PI);
+  material.fragmentShader = SPIKE_SKY_FRAGMENT;
+  Object.assign(material.uniforms, {
+   uView: { value: new THREE.Vector4() },
+   uSkyCol: { value: v.skyCol },
+   uSunPos: { value: new THREE.Vector4(...v.sunPos) },
+   uSunCol: { value: new THREE.Vector3(...v.sunCol) },
+   uGlowCol: { value: new THREE.Vector3(...v.glowCol) },
+   uMidCol: { value: new THREE.Vector3(...v.midCol) },
+   uPeak: { value: v.peaks },
+   uCapDepth: { value: v.caps },
+   uLayerCol: { value: v.cols },
+  });
+ }
  const mesh = new THREE.Mesh(geo, material);
  mesh.frustumCulled = false;
  mesh.renderOrder = CLIPMAP.levels;
@@ -212,7 +229,7 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
  const park = createParkMesh(THREE, glScene, shared, scene.course, scene.terrain, scene.look, view.mapFrame);
  const parkStats = { drawCalls: park.drawCalls, triangles: park.triangles, kickers: park.counts.kickers,
   rails: park.counts.rails, flags: park.counts.flags, drawn: 0 };
- const sky = addSky(THREE, glScene, scene.look);
+ const sky = addSky(THREE, glScene, scene.look, view.mapFrame);
  const unused = new THREE.Camera(); // three.js wants one; the shaders project for themselves
  const proj = createProjection();
  const at = { u: 0, v: 0 };
@@ -235,6 +252,7 @@ export function createGlTerrain(THREE, gl, canvas, view, scene) {
   const sun = sunDisc(sc.look.sky, sc.camera, v.W, v.Hh, sc.frame, v.sun);
   sky.uniforms.uRows.value.set(Math.max(1, p.rowC), p.Hh);
   sky.uniforms.uSun.value.set(sun.X, sun.Y, sun.r, sun.on ? 1 : 0);
+  if (sky.uniforms.uView) sky.uniforms.uView.value.set(p.focalC, p.W, camCompass(sc.camera), 0);
   // the rider's shadow: read-only on the drawn pose (view.drawn: x, y m, z m above the ground)
   v.mapFrame.toGrid(v.drawn.x, v.drawn.y, ground);
   riderShadow(v.drawn.z, sun, rs);

@@ -84,7 +84,7 @@ function terrainTone(lit, groomed, stripeWave, rock, out, cavity = 0, grain = 0)
  return out;
 }
 
-function sky(H, colour) {
+function sky(H, colour, sunAt) {
  const sun = H.sky.sun;
  return Object.freeze({
   stops: Object.freeze(H.sky.stops.map(([o, role]) => Object.freeze([o, colour(role)]))),
@@ -92,8 +92,8 @@ function sky(H, colour) {
    colour: colour(sun.colour),
    radiusFracOfWidth: sun.radiusFracOfWidth,
    aboveHorizonFrac: sun.aboveHorizonFrac,
-   azimuthDeg: H.maps[MAP_ID].sun.azimuthDeg,
-   elevationDeg: H.maps[MAP_ID].sun.elevationDeg,
+   azimuthDeg: sunAt.azimuthDeg,
+   elevationDeg: sunAt.elevationDeg,
   }),
  });
 }
@@ -143,11 +143,51 @@ function rider(H, riderAnim) {
  });
 }
 
+// SPIKE (?spike=env, throwaway): the v1.5 environment as plain numbers and hex colours for the GPU sky and trees.
+function spikeEnv(H) {
+ const E = H.environment;
+ const P = H.palette;
+ const B = E.backdrops.pyrenees;
+ const species = (s) => Object.freeze({
+  heightM: s.reference.heightM,
+  typicalM: s.heightM.typical,
+  profile: Object.freeze(s.profile.map((q) => Object.freeze(q.slice()))),
+  lit: P[s.roles.lit], body: P[s.roles.body], shade: P[s.roles.shade], trunk: P[s.roles.trunk],
+  snow: P[s.roles.snow], snowShade: P[s.roles.snowShade],
+  cover: s.snowLoad.coverOfTierUpperSide.typical,
+ });
+ return Object.freeze({
+  sun: H.maps['el-tarter'].sun,
+  sky: Object.freeze({
+   stops: Object.freeze(E.sky.stops.map((s) => Object.freeze({ elevationDeg: s.elevationDeg, colour: P[s.role] }))),
+   follows: E.sky.followsSun,
+   sun: E.sky.sun,
+   sunColour: P[E.sky.sun.role],
+   glowColour: P[E.sky.sun.glow.role],
+   skyMid: P.skyMid,
+   haze: P.skyHorizon,
+  }),
+  backdrop: Object.freeze({
+   ridge: B.ridge,
+   layers: Object.freeze(B.layers.map((l) => Object.freeze({
+    id: l.id, fill: P[l.roles.fill], shade: P[l.roles.shade], cap: P[l.roles.cap], hazeMix: l.hazeMix, capRule: l.cap,
+   }))),
+   peaks: Object.freeze(B.peaks),
+  }),
+  trees: Object.freeze({
+   pine: species(E.trees.sets.pine.species.uncinata),
+   fir: species(E.trees.sets.pine.species.fir),
+   firShare: E.trees.sets.pine.mix.firShareByAltM[0][1],
+  }),
+ });
+}
+
 /**
  * The Hanga Dawn Look from the art spec (HANGA: window.HANGA, passed in through env) and, for live rider poses,
  * riderAnim (RiderAnim). Resolves every colour once; validated before it is returned (throws naming the field).
  */
-export function createHangaLook(spec, riderAnim) {
+export function createHangaLook(spec, riderAnim, spike = null) {
+ const envSpike = spike === 'env' && spec.environment ? spikeEnv(spec) : null;
  const table = colourTable(spec.palette);
  const colour = (role) => {
   const c = table[role];
@@ -159,11 +199,12 @@ export function createHangaLook(spec, riderAnim) {
   roles: Object.freeze(Object.keys(table)),
   colour,
   terrainTone,
-  sky: sky(spec, colour),
+  sky: sky(spec, colour, envSpike ? envSpike.sun : spec.maps[MAP_ID].sun),
   fog: Object.freeze({ rgb: Object.freeze(spec.terrain.fog.rgb.slice()), amount: spec.fogAmount }),
   sprites: sprites(colour),
   camera: camera(spec),
   ui: UI_TOKENS,
   rider: rider(spec, riderAnim || null),
+  spikeEnv: envSpike,
  }));
 }

@@ -45,7 +45,7 @@ function mapMenuText(world) {
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
  */
 export function createGame(env) {
- const look = createHangaLook(env.HANGA, env.RiderAnim); // every colour, tone and style the view draws with
+ const look = createHangaLook(env.HANGA, env.RiderAnim, env.spike); // every colour, tone and style the view draws with
  const world = env.world || createWorld({ rotationRad: env.mapRotationRad || 0, map: env.map || 'test' });
  const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
  const view = createView(env.document, look);

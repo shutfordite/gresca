@@ -8,6 +8,7 @@ import { FOG_GLSL, snowLook, sunOnGrid } from './snow-material.js';
 import { SUN_VISIBILITY_GLSL, SUN_LIGHT_GLSL } from './sun-visibility.js';
 import { sunAzimuthDeg } from '../sky.js';
 import { FOV } from '../../core/config.js';
+import { spikeTreeGeometry, spikeTreeColours, SPIKE_TREE_VERTEX, SPIKE_TREE_FRAGMENT } from './spike-env.js';
 
 const DEG = Math.PI / 180;
 
@@ -289,7 +290,8 @@ void main() {
  */
 export function createTreeMesh(THREE, glScene, shared, treeArr, terrain, look, frame) {
  const instances = buildTreeInstances(treeArr, terrain);
- const model = treeGeometry();
+ const spike = look.spikeEnv; // SPIKE (?spike=env): the spec v1.5 pine and fir
+ const model = spike ? spikeTreeGeometry(spike.trees) : treeGeometry();
  const capacity = Math.max(1, treeArr.length);
  const treeData = new Float32Array(capacity * 4);
  const styleData = new Float32Array(capacity * 2);
@@ -300,15 +302,15 @@ export function createTreeMesh(THREE, glScene, shared, treeArr, terrain, look, f
  const geo = new THREE.InstancedBufferGeometry();
  geo.setAttribute('position', new THREE.BufferAttribute(model.positions, 3));
  geo.setAttribute('normal', new THREE.BufferAttribute(model.normals, 3));
- geo.setAttribute('aPart', new THREE.BufferAttribute(model.parts, 1));
+ geo.setAttribute('aPart', new THREE.BufferAttribute(model.parts, spike ? 3 : 1));
  geo.setAttribute('aTree', treeAttr);
  geo.setAttribute('aStyle', styleAttr);
  geo.instanceCount = 0;
  const L = treeLook(look, frame);
  const material = new THREE.RawShaderMaterial({
   glslVersion: THREE.GLSL3,
-  vertexShader: TREE_VERTEX,
-  fragmentShader: TREE_FRAGMENT,
+  vertexShader: spike ? SPIKE_TREE_VERTEX : TREE_VERTEX,
+  fragmentShader: spike ? SPIKE_TREE_FRAGMENT : TREE_FRAGMENT,
   uniforms: {
    uCam: shared.uCam, uDir: shared.uDir, uScreen: shared.uScreen, uClip: shared.uClip,
    uFar: shared.uFar, uFogLut: shared.uFogLut, uFog: shared.uFog,
@@ -320,8 +322,15 @@ export function createTreeMesh(THREE, glScene, shared, treeArr, terrain, look, f
    uAmbient: { value: new THREE.Vector3(L.ambient[0], L.ambient[1], L.ambient[2]) },
    uTreeShade: { value: new THREE.Vector2(TREE_MESH.TRUNK_DARKEN, TREE_MESH.UNDERSIDE_DARKEN) },
   },
-  side: THREE.FrontSide,
+  side: spike ? THREE.DoubleSide : THREE.FrontSide,
  });
+ if (spike) {
+  const c = spikeTreeColours(spike.trees);
+  Object.assign(material.uniforms, {
+   uTreeCol: { value: c.cols }, uCover: { value: new THREE.Vector2(c.cover[0], c.cover[1]) },
+   uFirShare: { value: spike.trees.firShare },
+  });
+ }
  const mesh = new THREE.Mesh(geo, material);
  mesh.frustumCulled = false; // the vertex shader projects
  mesh.renderOrder = 0;

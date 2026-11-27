@@ -59,6 +59,7 @@ const THREE = renderer === 'gl'
 const env = Object.freeze({
  scene: query('scene'),
  renderer,
+ spike: query('spike'), // ?spike=env: the spec v1.5 environment (a throwaway feel spike)
  THREE,
  map: query('map') === 'test' || query('scene') ? 'test' : 'play',
  world, // a loaded real map (?map=<id>), or null
