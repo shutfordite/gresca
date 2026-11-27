@@ -45,6 +45,11 @@ export function viewDebug(g) {
  };
  return Object.freeze({
   drawn: () => ({ rails: view.railsDrawn, flags: view.flagsDrawn }), // segments of rail and flags drawn last frame
+  alphaStyles: () => { // fill style strings the spray and collar reuse (view-state.js alphaStyle), all colours
+   let n = 0;
+   for (const styles of view.alphaStyles.values()) n += styles.filter((s) => s !== null).length;
+   return n;
+  },
   polesDrawn: () => view.polesDrawn, // the piste's edge poles drawn last frame (CPU; real maps only)
   project: (wx, wy, h) => { // screen position of a world point, or null
    const P = project(camera, wx, wy, h);

@@ -3,12 +3,13 @@ import { RAY_SAMPLES } from '../core/config.js';
 import { W0, H0 } from '../world/course.js';
 import { createAnimInput } from '../sim/anim-input.js';
 import { createProjection } from './sprites.js';
-import { cssRgb } from './look/look.js';
+import { cssRgb, cssRgba } from './look/look.js';
 import { createTrail } from './track-trail.js';
 
 const MAX_RENDER_COLUMNS = 400; // the occlusion buffer has room for this many render columns (draw.js uses <= 360)
 export const TREE_SLICES = 48;  // depth slices the trees are counted into before they are sorted exactly (draw.js)
 const TREE_STYLES_MAX = 4096;   // fill styles kept for trees, then the cache starts again (a few hundred are ever used)
+const ALPHA_STEPS = 100;        // cssRgba rounds alpha to hundredths: one fill style per hundredth is kept per colour
 const MAX_PIXEL_RATIO = 2;      // device pixels per CSS px, at most (more costs fill rate for nothing visible)
 
 /**
@@ -93,6 +94,7 @@ export function createView(doc, look) {
   rayFogFor: null, // the Look's fog rayFog was made for
   trees: createTreeBuffer(),
   treePos: { src: null, n: 0, x: null, y: null }, // the world's trees as x, y arrays (draw.js)
+  alphaStyles: new Map(), // fill style strings by colour (the Look's rgb array) and alpha in hundredths (alphaStyle)
   treeStyles: new Map(), // fill style strings by r, g, b, so a tree's colour is not built again each frame
   projA: createProjection(), projB: createProjection(), projG: createProjection(), // scratch (sprites.js)
   sun: { X: 0, Y: 0, r: 0, on: false }, // scratch: the sun disc (sky.js)
@@ -115,6 +117,25 @@ export function treeStyle(view, r, g, b) {
   style = cssRgb(r, g, b);
   if (styles.size >= TREE_STYLES_MAX) styles.clear();
   styles.set(key, style);
+ }
+ return style;
+}
+
+/**
+ * The fill style of colour rgb (the Look's 0..255 array, the same array each call) at alpha a (0..1), as cssRgba gives
+ * it, made once per hundredth of alpha and kept, so spray and powder draw without building a string per puff.
+ */
+export function alphaStyle(view, rgb, a) {
+ let styles = view.alphaStyles.get(rgb);
+ if (styles === undefined) {
+  styles = new Array(ALPHA_STEPS + 1).fill(null);
+  view.alphaStyles.set(rgb, styles);
+ }
+ const step = Math.max(0, Math.min(ALPHA_STEPS, Math.round(a * ALPHA_STEPS)));
+ let style = styles[step];
+ if (style === null) {
+  style = cssRgba(rgb, step / ALPHA_STEPS);
+  styles[step] = style;
  }
  return style;
 }

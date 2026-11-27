@@ -6,9 +6,8 @@ import { fogAt, drawSky, drawSun } from './sky.js';
 import { projectInto, drawFlags, drawRails, drawPistePoles } from './sprites.js';
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
-import { cssRgba } from './look/look.js';
 import { sprayPool } from '../sim/particles.js';
-import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
+import { STAGE, TREE_SLICES, treeStyle, alphaStyle } from './view-state.js';
 import { TREE_FAR_M, TREE_HEIGHT_M } from './gl/tree-mesh.js'; // m: the sprites and the GPU trees share them
 
 const SPRAY_NEAR_SCALE = 0.6; // times the rider's px per m: spray between the camera and the rider grows no bigger
@@ -363,7 +362,7 @@ function drawSpray(ctx, camera, terrain, view, pool, spray) {
   if (!projectInto(camera, pool.x[i], pool.y[i], terrain.height(pool.x[i], pool.y[i]) + pool.z[i], P)) continue;
   const k = t / life;
   const fade = r > 1 ? (1 - k) * (1 - k * 0.5) : 1 - k; // a plume hangs, then thins
-  ctx.fillStyle = cssRgba(spray.rgb, spray.maxAlpha * fade);
+  ctx.fillStyle = alphaStyle(view, spray.rgb, spray.maxAlpha * fade);
   ctx.beginPath();
   ctx.arc(P.X, P.Y, Math.max(1, Math.min(P.s, most) * r * (0.2 + 0.5 * k)), 0, 7);
   ctx.fill();
@@ -385,13 +384,13 @@ function clipSunk(ctx, rider, m, inAir) {
 
 // The powder around a sunk rider: a soft mound of snow along the cut line (y px, from clipSunk), in the spray's colour,
 // as COLLAR_RINGS nested ellipses, fainter outward.
-function drawCollar(ctx, look, m, y, sink) {
+function drawCollar(ctx, view, look, m, y, sink) {
  const sp = look.sprites.spray;
  const a = Math.min(1, sink / COLLAR_FULL_M); // light powder: a dusting round the boots; deep: a mound
  const ry = (COLLAR_HEIGHT_M + sink * 0.4) * m;
  for (let k = COLLAR_RINGS; k >= 1; k--) {
   const f = k / COLLAR_RINGS;
-  ctx.fillStyle = cssRgba(sp.rgb, a * (1.05 - f) * 0.9);
+  ctx.fillStyle = alphaStyle(view, sp.rgb, a * (1.05 - f) * 0.9);
   ctx.beginPath();
   ctx.ellipse(0, y, COLLAR_HALF_M * m * f, ry * f, 0, 0, 7);
   ctx.fill();
@@ -430,6 +429,6 @@ function drawRiderOnSnow(ctx, view, scene, gR, dt) {
  const line = clipSunk(ctx, rider, m, jz > AIRBORNE_DRAW_M);
  drawRider(ctx, look, m, list);
  ctx.restore();
- if (line !== null) drawCollar(ctx, look, m, line, rider.sink);
+ if (line !== null) drawCollar(ctx, view, look, m, line, rider.sink);
  ctx.restore();
 }
