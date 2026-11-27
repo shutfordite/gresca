@@ -1,0 +1,77 @@
+# Bakes a real map on a GitHub runner and opens a pull request with it. The agents' sandbox can't reach the elevation
+# tiles or OpenSkiMap, and the owner works from an iPad, so the bake runs here: Actions -> "Bake map" -> Run workflow.
+# 1. Run it with the map id only: it bakes maps/<id>.terrain.json and lists the piste names in the run summary.
+# 2. Run it again with a run name from that list (exact, accents included): it reuses the committed terrain file if
+#    there is one and writes maps/<id>.course.json (docs/adr/0010-map-course-format.md).
+# Pull requests opened with the workflow token don't start other workflows: close and reopen the PR (or push a commit)
+# to run CI on it. A course file is replaced (--overwrite) only through the PR, so check its diff for hand edits.
+# Needs Settings -> Actions -> "Allow GitHub Actions to create and approve pull requests".
+name: Bake map
+
+on:
+  workflow_dispatch:
+    inputs:
+      map:
+        description: Map id (maps/sources/<id>.json)
+        required: true
+        default: el-tarter
+      run_name:
+        description: Piste name for the course file (leave empty to bake the terrain and list the names)
+        required: false
+        default: ''
+      rebake:
+        description: Bake the terrain again even if maps/<id>.terrain.json exists
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bake:
+    runs-on: ubuntu-latest
+    env:
+      MAP: ${{ inputs.map }}
+      RUN_NAME: ${{ inputs.run_name }}
+      REBAKE: ${{ inputs.rebake }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the map id
+        run: |
+          if ! printf '%s' "$MAP" | grep -qE '^[a-z0-9-]+$' || [ ! -f "maps/sources/$MAP.json" ]; then
+            echo "::error::no maps/sources/$MAP.json"; exit 1
+          fi
+      - name: Bake the terrain
+        if: env.REBAKE == 'true' || hashFiles(format('maps/{0}.terrain.json', inputs.map)) == ''
+        run: node tools/map-compiler/cli.mjs --config "maps/sources/$MAP.json" --fetch
+      - name: List the piste names
+        run: |
+          {
+            echo "## Pistes in maps/$MAP.terrain.json"
+            echo
+            node -e "const t=require('./maps/'+process.env.MAP+'.terrain.json');for(const n of [...new Set(t.pistes.map(p=>p.name).filter(Boolean))].sort())console.log('- '+n)"
+            echo
+            echo "Run the workflow again with one of these as the run name to write the course file."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Write the course
+        if: env.RUN_NAME != ''
+        run: >-
+          node tools/map-compiler/cli.mjs --course --terrain "maps/$MAP.terrain.json" --config "maps/sources/$MAP.json"
+          --run-name "$RUN_NAME" --overwrite
+      - name: Open a pull request
+        run: |
+          git add "maps/$MAP.terrain.json" "maps/$MAP.course.json" 2>/dev/null || git add "maps/$MAP.terrain.json"
+          if git diff --cached --quiet; then echo "Nothing new to commit."; exit 0; fi
+          branch="maps/bake-$MAP-$GITHUB_RUN_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -m "Bake $MAP${RUN_NAME:+ with the course on $RUN_NAME}" -m "Baked by the Bake map workflow, run $GITHUB_RUN_ID."
+          git push -u origin "$branch"
+          body="Baked by the **Bake map** workflow ([run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)). The piste names are in the run summary."
+          gh pr create --base main --head "$branch" --title "S5: bake $MAP${RUN_NAME:+ ($RUN_NAME)}" --body "$body"

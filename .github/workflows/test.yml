@@ -67,3 +67,36 @@ jobs:
           name: shots
           path: shots/
           if-no-files-found: error
+
+  # The GPU terrain players get, on software WebGL (SwiftShader): the jobs above force ?renderer=cpu because CI has no
+  # GPU. Two small scenes on ?renderer=gl must draw a real frame with no page error or lost context (tools/gl-smoke.mjs).
+  # Runs on pull requests that touch how the game is drawn; the shots are an artifact of the run.
+  gl-smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Does this pull request touch the renderer?
+        id: gl
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(src/|art/|styles/|vendor/|index\.html|tools/gl-smoke)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.gl.outputs.changed == 'true'
+        with:
+          node-version: 22
+      - if: steps.gl.outputs.changed == 'true'
+        run: npm ci
+      - if: steps.gl.outputs.changed == 'true'
+        run: npx playwright-core install --with-deps chromium
+      - if: steps.gl.outputs.changed == 'true'
+        run: npm run smoke:gl
+      - if: always() && steps.gl.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gl-shots
+          path: shots/gl/
+          if-no-files-found: warn

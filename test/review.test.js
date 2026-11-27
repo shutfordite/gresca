@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
+ codeMapFiles, statusCheck,
  assertionChecks, behaviourChecks, countAsserts, docsAndStyleChecks, FAIL, INFO, ownerOf, ownershipChecks,
  parseDiff, renderReport, sectionText, templateChecks, WARN,
 } from '../tools/review/checks.mjs';
@@ -179,4 +180,18 @@ test('the report leads with the worst finding and lists moved assert counts', ()
  assert.ok(md.indexOf('broken') < md.indexOf('fine'));
  assert.ok(!md.includes('**B**'));
  assert.match(md, /\| `test\/a\.test\.js` \| 2 \| 1 \|/);
+});
+
+test('code map: a row in the folder AGENTS.md counts; STATUS belongs to the coordinator', () => {
+ assert.deepEqual(codeMapFiles('src/view/gl/a.js'),
+  ['AGENTS.md', 'docs/ARCHITECTURE.md', 'src/AGENTS.md', 'src/view/AGENTS.md', 'src/view/gl/AGENTS.md']);
+ const files = { 'src/sim/AGENTS.md': '| Flips | `src/sim/flip.js` |', 'src/sim/flip.js': '// Flips.\n' };
+ const read = (f) => files[f] ?? null;
+ const run = (changed) => texts(docsAndStyleChecks({ added: ['src/sim/flip.js'], changed, diffFiles: {}, read }));
+ assert.doesNotMatch(run(['src/sim/flip.js']), /code map/);
+ assert.match(texts(docsAndStyleChecks({ added: ['src/ui/x.js'], changed: [], diffFiles: {}, read })),
+  /add a row to `src\/ui\/AGENTS\.md`/);
+ assert.match(run(['src/sim/flip.js', 'docs/STATUS.md']), /`docs\/STATUS\.md` is the coordinator's: a S2 PR/);
+ assert.deepEqual(statusCheck(['src/core/contracts.js', 'docs/STATUS.md']), []);
+ assert.deepEqual(statusCheck(['src/sim/step.js']), []);
 });

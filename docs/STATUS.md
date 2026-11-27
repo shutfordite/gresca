@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 27 Nov 2026, main after PR #71, with X1 open.
+Updated 27 Nov 2026, main after PR #72 (X1), with X2 open. Only the coordinator edits this file (AGENTS.md).
 
 ## Done
 | Package | PR |
@@ -61,17 +61,19 @@ Updated 27 Nov 2026, main after PR #71, with X1 open.
 | S3/F6-lean edge-driven lean and unweighting, from `AnimInput.edge` and `skid` | #66 |
 | S4/E3b rails, flags and kickers as GPU objects; every GPU object lit by the baked sun visibility | #67 |
 | STATUS after #69, X1 in the roadmap; K, a real snow park, planned in the roadmap | #70, #71 |
+| X1 conflict-proofing: test areas from `// @areas` tags, golden split into sim and anim hashes, carve scenes, one property per line at the seams | #72 |
 
 ## In progress
-**Freeze for X1:** no other code PR opens or merges until X1 is in.
-
 | Stream | Package | Branch |
 |---|---|---|
-| Shared | **X1** conflict-proofing: test areas from `// @areas` tags, the golden split into sim and anim hashes, carve scenes, one property per line at the seams (behaviour change none) | `shared/x1-conflict-proofing` |
-| S5 maps | **C4b** waits for the owner's El Tarter bake (below) | none |
+| Shared | **X2** retrospective changes (`docs/RETROSPECTIVES.md`): Bake map workflow, GPU smoke test in CI, code map split into the folder `AGENTS.md` files, STATUS for the coordinator only, feel spikes, the owner loop, the Debt table (behaviour change none) | `shared/x2-retrospective` |
+| S5 maps | **C4b** waits for El Tarter's bake, now one tap (below) | none |
 
 ## Next, in order
-- **K0 park contract and format (ADR 0012), Shared, alone, right after X1** (`docs/ROADMAP.md`, "K: a real snow
+- **Real mountains first (X2):** the El Tarter bake (one tap, "Waiting on the owner"), then **C4b** (S5, with its
+  Shared `app.js` prep PR) runs **alongside K**, not after it. K's acceptance is ridden on the play mountain and, once
+  C4b is in, on El Tarter's park.
+- **K0 park contract and format (ADR 0012), Shared, alone, right after X2** (`docs/ROADMAP.md`, "K: a real snow
   park"). Then K1 (S5 shape library), K2 (S2 flight over the snow) and K3 (S2 grinds) in parallel; K4 (S4) once K1
   is in; K5 (S3) and K6 (S1) after K3.
 - Shared: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the
@@ -80,41 +82,42 @@ Updated 27 Nov 2026, main after PR #71, with X1 open.
 - S2: **ollie preload** (moved out of F6, #58, and out of F3 to keep F3 small): pop on jump release needs S1 to request
   the jump on release, and the crouch needs an `AnimInput` field (a Shared contract PR first). Then (optional) the
   gravity slope-law A/B.
-- S4: E4 tilt-shift and haze. The camera framing on the play mountain's 30° slopes (looks flat, #48) is its own
-  small package after E3b.
+- S4: a **feel spike** on camera framing for the play mountain's 30° slopes (looks flat, #48), then **F1** rider scale
+  (Debt) with the framing the owner picks; then E4 tilt-shift and haze.
 - Ski tracks: T1 is done; pressing them into the snow, lit edges and fading are the later tracks workstream.
 - S5: **C4b** loading a map in the game: `fetch` from `maps/` through `env` (same origin), a file the player picks,
   chunked build with progress (`loadMapSteps`), `createGame` taking a loaded world (a Shared prep PR first: `app.js`),
   a real-map branch for `world.H`/`M`/`layout` until D2, the rider start from the course tangent at `startS` (replacing
   `START_HEADING`/`MENU_HEADING`), credits from `world.credits`, kickers without ramps until the features layer, the
   course's sun from the Look's dawn setting, and removing `PENDING_ROOTS` from `test/page.test.js` (#57). Its
-  acceptance ride is El Tarter start to finish. **C4c** R5 slope and data-defect rules can run alongside, in `world/`.
+  acceptance ride is El Tarter start to finish (baked by the Bake map workflow). **C4c** R5 slope and data-defect
+  rules can run alongside, in `world/`.
 
-## Owner to do
-- **Bake El Tarter** (the agents' sandbox blocks the tile and piste hosts): `node tools/map-compiler/cli.mjs --config
-  maps/sources/el-tarter.json --fetch`, then list the piste names the file holds with
-  `node -e "const t=require('./maps/el-tarter.terrain.json');console.log([...new Set(t.pistes.map(p=>p.name))].join('\n'))"`,
-  and write the course with `--course --terrain maps/el-tarter.terrain.json --run-name "<name>"` (the name must match
-  exactly, accents included). Commit `maps/el-tarter.terrain.json` and `maps/el-tarter.course.json`. C4b's acceptance
-  (El Tarter rideable start to finish) waits on it.
-- **The first real course (owner, 25 Nov):** El Tarter's snow park if OpenSkiMap maps it as a piste; otherwise Àliga.
-  The snow park's kickers and rails go in the course file's park layout (ADR 0010) until real park features are mapped.
+## Waiting on the owner
+Verdicts and one-tap jobs only; everything else is the agents'. The coordinator raises these in the daily try list.
 
-## Known issues (not yet fixed)
-- **A few very slow frames in Chrome** (the mean frame time is about 6× the median, on main too). Look at this first
-  in D1.
-- **C2 leftovers, for later packages:** `START_HEADING`/`MENU_HEADING` (1.57, `view/camera.js` and `app.js`) are grid
-  headings turned through the frame until C4b starts the rider on the course tangent; the minimap still draws in grid
-  orientation, so S1/C4b decide whether a rotated or real map gets a north-up minimap. The view keeps the spec's
-  clockwise sign for `pathTurn` and `riderYaw` on purpose (#58); S3 may tidy it. `?rot=<deg>` in the URL places the
-  procedural map rotated (debug). (F6 removed `CARVE_LIMIT` and made the sim's yaw counter-clockwise.)
-- **The design canvas copy of the art spec** (claude.ai design "Gresca Rider Style Prototypes",
-  `project/data/gresca-hanga-spec.js`) is synced from the repo; re-sync it after every spec version.
-- **Scenes `ride-board` and `ride-ski` never ride straight:** scene inputs merge step to step, so the "straight"
-  0.3 s after the carve still holds the turn (found in X1). Fixing it changes their screenshots: a small S4 or Shared
-  PR, with the shots.
-- **Pose tuning for S3:** the ski tuck reads as a blob from straight behind, the ski brake legs look short, and the
-  board's toe-side brake looks like kneeling at yaw 90.
+| What | How | Since |
+|---|---|---|
+| **Bake El Tarter** (C4b's acceptance waits on it) | After X2 merges: enable Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests". Then Actions → **Bake map** → Run workflow with map `el-tarter`. It opens a PR with the terrain and lists the piste names in the run summary. Run it again with the run name (exact, accents included) to add the course. | 21 Nov |
+| **The first real course** (owner, 25 Nov) | El Tarter's snow park if OpenSkiMap maps it as a piste; otherwise Àliga. Its kickers and rails go in the course file's park layout (ADR 0010) until K. | decided |
+| Play mountain framing (#48 "looks flat") | Verdict on a feel spike with two or three camera framings (S4) | 22 Nov |
+
+## Debt
+Known issues and review notes left for later. Each stream's next package clears one of its rows or says why not in
+its PR; the coordinator adds rows from reviews and raises any row older than a week in the try list.
+
+| Item | Stream | From | Trigger |
+|---|---|---|---|
+| A few very slow frames in Chrome (mean frame time about 6× the median, on main too) | S4 | D1 #37 | before E4 |
+| F1 rider scale: one scale for the rider, flags, rails and trees, with the ratio test from the feedback plan (folded into E1/E3 and never closed) | S4 | 20 Nov plan | now, own package after a framing spike |
+| Scenes `ride-board` and `ride-ski` never ride straight (scene inputs merge step to step, so "straight" still turns); fixing it changes their shots | S4 | X1 | next S4 package |
+| Pose tuning: ski tuck reads as a blob from behind, ski brake legs look short, board toe-side brake looks like kneeling at yaw 90 | S3 | #69, #51 | K5 or sooner |
+| Ski lead code allocates two arrays and two closures per frame: use a plain loop | S3 | #66 | next S3 package |
+| C2 leftovers: `START_HEADING`/`MENU_HEADING` grid headings until C4b starts the rider on the course tangent; minimap in grid orientation (north-up for real maps?) | S5, S1 | #26 | C4b |
+| The view keeps the spec's clockwise sign for `pathTurn` and `riderYaw` (#58); tidy it | S3 | #58 | optional |
+| The design canvas copy of the art spec (claude.ai "Gresca Rider Style Prototypes") must be re-synced after every spec version | S4 | #18 | each spec version |
+
+`?rot=<deg>` places the procedural map rotated (debug).
 
 ## Decisions on record
 In `docs/ROADMAP.md` ("Decisions"), ADRs 0001, 0002, 0004 and 0005 (0003 is reserved for Playwright), and `docs/REAL-WORLD-DATA.md` (R1–R6). **D0**
@@ -123,5 +126,6 @@ nothing third-party is fetched at runtime, and the game loads only baked files f
 the player picks. Decide with El Tarter's real file size and frame times once it rides.
 
 ## How the work is run
-The coordinator skill (`.claude/skills/gresca-architect/SKILL.md`) holds the method: briefing agents, reviewing PRs,
-checking in a browser, and keeping this file current. Update this file in every PR that finishes or opens a package.
+The coordinator skill (`.claude/skills/gresca-architect/SKILL.md`) holds the method: briefing agents, feel spikes,
+reviewing PRs, merge order, the daily owner loop, and keeping this file current. Only the coordinator edits this
+file, in one docs PR per merge batch; stream PRs report in their body. Retrospectives: `docs/RETROSPECTIVES.md`.

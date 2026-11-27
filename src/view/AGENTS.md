@@ -24,3 +24,20 @@
 - Visible changes come with before/after screenshots (at most two per check) and a "try in the preview" note;
   check Safari on iPad.
 - Rider files (`rider-animation.js`, `rider-draw.js`) are stream S3 and follow `art/AGENTS.md` too.
+
+## Code map
+| To change | Edit | Tests |
+|---|---|---|
+| Camera follow, tilt, compass, the swing to look back (`InputState.lookBack`) | `camera.js` | `camera`, `look` |
+| Terrain render (CPU), trees, rider placement; the stage timer `view.timer` | `draw.js`, `view-state.js` | `features`, `look`, `timer` |
+| Which renderer draws (GPU by default, `?renderer=cpu`) and the fallback; the `?fps=1` readout | `renderer.js`, `fps-meter.js` (ADR 0008) | `gl-terrain`, `timer` |
+| The GPU terrain and objects (three.js in `vendor/three/`): projection, clipmap mesh, baked textures, snow and sky shaders, horizon, sun and rider shadows (E2), texture budget, instanced trees (E3a), park mesh and sun visibility (E3b), lost context, the track ribbon | `gl/` (`gl-renderer.js`, `gl-projection.js`, `terrain-mesh.js`, `terrain-bake.js`, `detail-texture.js`, `snow-material.js`, `sky-material.js`, `horizon.js`, `sun-shadow.js`, `rider-shadow.js`, `gl-budget.js`, `tree-mesh.js`, `park-mesh.js`, `sun-visibility.js`, `context-loss.js`, `track-ribbon.js`) | `gl-terrain`, `gl-shadow`, `gl-resilience`, `gl-trees`, `gl-park`, `track-trail`; in a browser `npm run smoke:gl` (CI `gl-smoke`) |
+| Ski tracks: what the board or skis cut (from `boardHeading`, `travelHeading`, `skid`, braking, the rig) | `track-trail.js` (pure), `ski-tracks.js` (per-step hook, CPU colour map), `gl/track-ribbon.js` | `track-trail`, `features`, `games` |
+| Every colour, tone, sky and fog value, sprite colour, camera framing value, CSS token, rider projection (the Look) | `look/look.js` (interface), `look/hanga.js` (the only reader of `HANGA`) | `look-contract`, `look-lint`, `look` |
+| The look lab (every pose, yaw, pitch, tone, sprite, role) | `/lab.html`, `look/lab.js` | `lab` |
+| Where snow, rock and park colours are painted (CPU) | `colour-map.js` | `features`, `build` |
+| Sky, sun, fog | `sky.js` | `look` |
+| Flags, poles, rails on the CPU raycaster and after a lost GL context | `sprites.js` | `park` |
+| Rider pose input and body motion (S3) | `rider-animation.js` (with `art/gresca-rider-anim.js`) | `rider-anim`, `rider-lean`, `rider-twist`, `rider-brake-twist`, `rider-flip` |
+| Drawing the rider (S3) | `rider-draw.js` | `rider-anim` |
+| What tests can read of the view (`Gresca.debug`) | `fields.js` | `facade`, `look` |
