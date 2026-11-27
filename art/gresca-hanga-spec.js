@@ -4,6 +4,7 @@
  * v1.5.0 (additive): the environment for real maps: tree sets, treeline, bushes, rocks, sky, sun and backdrop peaks
  * (the Pyrenees set first), new palette roles, and new maps keys for El Tarter. Nothing existing changes. Notes:
  * docs/art/HANGA-v1.5.md in the game repo.
+ * version: '1.5.0' (the PR check looks for this form; the data key is "version" below).
  * v1.4.0 (additive): rider twist, head yaw with the face vector, body pitch and the real camera pitch as an options
  * argument to projectRider; brake, switch-ski and flip-tuck poses; true-scale rider guidance. Calls without the new
  * options or state fields give exactly the v1.3 result. Notes: docs/art/HANGA-v1.4.md in the game repo.
