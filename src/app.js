@@ -15,6 +15,7 @@ import { buildColourMap } from './view/colour-map.js';
 import { pistePoles } from './view/piste-poles.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
 import { updateCamera, draw } from './view/draw.js';
+import { riderScreenBox } from './view/touch-box.js';
 import { chooseRenderer } from './view/renderer.js';
 import { createFpsMeter, tickFps, drawFps } from './view/fps-meter.js';
 import { markTrack, clearTracks } from './view/ski-tracks.js';
@@ -22,6 +23,7 @@ import { getUi, applyUiTokens } from './ui/dom.js';
 import { bindAirControls } from './ui/air-hints.js';
 import { createHud, subscribeHud, updateHud, showGloves } from './ui/hud.js';
 import { bindPause, updatePauseButton } from './ui/pause.js';
+import { showCameraLabel } from './ui/camera-label.js';
 import { bindMenu, loadStance, subscribeFinish, MENU_TEXT } from './ui/menu.js';
 import { createFacade } from './debug.js';
 
@@ -124,6 +126,7 @@ export function createGame(env) {
  function pickCameraMode(index) {
   camMode.index = index;
   saveCameraMode(env, index);
+  showCameraLabel(ui, CAM_MODES[index].label);
   return CAM_MODES[index].id;
  }
  // The next camera mode, A to B to C and round to A (what tapping the rider does). Returns the new mode's id.
@@ -239,7 +242,11 @@ export function createGame(env) {
  }
 
  const pause = bindPause(ui, hud, session, input, env, showMenu);
- bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right), pause.toggle);
+ const riderBox = { x: 0, y: 0, w: 0, h: 0 }; // CSS px, refilled by each touch's riderBox()
+ bindInput(ui.canvas, env.window, input, (state) => showGloves(ui, state.left, state.right), pause.toggle, {
+  riderBox: () => riderScreenBox(view, camera, riderBox),
+  onCamera: cycleCamera,
+ });
  ui.go.addEventListener('click', startRun);
  loadStance(session, env, look.rider.stanceStorageKey);
  bindMenu(ui, session, env, hud, look.rider.stanceStorageKey);
