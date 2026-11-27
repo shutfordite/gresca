@@ -15,6 +15,7 @@ import { NO_TREES } from '../src/world/build.js';
 import { createRider, createSession } from '../src/sim/state.js';
 import { step } from '../src/sim/step.js';
 import { createInput } from '../src/input/input.js';
+import { createSpray } from '../src/sim/particles.js';
 
 const near = (a, b, tol, what = '') => assert.ok(Math.abs(a - b) <= tol, `${what} ${a} vs ${b} (tol ${tol})`);
 
@@ -361,7 +362,7 @@ describe('a course that runs north-east, then back west', () => {
 
  it('can be ridden from start to finish: the rider follows it north-east, around the turn and back west', () => {
   const rider = createRider();
-  const state = { rider, session: createSession(), spray: { particles: [], rng: { seed: 1, state: 1 } },
+  const state = { rider, session: createSession(), spray: createSpray({ seed: 1, state: 1 }),
    gradient: { gx: 0, gy: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } };
   const start = course.point(course.startS, 0, {});
   Object.assign(rider, { x: start.x, y: start.y, heading: Math.PI / 4, vx: 5 * Math.SQRT1_2, vy: 5 * Math.SQRT1_2 });
