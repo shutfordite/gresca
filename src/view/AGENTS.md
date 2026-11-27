@@ -38,6 +38,7 @@
 | Where snow, rock and park colours are painted (CPU); on a real map, in a window along the run (`view.mapFrame`, `view.mapBounds`) | `colour-map.js`, `paint-window.js` (C4b) | `features`, `build`, `real-map` |
 | Sky, sun, fog | `sky.js` | `look` |
 | Flags, poles, rails on the CPU raycaster and after a lost GL context | `sprites.js` | `park` |
+| A real run's edge poles: in its difficulty colour, orange-topped on the right going down (CPU `drawPistePoles`, GPU `gl/park-mesh.js`; colours `sprites.pistePole` in the Look) | `piste-poles.js` | `real-map`, `gl-park` |
 | Rider pose input and body motion (S3) | `rider-animation.js` (with `art/gresca-rider-anim.js`) | `rider-anim`, `rider-lean`, `rider-twist`, `rider-brake-twist`, `rider-flip` |
 | Drawing the rider (S3) | `rider-draw.js` | `rider-anim` |
 | What tests can read of the view (`Gresca.debug`) | `fields.js` | `facade`, `look` |

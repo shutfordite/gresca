@@ -42,6 +42,8 @@
  * @property {{colour: string}} box  box bars and their flags
  * @property {{pad: string, lip: string, bigLip: string}} kickerRamp  the GPU kicker's ramp surface and its lip bar
  * @property {{rgb: readonly number[], maxAlpha: number}} spray  snow puffs: colour (0..255) and opacity when new
+ * @property {{green: string, blue: string, red: string, black: string, yellow: string, rightTop: string}} pistePole
+ *  a real map's edge poles: one colour per difficulty, and the orange top of the right-hand ones
  */
 
 /**
@@ -66,6 +68,7 @@ const RIGS = Object.freeze(['ski', 'board']);
 const SPRITES = Object.freeze({
  tree: ['colour'], flag: ['kicker', 'bigKicker'], pole: ['colour'], rail: ['colour'], box: ['colour'], spray: [],
  kickerRamp: ['pad', 'lip', 'bigLip'],
+ pistePole: ['green', 'blue', 'red', 'black', 'yellow', 'rightTop'], // real maps' edge poles (piste-poles.js)
 });
 // #rgb, #rrggbb, or rgb()/rgba() with numbers: the colour forms the game's canvas and CSS code uses.
 const COLOUR_RE = /^(?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgba?\((?:\s*[\d.]+\s*,){2}\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\))$/;

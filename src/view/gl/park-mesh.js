@@ -9,6 +9,7 @@ import { SUN_VISIBILITY_GLSL, SUN_LIGHT_GLSL } from './sun-visibility.js';
 import { hexRgb } from '../look/look.js';
 import { KICKER_FLAG_D, RAMP_FLAG_BACK_M, KICKER_RAMP_M, RAIL_FLAG_D } from '../sprites.js';
 import { treeLook } from './tree-mesh.js';
+import { PISTE_POLE } from '../piste-poles.js';
 import { FOV } from '../../core/config.js';
 
 // The sprites' flag and ramp placement, which the mesh keeps (tests read them from here).
@@ -45,7 +46,7 @@ export const PARK = Object.freeze({
 });
 
 /** Kinds of feature in the table, as the number stored in it. */
-export const FEATURE_KIND = Object.freeze({ KICKER: 0, RAIL: 1, FLAG: 2 });
+export const FEATURE_KIND = Object.freeze({ KICKER: 0, RAIL: 1, FLAG: 2, PISTE_POLE: 3 });
 /** Numbers per feature in the table: x, y (m, world), radius (m), first index, index count, kind. */
 export const FEATURE_STRIDE = 6;
 
@@ -252,6 +253,21 @@ export function flagPlacements(course, frame) {
  return out;
 }
 
+// One of the piste's edge poles (view/piste-poles.js): a thin square stick in the run's colour, the right-hand ones
+// with an orange top.
+function addPistePole(g, terrain, p, colours) {
+ const P = PISTE_POLE;
+ const start = beginFeature(g);
+ const ground = terrain.height(p.x, p.y);
+ const band = p.right ? P.TOP_M : 0;
+ const split = [p.x, p.y, ground + P.HEIGHT_M - band];
+ addBeam(g, [p.x, p.y, ground - 0.1], split, P.HALF_M, P.HALF_M, colours[p.tone], [1, 0, 0]);
+ if (p.right) {
+  addBeam(g, split, [p.x, p.y, ground + P.HEIGHT_M], P.HALF_M, P.HALF_M, colours.rightTop, [1, 0, 0]);
+ }
+ endFeature(g, start, p.x, p.y, CULL_MARGIN_M, FEATURE_KIND.PISTE_POLE);
+}
+
 // One flag: a square pole from the snow up, and a triangular pennant at its top streaming along (dirX, dirY).
 function addFlag(g, terrain, f, colours) {
  const P = PARK;
@@ -287,19 +303,28 @@ export function parkLook(look) {
  };
 }
 
+/** The piste poles' colours from the Look as 0..1 RGB, by tone (view/piste-poles.js) and rightTop. */
+export function pistePoleLook(look) {
+ const unitRgb = (hex) => hexRgb(hex).map((c) => c / 255);
+ return Object.fromEntries(Object.entries(look.sprites.pistePole).map(([k, hex]) => [k, unitRgb(hex)]));
+}
+
 /**
  * The park's mesh from the course: {positions, normals, colours (Float32Array, 3 per vertex; colours 0..1 RGB),
  * indices (Uint32Array, triangles), features (Float32Array, FEATURE_STRIDE each: x, y, radius, first index, index
- * count, kind), counts {kickers, rails, flags}}. Everything is in world m, on the terrain. look: the Look; frame: the
- * MapFrame. Allocates (boot only).
+ * count, kind), counts {kickers, rails, flags}, poles (count)}. Everything is in world m, on the terrain. look: the
+ * Look; frame: the MapFrame; poles: the piste's edge poles (view/piste-poles.js; none on the procedural maps).
+ * Allocates (boot only).
  */
-export function buildParkMesh(course, terrain, look, frame) {
+export function buildParkMesh(course, terrain, look, frame, poles = []) {
  const g = newBuild();
  const colours = parkLook(look);
  for (const k of course.kickers) addKicker(g, course, terrain, k, colours);
  for (const r of course.rails) addRail(g, terrain, r, colours);
  const flags = flagPlacements(course, frame);
  for (const f of flags) addFlag(g, terrain, f, colours);
+ const poleColours = pistePoleLook(look);
+ for (const p of poles) addPistePole(g, terrain, p, poleColours);
  return {
   positions: Float32Array.from(g.positions),
   normals: Float32Array.from(g.normals),
@@ -307,6 +332,7 @@ export function buildParkMesh(course, terrain, look, frame) {
   indices: Uint32Array.from(g.indices),
   features: Float32Array.from(g.features),
   counts: { kickers: course.kickers.length, rails: course.rails.length, flags: flags.length },
+  poles: poles.length, // the piste's edge poles (real maps)
  };
 }
 
@@ -391,8 +417,8 @@ void main() {
  * (gl-renderer.js sharedUniforms). Builds the mesh once; update() copies the indices of the features in view and
  * allocates nothing. THREE: env.THREE.
  */
-export function createParkMesh(THREE, glScene, shared, course, terrain, look, frame) {
- const built = buildParkMesh(course, terrain, look, frame);
+export function createParkMesh(THREE, glScene, shared, course, terrain, look, frame, poles = []) {
+ const built = buildParkMesh(course, terrain, look, frame, poles);
  const indexData = new Uint32Array(Math.max(3, built.indices.length));
  const indexAttr = new THREE.BufferAttribute(indexData, 1);
  indexAttr.setUsage(THREE.DynamicDrawUsage);

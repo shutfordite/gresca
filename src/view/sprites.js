@@ -1,5 +1,6 @@
 // Sprites on the 3D view: project() to the screen, flags and poles at the kickers and rails, rails and boxes.
 import { FOV } from '../core/config.js';
+import { PISTE_POLE } from './piste-poles.js';
 
 const NEAR_M = 3;          // m, nearer than this along the view is not drawn
 const FOV_MARGIN = 0.08;   // rad, project() keeps points this far outside the field of view
@@ -11,6 +12,7 @@ export const RAMP_FLAG_BACK_M = 8; // m up the ramp from the lip to a big kicker
 export const KICKER_RAMP_M = 11;  // m, a kicker's ramp runs this far up from the lip (along s)
 export const KICKER_DROP_M = 5;   // m, and its drop this far past it
 const RAIL_BEHIND_M = 5;   // m up the piste behind the camera that rails are still drawn
+const POLE_BEHIND_M = 5;   // m up the piste behind the camera that edge poles are still drawn
 export const RAIL_FLAG_D = 3;     // m further out than a rail's start, its flag
 
 /** A new scratch result for projectInto(): {X, Y, s, f, z}, all zero. */
@@ -153,6 +155,50 @@ export function drawRails(ctx, camera, terrain, course, view, sprites) {
    P = Q;
    Q = spare;
   }
+ }
+ return n;
+}
+
+/**
+ * The piste's edge poles (view/piste-poles.js, sorted by s) from just behind the camera to DRAW_AHEAD_M past it, far
+ * to near: a stick in the run's colour, the right-hand ones with an orange top. sprites: the Look's. Returns the number
+ * drawn.
+ */
+export function drawPistePoles(ctx, camera, terrain, course, view, poles, sprites) {
+ if (poles.length === 0) return 0;
+ const cs = course.project(camera.x, camera.y, view.where).s;
+ let lo = 0;
+ let hi = poles.length;
+ while (lo < hi) { // the first pole at or past cs - POLE_BEHIND_M
+  const mid = (lo + hi) >> 1;
+  if (poles[mid].s < cs - POLE_BEHIND_M) lo = mid + 1;
+  else hi = mid;
+ }
+ const A = view.projA;
+ const T = view.projB;
+ const colours = sprites.pistePole;
+ let n = 0;
+ let last = lo;
+ while (last < poles.length && poles[last].s <= cs + DRAW_AHEAD_M) last++;
+ for (let i = last - 1; i >= lo; i--) {
+  const p = poles[i];
+  const gh = terrain.height(p.x, p.y);
+  if (!projectInto(camera, p.x, p.y, gh, A) || !projectInto(camera, p.x, p.y, gh + PISTE_POLE.HEIGHT_M, T)) continue;
+  ctx.lineWidth = Math.max(1, A.s * PISTE_POLE.HALF_M * 2);
+  ctx.strokeStyle = colours[p.tone];
+  ctx.beginPath();
+  ctx.moveTo(A.X, A.Y);
+  ctx.lineTo(T.X, T.Y);
+  ctx.stroke();
+  if (p.right) {
+   const k = PISTE_POLE.TOP_M / PISTE_POLE.HEIGHT_M;
+   ctx.strokeStyle = colours.rightTop;
+   ctx.beginPath();
+   ctx.moveTo(T.X + (A.X - T.X) * k, T.Y + (A.Y - T.Y) * k);
+   ctx.lineTo(T.X, T.Y);
+   ctx.stroke();
+  }
+  n++;
  }
  return n;
 }
