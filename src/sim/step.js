@@ -237,7 +237,7 @@ function hitTrees(rider, session, trees, near, s) {
 function spraySnow(rider, input, spray, slip, dt) {
  const sn = Math.hypot(rider.vx, rider.vy);
  const deep = rider.snowDepth >= SNOW.SPRAY_DEEP;
- const puff = deep ? 2.2 : 1.2; // size, times the old puffs
+ const puff = deep ? 1.6 : 1.1; // size, times the old puffs
  const life = deep ? 2.4 : 1.3; // life, times the old puffs
  if (input.brake && sn > 3) {
   emit(spray, 1, rider.x, rider.y, 0.15, 2.2, 1.6, -rider.vx * 0.15, -rider.vy * 0.15, rider.sink > 0.05 ? puff : 1);
