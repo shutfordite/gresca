@@ -9,6 +9,7 @@ import { createRider, createSession } from '../src/sim/state.js';
 import { jumpStep, trickName } from '../src/sim/jump.js';
 import { FLIP } from '../src/sim/tuning.js';
 import { createInput } from '../src/input/input.js';
+import { createSpray } from '../src/sim/particles.js';
 
 const GRAVITY = 15;    // m/s², JUMP_GRAVITY in jump.js
 const FULL_TURN = 2 * Math.PI; // rad
@@ -28,7 +29,7 @@ function airborne(turns) {
 function fly(rider, flip) {
  const session = createSession();
  const input = createInput();
- const spray = { particles: [], rng: createRng(1) };
+ const spray = createSpray(createRng(1));
  input.flip = flip;
  let steps = 0;
  while ((rider.z > 0 || rider.vz > 0) && steps++ < 5000) jumpStep(rider, input, session, spray, SIM_DT);
@@ -57,7 +58,7 @@ describe('flips', () => {
   const front = airborne(1);
   const back = airborne(1);
   const input = createInput();
-  const spray = { particles: [], rng: createRng(1) };
+  const spray = createSpray(createRng(1));
   input.flip = 1;
   for (let i = 0; i < 60; i++) jumpStep(front, input, createSession(), spray, SIM_DT);
   input.flip = -1;
@@ -111,7 +112,7 @@ describe('flips', () => {
   landed.flipRot = 3;
   const input = createInput();
   input.jump = 1;
-  jumpStep(landed, input, createSession(), { particles: [], rng: createRng(1) }, SIM_DT);
+  jumpStep(landed, input, createSession(), createSpray(createRng(1)), SIM_DT);
   assert.ok(landed.z > 0);
   assert.equal(landed.flipRot, 0, 'reset at the take-off');
  });
@@ -120,7 +121,7 @@ describe('flips', () => {
   const rider = createRider();
   const input = createInput();
   input.flip = 1;
-  for (let i = 0; i < 20; i++) jumpStep(rider, input, createSession(), { particles: [], rng: createRng(1) }, SIM_DT);
+  for (let i = 0; i < 20; i++) jumpStep(rider, input, createSession(), createSpray(createRng(1)), SIM_DT);
   assert.equal(rider.flipRot, 0);
  });
 
