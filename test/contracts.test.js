@@ -20,7 +20,8 @@ describe('core/contracts.js', () => {
    assert.ok(INPUT_FIELDS.includes(k), k);
   }
   const rider = [...RIDER_FIELDS.number, ...RIDER_FIELDS.boolean, ...RIDER_FIELDS.object];
-  for (const k of ['travelHeading', 'boardHeading', 'edge', 'skid', 'flipRot', 'spinRot', 'isSwitch']) {
+  for (const k of ['travelHeading', 'boardHeading', 'edge', 'skid', 'flipRot', 'spinRot', 'isSwitch', 'yawRate',
+   'snowDepth', 'sink']) {
    assert.ok(rider.includes(k), k);
   }
   assert.deepEqual(Object.keys(createRider()).sort(), rider.sort(), 'createRider() has exactly the RiderState fields');
