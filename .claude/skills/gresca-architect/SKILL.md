@@ -109,6 +109,9 @@ Specs written ahead don't predict feel: one-finger flips (#60) were replaced aft
 The owner is the bottleneck for merges and feel checks, so batch them. Once a day, when anything is ready, send one
 message:
 - **Try list:** each ready PR's preview link, what to try in one line, and the one question if it needs a verdict.
+  **Everything the owner checks is a link they can tap on the iPad, never a file path:** the preview URL for the game,
+  `https://github.com/shutfordite/gresca/blob/<branch>/<path>` for an image or doc in a PR (GitHub shows it inline),
+  and the PR URL for merging. Name what to look at in the link text.
 - **Merge order:** the PRs ready to merge, in order, with the note that you'll update branches between merges.
 - **Owner to-dos**, only if something can't be done by an agent or a workflow.
 After the batch merges, update STATUS in one docs PR (done, debt, verdicts) and brief the next packages.

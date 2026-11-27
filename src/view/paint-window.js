@@ -3,8 +3,10 @@
 // so until D2 the view draws the window around the run; outside it is the sky's horizon.
 import { createMapFrame } from '../world/map-frame.js';
 import { mapBounds } from '../world/terrain.js';
+import { GROOM_EDGE_M } from '../world/map-loader.js';
 
 const SAMPLE_STEP_M = 10; // m of s between the course points that set the window
+const GROOM_STEP_M = 0.4; // m along and across the piste between the groomed samples (under a texel, so no gaps)
 
 /**
  * The width × length m window (the colour map's size, 1 m per texel) over a loaded world ({terrain, course}):
@@ -48,11 +50,34 @@ export function paintWindow(world, width, length) {
    const y = Math.min(b.maxY, Math.max(b.minY, w.y));
    const i = v * width + u;
    heights[i] = terrain.height(x, y);
-   groomed[i] = Math.round(terrain.groomed(x, y) * 255);
   }
  }
+ paintGroomed(course, frame, width, length, groomed);
  return {
   frame, bounds: mapBounds(frame, width, length), heights, groomed, cx: () => width / 2,
   fits: u1 - u0 <= width && v1 - v0 <= length,
  };
+}
+
+const smoothstep = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+
+// The groomed mask (0..255) along the piste: walked along and across the course, as the loader's terrain.groomed()
+// grades it (full on the piste, easing out GROOM_EDGE_M past its edge), instead of projecting every texel onto the
+// course, which took 10 s on El Tarter.
+function paintGroomed(course, frame, width, length, groomed) {
+ const p = { x: 0, y: 0 };
+ const g = { u: 0, v: 0 };
+ for (let s = 0; s <= course.length; s += GROOM_STEP_M) {
+  const half = course.widthAt(s) / 2;
+  for (let d = -(half + GROOM_EDGE_M); d <= half + GROOM_EDGE_M; d += GROOM_STEP_M) {
+   course.point(s, d, p);
+   frame.toGrid(p.x, p.y, g);
+   const u = Math.floor(g.u);
+   const v = Math.floor(g.v);
+   if (u < 0 || v < 0 || u >= width || v >= length) continue;
+   const value = Math.round((1 - smoothstep((Math.abs(d) - half) / GROOM_EDGE_M)) * 255);
+   const i = v * width + u;
+   if (value > groomed[i]) groomed[i] = value;
+  }
+ }
 }
