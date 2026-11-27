@@ -70,7 +70,9 @@ test('Àliga, a black run, is marked by black poles on both edges, orange-topped
 test('El Tarter loads into the game, shows its credits, and the autopilot rides Àliga to the finish', async () => {
  const g = await load({ world: WORLD });
  assert.equal(g.raw.world.map, 'el-tarter');
- assert.match(g.el('t').textContent, /Àliga[\s\S]*OpenStreetMap contributors \(ODbL\)/);
+ assert.match(g.el('t').textContent, /^Ride Àliga from the top to the finish\./);
+ assert.doesNotMatch(g.el('t').textContent, /OpenStreetMap/, 'the credits show once, in the map line');
+ assert.match(g.el('map-line').textContent, /OpenStreetMap contributors \(ODbL\)/);
  g.start();
  g.frames(1);
  assert.ok(g.debug.polesDrawn() > 4, 'edge poles are drawn ahead (CPU renderer)');

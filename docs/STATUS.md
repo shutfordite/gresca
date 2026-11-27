@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 27 Nov 2026 (evening), main after PR #96. Only the coordinator edits this file (AGENTS.md).
+Updated 27 Nov 2026 (night), main after PR #98. Only the coordinator edits this file (AGENTS.md).
 
 ## Done
 | Package | PR |
@@ -73,21 +73,29 @@ Updated 27 Nov 2026 (evening), main after PR #96. Only the coordinator edits thi
 | V1 art spec v1.5, environment (trees, rocks, sky, Pyrenees backdrop); accepted (decision 5) | #80, #86 |
 | Docs: TD time of day, G whole mountains and a lighter frame, U street plan (`docs/STREET.md`) | #81, #93, #96 |
 | CV1–CV3 camera modes A classic, B chase, C high (`gresca-cam`, `?cam=`), eased switch, tap the rider or `c` to cycle. Spike #87 closed | #92, #94, #95 |
+| **K0** park contract and format (ADR 0012): `Course.features` (jumps, rails as polylines) resolved to world points, course file version 2, `RiderState.grind` seg/style/balance, `AnimInput.grindStyle`, `JUMP_GRAVITY` in config. No behaviour change | #100 |
+| **C4b-menu** pick Play mountain or El Tarter · Àliga in the menu (`env.openMap`), one-line credits with a Credits panel and the ODbL link | #99 |
+| **G2** three.js and the map load in parallel (`core/boot-loads.js`), `modulepreload` for the whole static tree (tested to stay in step) | #102 |
+| **G3** idle frames: no sim step or draw while paused, hidden or behind Controls (one still frame on resize, renderer swap or return); the menu draws for 2 s after a change. `Gresca.draws()` | #101 |
+| G1-prep: the spray is reached only through `sim/particles.js` (`createSpray`, `clearSpray`, `stepSpray`, `sprayCount`, `sprayCopies`) | #98 |
 
 ## In progress
-| Stream | Package | Branch |
+| Stream | Package | PR |
 |---|---|---|
-| Shared | **K0** park contract and format (ADR 0012), alone among contract PRs | `shared/k0-park-contract` |
-| S2 | **G1** spray pool | `s2/g1-spray-pool` |
-| Shared | **G2** load in parallel (`src/main.js`, `index.html`) | `shared/g2-parallel-load` |
-| Shared | **G3** idle frames (`src/app.js`) | `shared/g3-idle-frames` |
-| S1 | **C4b-menu** pick the map and run in the menu (owner feedback: "choose the run from the menu") | `s1/c4b-run-picker` |
+| S2 | **G1** spray as a fixed pool (typed arrays, order-preserving compaction; golden unchanged) | #103, ready |
+| Shared | C4b-menu follow-up: a real map's credits show once | #104, ready |
+
+The owner asked (27 Nov) that K1–K3 are **not started yet**: the notes they need are in `docs/ROADMAP.md` ("Notes for
+K1–K3") and ADR 0012.
 
 ## Next, in order
-- **K1** (S5 shape library), **K2** (S2 flight) and **K3** (S2 grinds) in parallel once K0 merges; **K4a/V2** (S6 park
-  look in the spec) can start now, docs and spec only; K4 (S4) once K1 and K4a are in; K5 (S3) and K6 (S1) after K3.
-- **G4** (owner decision, below), then G5 and G6. **G7** the whole mountain (ADR 0015, S5 and S4) is unblocked now
-  that C4b has landed; it starts after G1–G3 merge, with **G8** bakes in a worker alongside.
+- **K1** (S5 shape library), **K2** (S2 flight) and **K3** (S2 grinds) in parallel, when the owner says go (K0 is in);
+  **K4a/V2** (S6 park look in the spec), docs and spec only; K4 (S4) once K1 and K4a are in; K5 (S3) and K6 (S1)
+  after K3.
+- **G4** (owner decision, below), then G5 and G6. **G7** the whole mountain (ADR 0015, S5 and S4) is unblocked (C4b,
+  G2 and G3 are in; G1 is ready), with **G8** bakes in a worker alongside.
+- S4: **find the frame's other garbage** (about 312 KB a frame in Chrome outside the sim, measured in #103), then
+  re-measure the slow frames, on the iPad too.
 - S4: **the Look picks the loaded map's sun** (decision 6; `look/hanga.js` reads `MAP_ID`, so El Tarter rides under the
   play mountain's sun), after G2 (it may need `main.js`). Then **V1's environment look in game** (trees, sky, backdrop
   ridge from spec v1.5, decision 5); then F1 rider scale per camera mode (decision 7); then E4 tilt-shift and haze.
@@ -106,7 +114,8 @@ Verdicts and one-tap jobs only; everything else is the agents'. The coordinator 
 |---|---|---|
 | **Handling feel** (H2): the 27 Nov feedback said steering is too sensitive (before H2 landed). Still? Is the brake's stopping distance right? | Ride the main preview. One number per answer: `RIGS.*.edgeRate` (sensitivity), `BRAKE.SKID_DECEL` (stop) | 27 Nov |
 | **Powder look** (H3): do light and deep powder read as different snow; the sunk rider and the plume? | Same ride, off the piste | 27 Nov |
-| **Àliga as a ride** (C4b, #79, #82): speed, the view from the start, load time; do the edge poles make it easy to follow (20 m apart)? | Main preview with `?map=el-tarter` | 27 Nov |
+| **Àliga as a ride** (C4b, #79, #82, #102): speed, the view from the start, load time (now in parallel); do the edge poles make it easy to follow (20 m apart)? | Main preview: pick El Tarter · Àliga in the menu | 27 Nov |
+| **Map picker** (#99): does it read well; is one-tap Credits OK? Pause, rotate and app-switch keep the frozen frame (#101)? | Main preview | 27 Nov |
 | **Camera modes** (CV2, CV3): do B and C frame well; is the rider tap easy to hit with no accidental switches? Which mode is the default? | Main preview, tap the rider | 27 Nov |
 | **G4: the CPU renderer's role** (before G5 and G6) | Is a device without WebGL2 still worth drawing for, or is the CPU raycaster a frozen fallback with no new looks? Recommendation: frozen fallback | 27 Nov |
 
@@ -116,7 +125,7 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 
 | Item | Stream | From | Trigger |
 |---|---|---|---|
-| A few very slow frames in Chrome (mean frame time about 6× the median, on main too); likely garbage collection from the spray (about 3.6 MB per 10 s) | S4, S2 | D1 #37 | G1, then re-measure |
+| A few very slow frames in Chrome (mean frame time about 6× the median, on main too). G1 (#103) removed the spray's garbage (1.35 MB per 10 s to 0) but the gap stays: about 312 KB a frame is allocated outside the sim | S4 | D1 #37, #103 | S4 frame-garbage package, next |
 | F1 rider scale: one scale for the rider, flags, rails and trees, with the ratio test from the feedback plan (folded into E1/E3 and never closed) | S4 | 20 Nov plan | after the camera-mode verdict (decision 7), per mode if needed |
 | Scenes `ride-board` and `ride-ski` never ride straight (scene inputs merge step to step, so "straight" still turns); fixing it changes their shots | S4 | X1 | next S4 package |
 | Pose tuning: ski tuck reads as a blob from behind, ski brake legs look short, board toe-side brake looks like kneeling at yaw 90 | S3 | #69, #51 | K5 or sooner |
@@ -132,12 +141,14 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 | Brake travel in `brake.test.js` is measured only while faster than 5 m/s (the 16 m stop crosses the test slope's bending fall line) | S2 | #88 | if the brake is retuned |
 | Real snow data: `terrain.powder` is a shape model (hollows, ridges, steepness, patches); a snow-depth raster at bake time could replace it through `Terrain.create({ powder })` | S5 | #85 | after C4b |
 | `course.test.js` fall-line check moved to world metres (`g.raw`): through the map view, grid rounding of 1e-13 m swung it 1.3e-12 rad on a nearly level spot. Other map-view checks with 1e-12 tolerances may be as fragile | Shared (`test/map-view.js`) | #88 | next map-view change |
-| Real maps: the menu still says "Real elevation data comes next" and the credits are long | S1 | #79 | C4b-menu |
 | Real maps: lifts, village and finish line aren't painted; the start heading is the window's start-to-finish direction, not the run's first bend | S4, S2 | #79 | G5; with C4c |
 | El Tarter has 60° slopes the bake warned about | S5 | #79 | C4c |
 | Piste pole colours are in the Look's unspecified list (`sprites.pistePole`): needs a spec role; poles on bends are spaced along the centreline | S6, S4 | #82 | V2 |
 | Camera modes: `horizonFrac` per mode is the spike's, not tuned; the rider draws smaller in B and C; `Gresca.config.camBack` is mode A's | S4 | #94 | F1 |
 | The rider tap box is estimated from the camera (boots to 1.9 m), so it stays at the boots in a jump | S1, S4 | #95 | G6 |
+| K1/K3: feature heights and world points are measured from the base snow (`heightAt` without the features layer); K1's stamped snow and K3's rail contact must use the same surface | S5, S2 | #100 | K1, K3 |
+| The map picker is a frozen catalog in `src/ui/map-catalog.js`; two `styles/menu.css` lines are over 120 characters | S1 | #99 | U (map search); next S1 PR |
+| `?renderer=cpu` fetches three.js it doesn't use (preloaded for the GPU default); preloading the map files from `<head>` is left | Shared | #102 | G4 (if the CPU renderer stays a fallback) |
 
 `?rot=<deg>` places the procedural map rotated (debug).
 

@@ -84,8 +84,9 @@ If you change who owns a folder, change this table and `OWNERS` in `tools/review
   stubs. `view/` reads sim state but never writes it. The camera is not advanced inside a draw call.
 - **No module-level mutable state** (ADR 0002): modules export functions and frozen constants; state lives in the
   objects `createGame(env)` makes. Only `src/main.js` reads browser globals or `HANGA`/`RiderAnim`; the rest use `env`.
-- `index.html` is only HTML (CSS in `styles/`); every `src/` file is reached from `src/main.js` by static imports and
-  starts with a one-line comment saying what it holds. A new folder loaded at runtime goes in `SITE` in
+- `index.html` is only HTML (CSS in `styles/`); every `src/` file is reached from `src/main.js` by static imports,
+  has a `modulepreload` line in `index.html` (`test/page.test.js` checks the list) and starts with a one-line comment
+  saying what it holds. A new folder loaded at runtime goes in `SITE` in
   `.github/workflows/preview.yml`.
 - No build step and no runtime npm packages; vendored code is pinned and unmodified in `vendor/`. Changing that, or
   anything costly to undo (a format, a frame or unit convention, the layering), needs an ADR in `docs/adr/`.
@@ -97,6 +98,8 @@ If you change who owns a folder, change this table and `OWNERS` in `tools/review
 - Colours come from the Look (`src/view/look/`, ADR 0007): no hex or `rgb()` literal and no `HANGA` outside it; CSS
   uses `var(--…)` tokens.
 - The art spec (`art/gresca-hanga-spec.js`) changes only as a new, additive version (`art/AGENTS.md`).
+- The loop draws only when something can change (G3): a change to the picture outside a run, or while paused, calls
+  the game's `requestDraw()`.
 - Changes must work in Safari on iPad.
 
 ## Style
