@@ -9,6 +9,11 @@ Where things stand: `docs/STATUS.md`. The order of work: `docs/ROADMAP.md`. Arch
 - Run `npm test` (Node 22) before every commit. CI also runs `npm run test:rotated` (the suite on a map turned 37°
   and 300°): run it too when you touch coordinates, headings or the map.
 - Never weaken, skip or delete an assertion to make a change pass. If a test has to change, say why in your report.
+  The one exception is a QA test-health package, which removes a redundant assertion only by naming the test that
+  still covers it (`docs/QUALITY.md`).
+- Tests meet `docs/QUALITY.md`: they fail without the change, they're as cheap as they can be (a test over 1 s says
+  why), and they keep the suite inside its time budget. The QA agent checks every round against it, and its BLOCK
+  stops a package joining the round PR.
 - One work package per branch, `s<stream>/<package>` (or `shared/<package>`). **Push the branch; don't open a PR**
   (X3): when every stream in the round has finished, the coordinator joins the branches into one round PR, with what
   changed and what to test. Your report back uses the sections of `.github/pull_request_template.md`.

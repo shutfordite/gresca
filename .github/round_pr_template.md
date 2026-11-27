@@ -15,6 +15,10 @@ hood worth knowing. "Nothing visible" when that is true. -->
 **Owner verdicts needed:** <!-- "none", or each question (a feel spike, a pose, a gesture) with the link to try it.
 Nothing is built on a spike until the owner answers. -->
 
+**Quality (QA):** <!-- the QA agent's verdict (PASS / PASS WITH NOTES; a BLOCK never reaches this PR), the suite's
+tests and summed time and coverage against last round, missing coverage and overtesting found, and the test-health
+package planned for next round. From .claude/skills/gresca-qa. -->
+
 **Proof:** <!-- per package, the evidence from its review: tests added, golden trace, digests, frame time. Short. -->
 
 **Debt:** <!-- rows this round clears and adds (also in docs/STATUS.md, which this PR updates) -->
@@ -24,4 +28,5 @@ Nothing is built on a spike until the owner answers. -->
 **Checklist**
 - [ ] Every stream branch passed review (`npm run review` on the branch) before it joined the round
 - [ ] `npm test` and `npm run test:rotated` pass on the round branch
+- [ ] QA verdict is PASS or PASS WITH NOTES, and its Trend row is in `docs/QUALITY.md`
 - [ ] `docs/STATUS.md` updated for this round

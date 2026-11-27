@@ -116,18 +116,26 @@ Wait until **every** package of the round has joined or been held back; don't op
 2. On the round branch: `npm test` and `npm run test:rotated`, the smoke test, and the golden trace if any package
    claimed no behaviour change. A package that breaks the round is reverted out (`git revert -m 1 <merge sha>`) and
    listed under **Not in this round**.
-3. Your own commit on top: `docs/STATUS.md` (done, debt, waiting on the owner) and any `docs/ROADMAP.md` decisions,
+3. **QA gate.** Launch the QA agent (`.claude/skills/gresca-qa/SKILL.md`, Opus, in the background) on the round
+   worktree, with the round number, the packages and their branches, and the agents' reports. It measures the suite
+   (times and coverage), checks every package's tests against `docs/QUALITY.md`, and commits its Trend row. On
+   **BLOCK**, send each item to its stream agent (fix on the stream branch, merge it into the round again, then rerun
+   QA on that package's files only) or revert the package out of the round. **PASS WITH NOTES:** its debt goes into
+   STATUS, and its test-health package, if any, goes into the next round's briefs. Each round carries at most one
+   test-health package, and it is the only kind that may remove redundant assertions (`docs/QUALITY.md` section 3).
+4. Your own commit on top: `docs/STATUS.md` (done, debt, waiting on the owner) and any `docs/ROADMAP.md` decisions,
    so STATUS is right the moment the round merges. No separate docs PR.
-4. Open the PR (`Round <n>: <what>`, body from `.github/round_pr_template.md`). **What changed** is in plain words
-   per package, what the player notices first. **What to test (iPad)** is a numbered list the owner can do in one
+5. Open the PR (`Round <n>: <what>`, body from `.github/round_pr_template.md`). **What changed** is in plain words
+   per package, what the player notices first. **Quality (QA)** is the top of the QA report: verdict, suite
+   time and coverage against last round, and what is planned for the next round. **What to test (iPad)** is a numbered list the owner can do in one
    session: each step a tappable link (the preview with the right `?scene=`, `?map=` or `?spike=`; images and docs
    as `https://github.com/shutfordite/gresca/blob/round/<n>/<path>`) and what they should see or feel.
-5. When the Preview comment arrives, send the owner one message: the round PR link, the preview link, the test list
+6. When the Preview comment arrives, send the owner one message: the round PR link, the preview link, the test list
    and any verdict questions. That is the whole owner loop: one iPad session, one merge.
-6. **Fixes during testing:** the owner comments on the round PR. The stream agent fixes on its own branch, you merge
+7. **Fixes during testing:** the owner comments on the round PR. The stream agent fixes on its own branch, you merge
    the branch into `round/<n>` again and say in a PR comment what to re-test. To drop a package instead, revert its
    merge commit. Never force-push the round branch.
-7. After the owner merges: check `git log origin/main --oneline -5`, delete the round and stream branches, remove the
+8. After the owner merges: check `git log origin/main --oneline -5`, delete the round and stream branches, remove the
    worktrees, and brief the next round from `origin/main`.
 - No stacked PRs any more: a package that needs another of the same round branches from it and is merged after it;
   one that needs a package not yet ridden by the owner waits for the next round.

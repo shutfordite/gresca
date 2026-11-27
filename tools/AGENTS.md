@@ -1,4 +1,4 @@
-# tools: dev tools, CI checks and the map compiler (S5 by default; `bench/` is S4's, `review/` the coordinator's)
+# tools: dev tools, CI checks and the map compiler (S5 by default; `bench/` is S4's, `review/` and `qa/` the coordinator's)
 
 - Tools run in Node 22 or headless Chrome (Playwright is dev-only, ADR 0003) and never ship to players.
 - The sandbox agents run in can't reach the map data hosts: real maps are baked by the **Bake map** GitHub Action
@@ -17,6 +17,7 @@
 | The GPU smoke test: two scenes on `?renderer=gl` in software WebGL must draw a real frame (`npm run smoke:gl`; CI `gl-smoke` job) | `gl-smoke.mjs`, `gl-smoke-check.mjs` (pure) | `gl-smoke` |
 | Frame time by stage (`npm run bench`, `-- --chrome`, `-- --gl`), the baseline, the CI regression check, pixel digests | `bench/` (`core.mjs`, `baseline.json`, `compare.mjs`, `digest.mjs`) | `bench`, `timer` |
 | The mechanical PR check (asserts, golden hash, ownership, template, code map, STATUS, style, smoke test); round PRs (`Round <n>:`, `.github/round_pr_template.md`) | `review/` (`checks.mjs` pure, `run.mjs`, `smoke.mjs`), `.github/workflows/pr-check.yml` | `review` |
+| QA timing and coverage report (`npm run test:times`, `npm run test:quality`; the standard is `docs/QUALITY.md`) | `qa/test-times.mjs` (a node:test reporter) | `qa-times` |
 | Outlines of big files for ranged reads | `outline.mjs` | `outline` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the files | `map-compiler/core.js` (pure) | `map-compiler`, `map-course` |
 | DEM and piste sources (Terrarium tiles; OpenSkiMap, Overpass) | `map-compiler/sources/` | `map-compiler` |

@@ -16,6 +16,12 @@ PRs (several streams and a STATUS edit are expected there; it checks the round t
 on the stream branch and are merged into the round again; a package that fails is reverted out of the round.
 Method: `SKILL.md` ("The round PR"), `AGENTS.md` ("Every change").
 
+**And a QA gate.** No one owned overall quality: each review looked at one package, the suite had grown to about two
+minutes, and no one measured coverage. Now a QA agent runs on every round branch before the PR opens. It measures
+the suite (`npm run test:quality`: the slowest tests and files, coverage per folder), checks each package's tests
+against the standard in `docs/QUALITY.md`, lists missing coverage and overtesting, and plans at most one
+test-health package per round. Its BLOCK keeps a package out of the round. The trend is kept in `docs/QUALITY.md`.
+
 ## 27 Nov 2026: the H stack merged into itself
 
 **What happened.** H0–H3 (#84, #85, #88, #89) were opened as a stack, each PR based on the branch below it. The owner

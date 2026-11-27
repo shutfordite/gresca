@@ -29,6 +29,7 @@ export const OWNERS = Object.freeze([
  ['src/view/', 'S4'],
  ['tools/bench/', 'S4'],
  ['tools/review/', 'Shared'],
+ ['tools/qa/', 'Shared'],
  ['src/world/', 'S5'],
  ['tools/', 'S5'],
  ['maps/', 'S5'],
