@@ -23,6 +23,11 @@ export function getUi(doc) {
   dot: $('dot'),     // the rider on the minimap
   gl: $('gl'),       // left glove hint
   gr: $('gr'),       // right glove hint
+  maps: $('maps'),   // the map picker (where to ride)
+  mapLine: $('map-line'), // the short line about the loaded map's data
+  cr: $('cr'),       // Credits toggle (real maps)
+  credits: $('credits'), // the credits panel
+  creditsText: $('credits-text'),
   pb: $('pb'),       // Snowboard button
   ps: $('ps'),       // Skis button
   stance: $('stance'), // the Regular / Goofy picker (shown with Snowboard)
