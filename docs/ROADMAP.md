@@ -163,6 +163,17 @@ in the sky. Order:
    planned yet.
 4. **The sun can sit in different places later** (TD above): a date and time of day per course or chosen by the
    player, after K and C4b. Until TD0, El Tarter keeps one fixed sun (V1, #80, asks the owner which).
+5. **V1's environment look is accepted** (trees, sky, Pyrenees backdrop, seen in game in spike #83). S4 builds it
+   after a camera framing spike: the riding camera shows too little sky for the peaks to be seen.
+6. **El Tarter's sun is a winter dawn, compass 110°** (the spec's `maps['el-tarter'].sun`), not the baked 76° (fall
+   line + 90°). The art spec's `maps[id].sun` wins for the look; the course file's `sun` is only the default for a map
+   the spec doesn't list. Today the Look reads `maps.procedural.sun` on every map (`MAP_ID`), so El Tarter rides
+   under the play mountain's sun: a small S4 package makes the Look pick the loaded map's entry. TD0 replaces both
+   with the real sun for a date and time.
+7. **All three camera framings stay, and tapping the rider switches between them** (spike #87: A classic, B chase,
+   C high). CV1 (Shared: `CAM_MODES` in config, game state, `gresca-cam` key, `?cam=`), CV2 (S4: the camera follows
+   the mode, eased), CV3 (S1: tap the rider, `c` on keys). The default stays A until the owner picks one; the rider
+   scale (F1) is set after, per mode if needed.
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
