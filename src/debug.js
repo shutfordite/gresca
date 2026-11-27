@@ -107,6 +107,11 @@ export function createFacade(g) {
  }
  const facade = {
   state,
+  // Frames drawn since the game began. The loop skips the draw while nothing can change (app.js), so this stands
+  // still while paused, hidden or behind the Controls screen. A function, not a state() field: it is a counter, not
+  // part of the game's state (two games that reached the same state differ in it).
+  draws: () => g.idle.draws,
+  requestDraw: g.requestDraw, // asks the start screen for a few more frames (app.js)
   set,
   // New run (start()), then put the rider at {x, y (world m) or s, d (course m), vx, vy (m/s), heading (rad), z, vz}:
   // defaults s 500 (the empty practice stretch), d 0 (the piste centreline), at rest, heading straight down the map

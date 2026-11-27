@@ -196,6 +196,7 @@ export async function load(opts = {}) {
     place: (o = {}) => G().place(o),
   };
 
+  g.el('ctl').hidden = true; // as in index.html: the Controls screen starts closed (the loop skips draws behind it)
   while (timers.length) timers.shift()(); // runs build() and shows the start screen
   return g;
 }

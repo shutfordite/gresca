@@ -31,6 +31,7 @@ const START_SPEED = 2;  // m/s down the map at the drop
 const MENU_HEADING = 1.57; // rad on the map's grid: just short of straight down
 const CAM_KEY = 'gresca-cam'; // localStorage: the id of the camera mode last used
 const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
+const MENU_SETTLE_S = 2; // s, how long the start screen keeps drawing after something changed (the camera easing in)
 
 // The menu text on a real map: its run and its data credits (ODbL attribution must show with real map data).
 function mapMenuText(world) {
@@ -74,10 +75,19 @@ export function createGame(env) {
  const look = createHangaLook(env.HANGA, env.RiderAnim); // every colour, tone and style the view draws with
  const world = env.world || createWorld({ rotationRad: env.mapRotationRad || 0, map: env.map || 'test' });
  const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
+ // Idle frames: what the loop needs to know to skip a draw. draws: frames drawn (the façade's draws); settleS: s the
+ // start screen still draws; the last* fields are what the picture depended on at the last tick (a change redraws).
+ const idle = {
+  draws: 0, settleS: MENU_SETTLE_S,
+  lastRig: '', lastStance: '', lastCam: -1, lastW: 0, lastH: 0, lastRenderer: null,
+ };
  const view = createView(env.document, look);
  const ui = getUi(env.document);
  applyUiTokens(env.document, look.ui);
- const resize = () => resizeScreen(view, ui.canvas, env.devicePixelRatio);
+ const resize = () => {
+  resizeScreen(view, ui.canvas, env.devicePixelRatio);
+  requestDraw();
+ };
  env.window.addEventListener('resize', resize);
  resize();
 
@@ -122,9 +132,35 @@ export function createGame(env) {
   particles: spray.particles, timestep, look, riderAnim: env.RiderAnim, camMode,
  };
 
+ // Asks for a frame: the start screen draws for MENU_SETTLE_S more seconds. Anything that changes the picture calls it.
+ function requestDraw() {
+  idle.settleS = MENU_SETTLE_S;
+ }
+
+ // Whether the picture can change this tick: not while paused, the page is hidden or the Controls screen covers the
+ // canvas; and on the start screen only while it is settling after a change. The run, the finish and the load draw
+ // every frame.
+ function wantsDraw(dt) {
+  if (hud.paused || env.document.hidden || !ui.ctl.hidden) return false;
+  if (session.phase !== 'ready') return true;
+  if (session.rig !== idle.lastRig || session.stance !== idle.lastStance || camMode.index !== idle.lastCam ||
+   view.W !== idle.lastW || view.Hh !== idle.lastH || view.renderer !== idle.lastRenderer) {
+   idle.lastRig = session.rig;
+   idle.lastStance = session.stance;
+   idle.lastCam = camMode.index;
+   idle.lastW = view.W;
+   idle.lastH = view.Hh;
+   idle.lastRenderer = view.renderer;
+   requestDraw();
+  }
+  idle.settleS -= dt;
+  return idle.settleS > 0;
+ }
+
  // Picks the camera mode at index (0 to the last) and remembers it. Returns the mode's id.
  function pickCameraMode(index) {
   camMode.index = index;
+  requestDraw();
   saveCameraMode(env, index);
   showCameraLabel(ui, CAM_MODES[index].label);
   return CAM_MODES[index].id;
@@ -180,6 +216,7 @@ export function createGame(env) {
 
  // Moves the camera, then draws a frame and the HUD. dt: s since the last frame; alpha: see view/draw.js riderPose().
  function frame(dt, alpha) {
+  idle.draws++;
   const t0 = fps ? env.now() : 0;
   updateCamera(view, scene, dt, alpha);
   render.draw(view, scene, dt);
@@ -194,6 +231,13 @@ export function createGame(env) {
  function loop(ts) {
   const dt = Math.max(0, (ts - clock.lastMs) / 1000 || 0);
   clock.lastMs = ts;
+  if (session.phase !== 'load' && !wantsDraw(dt)) {
+   // nothing can change: no step, no draw. lastMs keeps ticking, so resuming starts from one frame's dt, not the
+   // whole stop; the step count is capped by advance() anyway
+   clock.dt = 0;
+   env.requestAnimationFrame(loop);
+   return;
+  }
   clock.dt = dt;
   // paused: no steps, the accumulator and the camera stand still (dt 0), the last pose is drawn again
   const alpha = hud.paused ? timestep.acc / SIM_DT : advance(sim, timestep, dt);
@@ -234,6 +278,7 @@ export function createGame(env) {
   rider.z = rider.vz = 0;
   rider.grind = null;
   spray.particles.length = 0;
+  requestDraw();
   menuCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame, CAM_MODES[camMode.index]);
   ui.msgT.textContent = world.layout ? MENU_TEXT : mapMenuText(world);
   ui.go.textContent = 'Drop in';
@@ -255,7 +300,7 @@ export function createGame(env) {
 
  const facade = createFacade({
   rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun,
-  frame, camMode, cycleCamera, setCameraMode,
+  frame, camMode, cycleCamera, setCameraMode, idle, requestDraw,
  });
  return facade;
 }
