@@ -71,6 +71,13 @@ const env = Object.freeze({
  THREE,
  map: query('map') === 'test' || query('scene') ? 'test' : 'play',
  world, // a loaded real map (?map=<id>), or null
+ // The menu's map picker: reload into map id ('play' is the play mountain), keeping ?cam=, ?renderer= and the rest.
+ openMap(id) {
+  const url = new URL(window.location.href);
+  if (id === 'play') url.searchParams.delete('map'); else url.searchParams.set('map', id);
+  url.searchParams.delete('scene'); // a scene forces the test slope
+  window.location.assign(url.href);
+ },
  cam: query('cam'), // ?cam=<id>: the camera mode to start in (A, B or C)
  showFps: query('fps') === '1',
  now: () => performance.now(),
