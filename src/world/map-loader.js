@@ -20,7 +20,8 @@ const MARK_STEP_M = 16;        // m of s between the discs that mark the corrido
 const MARK_PER_CHUNK = 64;     // discs marked per chunk
 const TREE_TILES_PER_CHUNK = 8; // corridor tiles of trees placed per chunk
 const PLACEHOLDER_WIDTH_M = 30; // m, the width of the first course, which only gives the centreline
-const GROOM_EDGE_M = 6;         // m, the groomed snow eases out over this far past the piste's edge
+/** m, the groomed snow eases out over this far past the piste's edge. */
+export const GROOM_EDGE_M = 6;
 const MAX_REPORTED_ERRORS = 5;
 const RAD_TO_DEG = 180 / Math.PI;
 /** The loader's phases in order; each yields {phase, fraction} when it is done. */
@@ -65,7 +66,8 @@ function buildCourse(terrainFile, courseFile, terrain) {
  * field when either file does not validate. terrainInput and courseInput: parsed objects or JSON text. opts:
  * refiners (a list of (x, y) -> m, extra corridor refinements; see corridor-layer.js) and maxTiles (cache size).
  * The world: {id, name, frame, terrain, course, trees, treeCells, treeArr, corridor ({contains, prefetch, stats}),
- * sky ({sun: {azimuthDeg, elevationDeg} compass deg, horizon, treeSet}), credits ([string]), licence, warnings}.
+ * sky ({sun: {azimuthDeg, elevationDeg} compass deg, horizon, treeSet}), piste ({difficulty}), credits ([string]),
+ * licence, warnings}.
  * It has no H, M or layout: those are the procedural map's (view/colour-map.js reads them until D2).
  */
 export function* loadMapSteps(terrainInput, courseInput, opts = {}) {
@@ -102,6 +104,7 @@ export function* loadMapSteps(terrainInput, courseInput, opts = {}) {
   trees: createTreeLookup(treeCells, frame),
   corridor: Object.freeze({ contains: corridor.contains, prefetch: corridor.prefetch, stats: corridor.stats }),
   sky: Object.freeze({ sun: courseFile.sun, horizon: courseFile.horizon, treeSet: courseFile.treeSet }),
+  piste: Object.freeze({ difficulty: courseFile.run.difficulty }), // the run's OpenSkiMap difficulty ('advanced')
   credits: [...new Set(terrainFile.sources.map((s) => s.attribution))],
   licence: terrainFile.licence, warnings,
  };

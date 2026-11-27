@@ -42,6 +42,7 @@ export function viewDebug(g) {
  };
  return Object.freeze({
   drawn: () => ({ rails: view.railsDrawn, flags: view.flagsDrawn }), // segments of rail and flags drawn last frame
+  polesDrawn: () => view.polesDrawn, // the piste's edge poles drawn last frame (CPU; real maps only)
   project: (wx, wy, h) => { // screen position of a world point, or null
    const P = project(camera, wx, wy, h);
    return P && { ...P };
