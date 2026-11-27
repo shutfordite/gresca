@@ -9,3 +9,10 @@
 - `gresca-rider-anim.js` (stream S3): pure maths on top of the spec. Bump its header version on behaviour
   changes. Tests: `test/rider-anim.test.js`.
 - Don't open the PNGs in `docs/art/` unless the package is about how the rider looks.
+
+## Code map
+| To change | Edit | Tests |
+|---|---|---|
+| Rider pose and body motion (S3) | `gresca-rider-anim.js`, `src/view/rider-animation.js` | `rider-anim` and the `rider-*` tests |
+| Rider shapes, poses, palette: the spec (a new version only) | `gresca-hanga-spec.js`, `docs/art/HANGA-v<version>.md` | `hanga-v14` |
+| The rider contact sheet (every pose for checking by eye) | `tools/rider-sheet.html`, `tools/rider-sheet.js` | none |
