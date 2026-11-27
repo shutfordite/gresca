@@ -14,7 +14,7 @@ import { on, publish, afterStep } from './core/events.js';
 import { startRecording, stopRecording, readInput } from './core/input-log.js';
 import { worldFacade } from './world/fields.js';
 import { step } from './sim/step.js';
-import { emit, stepParticles } from './sim/particles.js';
+import { emit, stepSpray, clearSpray, sprayCopies } from './sim/particles.js';
 import { simTick, snapInterpolation } from './sim/timestep.js';
 import { applyScene, SCENES } from './scenes.js';
 import { simFields } from './sim/fields.js';
@@ -154,17 +154,17 @@ export function createFacade(g) {
    publish(g.bus, step(g.sim.state, input, g.sim.world, dt));
    afterStep(g.bus, dt);
   },
-  stepParticles(dt) { stepParticles(spray.particles, dt); }, // one spray step only
+  stepParticles(dt) { stepSpray(spray, dt); }, // one spray step only
   cycleCamera: () => g.cycleCamera(),   // the next camera mode (A, B, C, A); returns its id, saved under gresca-cam
   setCameraMode: (id) => g.setCameraMode(id), // pick the camera mode by id; throws on an unknown id
   frame(dt) { g.frame(dt, 1); },        // move the camera and draw one frame (terrain, rider, HUD), dt in s
   start() { g.startRun(); },            // what the Drop in button does
   input(o) { set({ input: o }); },      // {left,right,brake,jump}, any subset; bypasses touch and keyboard
   resetInput() { resetInput(input); },  // lift every finger and key
-  clearParticles() { spray.particles.length = 0; },
+  clearParticles() { clearSpray(spray); },
   // copies of the live spray: m, m/s, s
   particles() {
-   return spray.particles.map((p) => ({ x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, t: p.t, life: p.life }));
+   return sprayCopies(spray);
   },
   // m, m, m, m/s, m/s, m/s, m/s
   emitParticles(n, px, py, pz, spread, up, dvx, dvy) { emit(spray, n, px, py, pz, spread, up, dvx, dvy); },

@@ -1,4 +1,5 @@
-// Snow spray: emit() adds particles drawn from the seeded RNG, stepParticles() moves them and lets them die.
+// Snow spray: createSpray() holds it, emit() adds particles drawn from the seeded RNG, stepParticles() moves them and
+// lets them die; clearSpray(), sprayCount() and sprayCopies() are how the game and the façade reach it.
 import { MAX_PARTICLES } from '../core/config.js';
 import { rnd } from '../core/rng.js';
 
@@ -40,4 +41,29 @@ export function stepParticles(parts, dt) {
   p.vy *= SPRAY_DRAG;
   if (p.t > p.life || p.z < SPRAY_FLOOR_M) parts.splice(k, 1);
  }
+}
+
+/** Advances spray by dt (s): stepParticles() on its live particles (mutates spray). */
+export function stepSpray(spray, dt) {
+ stepParticles(spray.particles, dt);
+}
+
+/** A new, empty spray drawing from rng (core/rng.js). Callers outside this file use only the functions below. */
+export function createSpray(rng) {
+ return { particles: [], rng };
+}
+
+/** Removes every live particle from spray (mutates it); draws nothing from its RNG. */
+export function clearSpray(spray) {
+ spray.particles.length = 0;
+}
+
+/** The number of live particles in spray. */
+export function sprayCount(spray) {
+ return spray.particles.length;
+}
+
+/** Copies of spray's live particles, oldest first: {x, y, z (m), vx, vy, vz (m/s), t, life (s)}. Allocates; façade only. */
+export function sprayCopies(spray) {
+ return spray.particles.map((p) => ({ x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, t: p.t, life: p.life }));
 }

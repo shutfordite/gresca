@@ -7,6 +7,7 @@ import { createEventBus, onStep } from './core/events.js';
 import { createInputLog } from './core/input-log.js';
 import { createRider, createSession, resetDerived } from './sim/state.js';
 import { createTimestep, snapInterpolation, advance } from './sim/timestep.js';
+import { createSpray, clearSpray } from './sim/particles.js';
 import { createInput } from './input/input.js';
 import { bindInput } from './input/bind-input.js';
 import { createView, resizeScreen } from './view/view-state.js';
@@ -87,7 +88,7 @@ export function createGame(env) {
  const session = createSession();
  const input = createInput();
  const rng = createRng(1);
- const spray = { particles: [], rng };
+ const spray = createSpray(rng); // snow spray (sim/particles.js)
  const timestep = createTimestep();
  const clock = { lastMs: 0, dt: 0 }; // ms, the last frame's timestamp; s, the last frame's real duration
  const render = { draw }; // the frame drawer: the CPU raycaster until the boot picks (view/renderer.js)
@@ -119,7 +120,7 @@ export function createGame(env) {
   frame: mapFrame,
   treeArr: world.treeArr,
   pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
-  particles: spray.particles, timestep, look, riderAnim: env.RiderAnim, camMode,
+  spray, timestep, look, riderAnim: env.RiderAnim, camMode,
  };
 
  // Picks the camera mode at index (0 to the last) and remembers it. Returns the mode's id.
@@ -162,7 +163,7 @@ export function createGame(env) {
   session.events.length = 0;
   rider.airTime = 0;
   rider.fromKicker = false;
-  spray.particles.length = 0;
+  clearSpray(spray);
   rider.z = rider.vz = input.jump = 0;
   rider.rotation = 0;
   input.both = false;
@@ -233,7 +234,7 @@ export function createGame(env) {
   rider.wipeoutSpin = 0;
   rider.z = rider.vz = 0;
   rider.grind = null;
-  spray.particles.length = 0;
+  clearSpray(spray);
   menuCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame, CAM_MODES[camMode.index]);
   ui.msgT.textContent = world.layout ? MENU_TEXT : mapMenuText(world);
   ui.go.textContent = 'Drop in';
