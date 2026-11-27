@@ -6,9 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import {
- codeMapFiles, statusCheck,
+ codeMapFiles, isRound, statusCheck,
  assertionChecks, behaviourChecks, countAsserts, docsAndStyleChecks, FAIL, INFO, ownerOf, ownershipChecks,
- parseDiff, renderReport, sectionText, templateChecks, WARN,
+ parseDiff, renderReport, sectionText, templateChecks, templateSections, WARN,
 } from '../tools/review/checks.mjs';
 import { smokeFindings } from '../tools/review/smoke-report.mjs';
 
@@ -109,6 +109,22 @@ test('the template check wants a package-id title and every section filled; scre
  assert.deepEqual(severities(bad), [WARN, FAIL, FAIL, WARN]);
  assert.match(texts(bad), /not `<package id>: <what>`/);
  assert.match(texts(bad), /1 checklist item/);
+});
+
+test('a round PR joins streams and updates STATUS without findings, and is checked on the round template', () => {
+ assert.ok(isRound('Round 4: El Tarter rides'));
+ assert.ok(!isRound('F5: brake skid'));
+ assert.ok(!isRound('Round four'));
+ const changed = ['src/sim/step.js', 'src/ui/hud.js', 'src/core/contracts.js', 'docs/STATUS.md'];
+ assert.deepEqual(severities(ownershipChecks(changed, { round: true })), [INFO]);
+ assert.match(texts(ownershipChecks(changed, { round: true })), /round PR, streams joined: S1 \(1\), S2 \(1\)/);
+ assert.deepEqual(statusCheck(['src/sim/step.js', 'docs/STATUS.md'], { round: true }), []);
+ const round = read('.github/round_pr_template.md');
+ for (const s of ['Packages', 'What changed', 'What to test (iPad)', 'Owner verdicts needed', 'Debt']) {
+  assert.ok(templateSections(round).includes(s), `round template has **${s}:**`);
+ }
+ const body = templateSections(round).map((s) => `**${s}:** filled`).join('\n\n') + '\n- [x] done';
+ assert.deepEqual(templateChecks('Round 4: El Tarter rides', body, round, changed), []);
 });
 
 test('the real PR template has the sections the check expects', () => {

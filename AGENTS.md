@@ -1,23 +1,26 @@
 # Working on Gresca
 
 Gresca is a browser ski and snowboard game: a static site on GitHub Pages with no build step and nothing to install
-(`docs/adr/0001-multi-file-site.md`). The owner tests it on an iPad through each PR's preview link.
+(`docs/adr/0001-multi-file-site.md`). The owner tests it on an iPad through the preview link of one round PR.
 Where things stand: `docs/STATUS.md`. The order of work: `docs/ROADMAP.md`. Architecture and package definitions:
 `docs/ARCHITECTURE.md`. Package IDs look like A1, B2, C3. Coordination method: `.claude/skills/gresca-architect/SKILL.md`.
 
 ## Every change
 - Run `npm test` (Node 22) before every commit. CI also runs `npm run test:rotated` (the suite on a map turned 37°
   and 300°): run it too when you touch coordinates, headings or the map.
-- Never weaken, skip or delete an assertion to make a change pass. If a test has to change, say why in the PR.
-- One work package per PR, on its own branch. Title `<package id>: <what>`; fill in `.github/pull_request_template.md`.
-- Rebase on or merge main before review. Don't merge your own PR. Don't stack PRs unless the brief says so.
-- If the change is visible or changes feel, say in the PR what to try in the preview, and whether the owner's verdict
-  is needed before more is built on it (feel, input and look are judged on the iPad, not by tests).
+- Never weaken, skip or delete an assertion to make a change pass. If a test has to change, say why in your report.
+- One work package per branch, `s<stream>/<package>` (or `shared/<package>`). **Push the branch; don't open a PR**
+  (X3): when every stream in the round has finished, the coordinator joins the branches into one round PR, with what
+  changed and what to test. Your report back uses the sections of `.github/pull_request_template.md`.
+- Branch from `origin/main`, or from the branch the brief names. Never force-push.
+- If the change is visible or changes feel, say in the report what to try in the preview, and whether the owner's
+  verdict is needed before more is built on it (feel, input and look are judged on the iPad, not by tests).
   Give the owner links, not paths: the preview URL, and for boards, images or docs
   `https://github.com/shutfordite/gresca/blob/<branch>/<path>` (the owner reviews on an iPad).
-- **Don't edit `docs/STATUS.md`** in a stream PR: report what's done, what's left and any debt in the PR body; the
-  coordinator updates STATUS after merging (the PR check warns).
-- Before opening a PR, run `npm run review -- --title "<title>" --body-file <body.md>` and fix what it flags.
+- **Don't edit `docs/STATUS.md`** on a stream branch: report what's done, what's left and any debt; the coordinator
+  updates STATUS on the round branch (the PR check warns).
+- Before reporting back, run `npm run review -- --title "<package id>: <what>" --body-file <report.md>` and fix what
+  it flags.
 
 ## Code map
 Each folder's `AGENTS.md` holds its local rules and its code map ("to change X, edit Y; the tests are Z"). Read the
@@ -56,8 +59,8 @@ whole suite is the gate. To see the game: `npm run shot` (CPU) or `npm run smoke
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` set to an installed Chrome; open one or two PNGs from `shots/`.
 
 ## Who owns what (from phase 3)
-Each stream owns its folders. A PR edits only its stream's folders; anything else (a contract in `src/core/`,
-`app.js`, `debug.js`, `index.html`) is its own small PR, merged first.
+Each stream owns its folders. A branch edits only its stream's folders; anything else (a contract in `src/core/`,
+`app.js`, `debug.js`, `index.html`) is its own small `shared/` branch, joined into the round first.
 
 | Stream | Owns |
 |---|---|

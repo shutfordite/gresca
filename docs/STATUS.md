@@ -149,5 +149,7 @@ the player picks. Decide with El Tarter's real file size and frame times once it
 
 ## How the work is run
 The coordinator skill (`.claude/skills/gresca-architect/SKILL.md`) holds the method: briefing agents, feel spikes,
-reviewing PRs, merge order, the daily owner loop, and keeping this file current. Only the coordinator edits this
-file, in one docs PR per merge batch; stream PRs report in their body. Retrospectives: `docs/RETROSPECTIVES.md`.
+reviewing stream branches, and the round PR (X3): stream agents push branches and open no PRs; once every stream in
+the round has finished, the coordinator joins them into one PR, `Round <n>: …`, that says what changed and what to
+test on the iPad, so the owner tests one preview and merges one PR. Only the coordinator edits this file, in its own
+commit on the round branch. Retrospectives: `docs/RETROSPECTIVES.md`.

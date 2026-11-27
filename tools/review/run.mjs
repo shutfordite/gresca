@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
- assertionChecks, behaviourChecks, docsAndStyleChecks, FAIL, INFO, ownershipChecks, parseDiff, renderReport,
+ assertionChecks, behaviourChecks, docsAndStyleChecks, FAIL, INFO, isRound, ownershipChecks, parseDiff, renderReport,
  templateChecks, WARN,
 } from './checks.mjs';
 import { smokeFindings } from './smoke-report.mjs';
@@ -56,18 +56,20 @@ export function buildReport(base) {
  const diffFiles = parseDiff(git('diff', '-U0', '-M', mb, 'HEAD'));
  const read = (f) => show('HEAD', f);
  const asserts = assertionChecks(testFiles(mb), testFiles('HEAD'), diffFiles);
+ const pr = pullRequest();
+ const round = isRound(pr?.title);
  const sections = [
   ['Tests and asserts', asserts.findings.length ? asserts.findings : [[INFO, 'no assert removed, skipped or altered']]],
   ['Behaviour proof', behaviourChecks(changed, diffFiles)],
-  ['Ownership', ownershipChecks(changed)],
+  ['Ownership', ownershipChecks(changed, { round })],
  ];
- const pr = pullRequest();
- const template = read('.github/pull_request_template.md') || '';
+ // A round PR (`Round <n>: …`) is checked against the round template instead of the package one.
+ const template = read(round ? '.github/round_pr_template.md' : '.github/pull_request_template.md') || '';
  if (pr) {
   const found = templateChecks(pr.title, pr.body, template, changed);
   sections.push(['Title and template', found.length ? found : [[INFO, 'title and every template section filled in']]]);
  }
- sections.push(['Docs and style', docsAndStyleChecks({ added, changed, diffFiles, read })]);
+ sections.push(['Docs and style', docsAndStyleChecks({ added, changed, diffFiles, read, round })]);
  const smoke = arg('smoke');
  if (smoke) {
   const result = fs.existsSync(smoke) ? JSON.parse(fs.readFileSync(smoke, 'utf8')) : null;

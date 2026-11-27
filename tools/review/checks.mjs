@@ -129,8 +129,19 @@ export function assertionChecks(base, head, diffFiles) {
  return { findings, rows };
 }
 
-/** Review step 4, ownership: which streams the PR touches, and contract changes mixed with other code. */
-export function ownershipChecks(changed) {
+/** A round PR (X3): the coordinator's one PR per round, joining every stream's branch. Title `Round <n>: <what>`. */
+export const ROUND_RE = /^Round \d+: \S/;
+
+/** True for a round PR's title. */
+export function isRound(title) {
+ return ROUND_RE.test(title || '');
+}
+
+/**
+ * Review step 4, ownership: which streams the PR touches, and contract changes mixed with other code. A round PR
+ * joins several streams on purpose, so there it lists them instead (each stream branch is checked before it joins).
+ */
+export function ownershipChecks(changed, { round = false } = {}) {
  const by = {};
  for (const f of changed) {
   const o = ownerOf(f);
@@ -138,6 +149,10 @@ export function ownershipChecks(changed) {
  }
  const findings = [];
  const streams = Object.keys(by).filter((o) => o !== 'Shared');
+ if (round) {
+  const summary = Object.entries(by).sort().map(([o, fs]) => `${o} (${fs.length})`).join(', ') || 'tests/docs only';
+  return [[INFO, `round PR, streams joined: ${summary}`]];
+ }
  if (streams.length > 1) findings.push([FAIL, `edits more than one stream's folders: ${streams.sort().join(', ')}`]);
  if (streams.length && by.Shared) {
   findings.push([WARN, `stream PR also edits shared files: ${by.Shared.map((f) => `\`${f}\``).join(', ')}`]);
@@ -169,7 +184,7 @@ const LOOK_RE = /^(src\/view\/|art\/|styles\/)/;
 /** The PR title and template: package id, every section filled, screenshots for visible changes. */
 export function templateChecks(title, body, template, changed) {
  const findings = [];
- if (!/^[A-Z][\w.-]*(?:\/[\w.-]+)?: \S/.test(title)) {
+ if (!isRound(title) && !/^[A-Z][\w.-]*(?:\/[\w.-]+)?: \S/.test(title)) {
   findings.push([WARN, `title "${title}" is not \`<package id>: <what>\``]);
  }
  const text = body || '';
@@ -195,7 +210,8 @@ export function codeMapFiles(file) {
 }
 
 /** Stream PRs report in their body and leave docs/STATUS.md to the coordinator (X2): a warning when one edits it. */
-export function statusCheck(changed) {
+export function statusCheck(changed, { round = false } = {}) {
+ if (round) return []; // the round PR carries the coordinator's STATUS update
  const streams = [...new Set(changed.map(ownerOf).filter((o) => o && o !== 'Shared'))];
  if (!changed.includes('docs/STATUS.md') || !streams.length) return [];
  return [[WARN, `\`docs/STATUS.md\` is the coordinator's: a ${streams.join('/')} PR reports in its body instead`]];
@@ -206,8 +222,8 @@ export function statusCheck(changed) {
  * art spec change without a version and its notes, tunables without a unit comment, long lines, missing headers.
  * added: files new in this PR. read(file): head source or null. diffFiles: from parseDiff.
  */
-export function docsAndStyleChecks({ added, changed, diffFiles, read }) {
- const findings = [...statusCheck(changed)];
+export function docsAndStyleChecks({ added, changed, diffFiles, read, round = false }) {
+ const findings = [...statusCheck(changed, { round })];
  for (const f of added.filter((x) => /^src\/.*\.js$/.test(x))) {
   const base = f.split('/').pop();
   const maps = codeMapFiles(f);

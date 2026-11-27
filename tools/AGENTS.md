@@ -16,7 +16,7 @@
 | Screenshots of every scene, board and skis, 820x1180 (`npm run shot`; CI `shots` job) | `shot.mjs`, `.github/workflows/test.yml` | none |
 | The GPU smoke test: two scenes on `?renderer=gl` in software WebGL must draw a real frame (`npm run smoke:gl`; CI `gl-smoke` job) | `gl-smoke.mjs`, `gl-smoke-check.mjs` (pure) | `gl-smoke` |
 | Frame time by stage (`npm run bench`, `-- --chrome`, `-- --gl`), the baseline, the CI regression check, pixel digests | `bench/` (`core.mjs`, `baseline.json`, `compare.mjs`, `digest.mjs`) | `bench`, `timer` |
-| The mechanical PR check (asserts, golden hash, ownership, template, code map, STATUS, style, smoke test) | `review/` (`checks.mjs` pure, `run.mjs`, `smoke.mjs`), `.github/workflows/pr-check.yml` | `review` |
+| The mechanical PR check (asserts, golden hash, ownership, template, code map, STATUS, style, smoke test); round PRs (`Round <n>:`, `.github/round_pr_template.md`) | `review/` (`checks.mjs` pure, `run.mjs`, `smoke.mjs`), `.github/workflows/pr-check.yml` | `review` |
 | Outlines of big files for ranged reads | `outline.mjs` | `outline` |
 | Map compiler: lat/lon to ENU, resampling, piste clipping, the files | `map-compiler/core.js` (pure) | `map-compiler`, `map-course` |
 | DEM and piste sources (Terrarium tiles; OpenSkiMap, Overpass) | `map-compiler/sources/` | `map-compiler` |
