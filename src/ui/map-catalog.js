@@ -1,6 +1,6 @@
 // The maps the menu offers, a frozen list for the map picker. Debt: U's map search (docs/ROADMAP.md) replaces it.
 
-/** Where the menu lets the player ride: id ('play' is the play mountain, else the id of maps/<id>.*.json), label, run name (or null). */
+/** Where the menu lets the player ride: id ('play', or the id of maps/<id>.*.json), label, run name (or null). */
 export const MAP_CATALOG = Object.freeze([
  Object.freeze({ id: 'play', label: 'Play mountain', run: null }),
  Object.freeze({ id: 'el-tarter', label: 'El Tarter', run: 'Àliga' }),

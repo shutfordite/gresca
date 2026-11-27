@@ -1,6 +1,6 @@
 // @areas ui
-// The menu's map picker: lists the catalog, marks the loaded map, asks env.openMap to reload into another, and keeps the
-// credits and ODbL attribution one tap away on a real map.
+// The menu's map picker: lists the catalog, marks the loaded map, asks env.openMap to reload into another, and keeps
+// the credits and ODbL attribution one tap away on a real map.
 import fs from 'node:fs';
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -45,7 +45,7 @@ describe('map picker (menu)', () => {
   assert.deepEqual(opened, ['el-tarter']);
  });
 
- it('on El Tarter: the map is marked, the run and difficulty show, and the credits and ODbL are one tap away', async () => {
+ it('on El Tarter: marked, run and difficulty shown, credits and ODbL one tap away', async () => {
   const opened = [];
   const g = await load({ world: realWorld(), openMap: (id) => opened.push(id) });
   assert.match(g.el('maps').innerHTML, /data-map="el-tarter" aria-pressed="true"/);

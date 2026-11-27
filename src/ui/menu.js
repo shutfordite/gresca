@@ -1,5 +1,5 @@
-// The menu: the map picker, the Snowboard / Skis picker (gresca-rig), the Regular / Goofy picker (gresca-stance), the menu texts and
-// the finish screen (a SimEvent subscriber).
+// The menu: the map picker, the Snowboard / Skis picker (gresca-rig), the Regular / Goofy picker (gresca-stance), the
+// menu texts and the finish screen (a SimEvent subscriber).
 import { on } from '../core/events.js';
 import { bindControls } from './controls.js';
 import { MAP_CATALOG, loadedMapId, mapButtonText } from './map-catalog.js';
@@ -32,7 +32,8 @@ export function bindMapPicker(ui, env) {
   if (id && id !== loaded && MAP_CATALOG.some((m) => m.id === id) && env.openMap) env.openMap(id);
  });
  const world = env.world;
- ui.mapLine.textContent = world ? world.name + (world.piste ? ' \u00b7 ' + world.piste.difficulty : '') + '. ' + REAL_LINE : STYLIZED_LINE;
+ const run = world && world.name + (world.piste ? ' \u00b7 ' + world.piste.difficulty : '');
+ ui.mapLine.textContent = world ? run + '. ' + REAL_LINE : STYLIZED_LINE;
  ui.cr.hidden = !world;
  ui.credits.hidden = true;
  if (world) {
