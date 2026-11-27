@@ -4,9 +4,11 @@ import {
  FORMAT, KIND_TERRAIN, PROJECTION, HEIGHT_ENCODING, SPIKE_MIN_M, SPIKE_SLOPE, fnv1a32, heightBytes, median8,
 } from './format.js';
 import {
- KIND_COURSE, TREE_SETS, RAIL_TYPES, MEAN_SLOPE_TOLERANCE_DEG, MAX_MEAN_SLOPE_DEG, WIDTH_RANGE_M, MIN_LENGTH_M,
+ KIND_COURSE, COURSE_VERSIONS, FEATURES_VERSION, TREE_SETS, RAIL_TYPES, MEAN_SLOPE_TOLERANCE_DEG, MAX_MEAN_SLOPE_DEG,
+ WIDTH_RANGE_M, MIN_LENGTH_M,
  RUN_BOUNDS_TOLERANCE_M, SUN_ELEVATION_RANGE_DEG, HORIZON_STEPS_DEG, HORIZON_ANGLE_RANGE_DEG,
 } from './course-format.js';
+import { checkParkFeatures } from '../../core/contracts.js';
 import { measureMeanSlopeDeg, runCourse, selectParts, terrainLayer } from './course-run.js';
 
 /** The validator's size limits: anything larger is rejected before it is decoded or walked. */
@@ -325,7 +327,8 @@ const KICKER_DEPTH_M = Object.freeze({ min: 1, max: 40 }); // m, a kicker's laun
 const KICKER_GAIN = Object.freeze({ min: 0.5, max: 3 }); // dimensionless, launchGain (sim/jump.js: 1 and 1.35)
 const RAIL_HEIGHT_M = Object.freeze({ min: 0.05, max: 3 }); // m, a rail's or box's top above the snow
 const COURSE_TOP_KEYS = Object.freeze(['format', 'kind', 'id', 'name', 'generator', 'licence', 'terrain', 'sources',
- 'run', 'widths', 'startS', 'finishS', 'meanSlopeDeg', 'kickers', 'rails', 'sun', 'treeSet', 'horizon']);
+ 'run', 'widths', 'startS', 'finishS', 'meanSlopeDeg', 'kickers', 'rails', 'sun', 'treeSet', 'horizon', 'version',
+ 'features']);
 const COMPASS_FULL_DEG = 360;
 
 /**
@@ -359,6 +362,9 @@ function checkCourseFile(f, ctx) {
  const before = report.errors.length;
  if (f.format !== FORMAT) at('format', 'must be "' + FORMAT + '"');
  if (f.kind !== KIND_COURSE) at('kind', 'must be "' + KIND_COURSE + '"');
+ if (f.version !== undefined && !COURSE_VERSIONS.includes(f.version)) {
+  at('version', 'must be one of ' + COURSE_VERSIONS.join(', ') + ' (absent is 1)');
+ }
  if (typeof f.id !== 'string' || !ID_PATTERN.test(f.id)) at('id', 'must be lower-case kebab-case, 1..64 characters');
  checkText(f, 'name', at, true);
  checkText(f, 'generator', at, false);
@@ -377,6 +383,7 @@ function checkCourseFile(f, ctx) {
  if (widths && span) {
   checkKickers(f.kickers, widths, span, at);
   checkRails(f.rails, widths, span, at);
+  checkFeatures(f, widths, span, at);
  }
  checkSun(f.sun, at);
  if (!TREE_SETS.includes(f.treeSet)) at('treeSet', 'must be one of ' + TREE_SETS.join(', '));
@@ -547,6 +554,45 @@ function checkRails(list, widths, span, at) {
    at(field + '.d', 'the rail (d ' + r.d + ' m) is outside the piste width (+-' + half + ' m)');
   }
  });
+}
+
+// The park's features (version 2, ADR 0012): the contract's checks, then each one inside the piste and the run.
+function checkFeatures(f, widths, span, at) {
+ if (f.features === undefined) return;
+ if ((f.version ?? 1) < FEATURES_VERSION) {
+  return at('features', 'needs "version": ' + FEATURES_VERSION + ' (a version 1 file has only kickers and rails)');
+ }
+ const bad = checkParkFeatures(f.features, false);
+ for (const problem of bad) {
+  const cut = problem.indexOf(': ');
+  const where = problem.slice(0, cut);
+  at(where.startsWith('features') ? where : 'features.' + where, problem.slice(cut + 2));
+ }
+ if (bad.length) return;
+ if (f.features.jumps.length + f.features.rails.length > COURSE_LIMITS.items) {
+  return at('features', 'more than ' + COURSE_LIMITS.items + ' items');
+ }
+ f.features.jumps.forEach((j, i) => {
+  const a = j.s - j.takeoff.length;
+  const b = j.s + j.table.length + j.landing.length;
+  checkFits(at, 'features.jumps[' + i + ']', a, b, Math.abs(j.d) + j.takeoff.width / 2, widths, span);
+ });
+ f.features.rails.forEach((r, i) => {
+  const s = r.points.map((p) => p.s);
+  const across = Math.max(...r.points.map((p) => Math.abs(p.d)));
+  checkFits(at, 'features.rails[' + i + ']', Math.min(...s), Math.max(...s), across, widths, span);
+ });
+}
+
+// A park item from s a to b (m), reaching across m from the centre line, lies within start and finish and the piste.
+function checkFits(at, field, a, b, across, widths, span) {
+ if (a < span.startS || b > span.finishS) {
+  at(field, 'the feature (' + a + ' to ' + b + ' m) must lie between the start and the finish');
+ }
+ const half = narrowestOver(widths, a, b) / 2;
+ if (across > half) {
+  at(field, 'the feature reaches ' + across + ' m across, outside the piste width (+-' + half + ' m)');
+ }
 }
 
 // The sun is the one place a course holds compass degrees (clockwise from north), as the art spec wants them.

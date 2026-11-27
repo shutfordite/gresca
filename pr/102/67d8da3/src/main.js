@@ -16,7 +16,6 @@ import { loadMapSteps } from './world/map-loader.js';
 // ?map=<id> for any other id loads the real map maps/<id>.terrain.json and maps/<id>.course.json (C4b, ADR 0011):
 // fetched here, built in chunks with the progress on the menu, then handed to the game. If either file fails, the
 // game warns and opens on the play mountain.
-// The three.js import starts before the map fetch and both are awaited together (core/boot-loads.js, G2).
 const query = (name) => new URLSearchParams(window.location.search).get(name);
 const REAL_MAP_ID = /^[a-z0-9-]{1,40}$/; // a real map's id: the file names in maps/
 const LOAD_YIELD_MS = 0; // ms between load chunks: lets the page paint the progress
@@ -71,6 +70,13 @@ const env = Object.freeze({
  THREE,
  map: query('map') === 'test' || query('scene') ? 'test' : 'play',
  world, // a loaded real map (?map=<id>), or null
+ // The menu's map picker: reload into map id ('play' is the play mountain), keeping ?cam=, ?renderer= and the rest.
+ openMap(id) {
+  const url = new URL(window.location.href);
+  if (id === 'play') url.searchParams.delete('map'); else url.searchParams.set('map', id);
+  url.searchParams.delete('scene'); // a scene forces the test slope
+  window.location.assign(url.href);
+ },
  cam: query('cam'), // ?cam=<id>: the camera mode to start in (A, B or C)
  showFps: query('fps') === '1',
  now: () => performance.now(),
