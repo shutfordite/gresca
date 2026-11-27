@@ -200,7 +200,27 @@ var HANGA = {
   "pineS": "#24392D",
   "railHi": "#9FB0D3",
   "spray": "#FBF8F1",
-  "sprayS": "#C3CCE0"
+  "sprayS": "#C3CCE0",
+  "pineLit": "#4F7058",
+  "fir": "#2C4B4C",
+  "firS": "#1F3637",
+  "firLit": "#42696A",
+  "snowLoad": "#E8EDF5",
+  "snowLoadS": "#BFC9DE",
+  "krummholz": "#55684F",
+  "krummholzS": "#3C4B3B",
+  "scrub": "#7A6F58",
+  "scrubS": "#5C5342",
+  "rhodo": "#7A5A55",
+  "rockLit": "#8F98B2",
+  "scree": "#A2A8BC",
+  "screeS": "#8088A2",
+  "cliff": "#4C566F",
+  "mtnMid": "#97A8CB",
+  "mtnMidS": "#7F92B9",
+  "mtnMidCap": "#F1EBDD",
+  "alpenglow": "#F0A98E",
+  "sunGlow": "#F8C9A8"
  },
  "camera": {
   "chasePitchDeg": 20,
@@ -6340,32 +6360,7 @@ var HANGA = {
     "min": 1.2,
     "why": "Sun disc against its glow"
    }
-  ],
-  "palette": {
-   "note": "New roles for the environment (sRGB hex). They live here, not in the top-level palette, so that palette stays exactly as in v1.4.0 (test/hanga-v14.test.js compares it with v1.3.0 whole). Code resolves a role from palette first, then from this object. Moving them into palette is one line of data and one test change; see HANGA-v1.5.md.",
-   "roles": {
-    "pineLit": "#4F7058",
-    "fir": "#2C4B4C",
-    "firS": "#1F3637",
-    "firLit": "#42696A",
-    "snowLoad": "#E8EDF5",
-    "snowLoadS": "#BFC9DE",
-    "krummholz": "#55684F",
-    "krummholzS": "#3C4B3B",
-    "scrub": "#7A6F58",
-    "scrubS": "#5C5342",
-    "rhodo": "#7A5A55",
-    "rockLit": "#8F98B2",
-    "scree": "#A2A8BC",
-    "screeS": "#8088A2",
-    "cliff": "#4C566F",
-    "mtnMid": "#97A8CB",
-    "mtnMidS": "#7F92B9",
-    "mtnMidCap": "#F1EBDD",
-    "alpenglow": "#F0A98E",
-    "sunGlow": "#F8C9A8"
-   }
-  }
+  ]
  },
  "terrain": {
   "sun": {
