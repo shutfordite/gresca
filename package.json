@@ -9,6 +9,8 @@
   "scripts": {
     "test": "node --test --test-reporter=dot test/*.test.js",
     "test:verbose": "node --test test/*.test.js",
+    "test:times": "node --test --test-reporter=./tools/qa/test-times.mjs test/*.test.js",
+    "test:quality": "node --test --experimental-test-coverage --test-coverage-include=src/** --test-reporter=./tools/qa/test-times.mjs test/*.test.js",
     "test:rotated": "GRESCA_MAP_ROTATION_DEG=37 node --test --test-reporter=dot test/*.test.js && GRESCA_MAP_ROTATION_DEG=300 node --test --test-reporter=dot test/*.test.js",
     "shot": "node tools/shot.mjs",
     "bench": "node tools/bench/run.mjs",

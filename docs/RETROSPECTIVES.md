@@ -3,6 +3,25 @@
 Each one ends with changes to the method (`.claude/skills/gresca-architect/SKILL.md`, the `AGENTS.md` files, CI),
 not only notes. Newest first.
 
+## 27 Nov 2026: too many PRs to test (X3)
+
+**What happened.** Each package was its own PR, so a day with five streams meant five previews to ride, five merges in
+order, `update-branch` between them, and a separate STATUS PR. The owner found the testing too much.
+
+**Change.** One PR per round. Stream agents push branches and open no PRs. The coordinator reviews each branch
+(`tools/review/run.mjs` and the smoke test, run on the branch), then, once every stream has finished, joins them into
+`round/<n>` with the STATUS update on top and opens `Round <n>: <what>` from `.github/round_pr_template.md`: what
+changed in plain words, and a numbered list of what to test on the iPad, each step a link. The PR check knows round
+PRs (several streams and a STATUS edit are expected there; it checks the round template). Fixes during testing go
+on the stream branch and are merged into the round again; a package that fails is reverted out of the round.
+Method: `SKILL.md` ("The round PR"), `AGENTS.md` ("Every change").
+
+**And a QA gate.** No one owned overall quality: each review looked at one package, the suite had grown to about two
+minutes, and no one measured coverage. Now a QA agent runs on every round branch before the PR opens. It measures
+the suite (`npm run test:quality`: the slowest tests and files, coverage per folder), checks each package's tests
+against the standard in `docs/QUALITY.md`, lists missing coverage and overtesting, and plans at most one
+test-health package per round. Its BLOCK keeps a package out of the round. The trend is kept in `docs/QUALITY.md`.
+
 ## 27 Nov 2026: the H stack merged into itself
 
 **What happened.** H0–H3 (#84, #85, #88, #89) were opened as a stack, each PR based on the branch below it. The owner
