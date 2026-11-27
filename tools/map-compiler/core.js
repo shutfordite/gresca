@@ -298,21 +298,44 @@ export function lastPointS(length) {
  return s <= length ? s : roundTo((steps - 1) * POINT_ROUND_M, POINT_ROUND_M);
 }
 
-export function compileCourse({ terrain, run, name, widthM, startS = 0, finishS, kickers = [], rails = [], sun,
+const TOP_SEARCH_M = 300; // m of s from the run's first point searched for its high point (the default start)
+const TOP_STEP_M = 5;     // m of s between the heights compared
+
+/**
+ * m, the default start: the highest point of the run's first TOP_SEARCH_M m (at most a quarter of it), on the point
+ * step. A run's first metres are often flat or climb a little off a lift's top station, where a rider would slide back.
+ */
+export function topS(course, layer) {
+ const p = { x: 0, y: 0 };
+ let best = 0;
+ let bestH = -Infinity;
+ for (let s = 0; s <= Math.min(TOP_SEARCH_M, course.length / 4); s += TOP_STEP_M) {
+  course.point(s, 0, p);
+  const h = layer.height(p.x, p.y);
+  if (h > bestH) {
+   bestH = h;
+   best = s;
+  }
+ }
+ return roundTo(best, POINT_ROUND_M);
+}
+
+export function compileCourse({ terrain, run, name, widthM, startS, finishS, kickers = [], rails = [], sun,
  treeSet = 'pine', horizonStepDeg = 1 }) {
  const layer = terrainLayer(terrain);
  const { parts, problems } = selectParts(terrain, run);
  if (problems.length > 0) throw new Error('compileCourse: ' + problems.join('; '));
  const course = runCourse(terrain, parts, layer);
+ const start = startS ?? topS(course, layer);
  const end = finishS ?? lastPointS(course.length);
  const difficulty = difficultyOf(parts);
  const width = widthM ?? DIFFICULTY_WIDTH_M[difficulty];
- const top = course.point(startS, 0, {});
+ const top = course.point(start, 0, {});
  const bottom = course.point(end, 0, {});
- const middle = course.point((startS + end) / 2, 0, {});
+ const middle = course.point((start + end) / 2, 0, {});
  const profile = Array.from(computeHorizon(terrain, layer, middle.x, middle.y, horizonStepDeg),
   (v) => roundTo(v, HORIZON_ROUND_DEG));
- const slope = measureMeanSlopeDeg(course, layer, startS, end);
+ const slope = measureMeanSlopeDeg(course, layer, start, end);
  const runName = name ?? (parts.find((p) => p.name)?.name || terrain.name);
  return {
   format: FORMAT,
@@ -325,7 +348,7 @@ export function compileCourse({ terrain, run, name, widthM, startS = 0, finishS,
   sources: terrain.sources.map((s) => sourceRecord(s, null, true)),
   run: { osm: [...new Set(parts.flatMap((p) => p.osm))].sort(), name: run.name || runName, difficulty },
   widths: [[0, roundTo(width, POINT_ROUND_M)]],
-  startS: roundTo(startS, POINT_ROUND_M),
+  startS: roundTo(start, POINT_ROUND_M),
   finishS: roundTo(end, POINT_ROUND_M),
   meanSlopeDeg: roundTo(slope, SLOPE_ROUND_DEG),
   kickers,

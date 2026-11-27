@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { compileCourse, lastPointS, stringifyMap } from '../tools/map-compiler/core.js';
+import { compileCourse, lastPointS, stringifyMap, topS } from '../tools/map-compiler/core.js';
 import { runCli } from '../tools/map-compiler/cli.mjs';
 import { MEAN_SLOPE_TOLERANCE_DEG } from '../tools/map-compiler/course-format.js';
 import { validateCourse, validateTerrain, widthAtS } from '../tools/map-compiler/validate.js';
@@ -267,5 +267,15 @@ describe('the default finish', () => {
    const s = lastPointS(length);
    assert.ok(s <= length && length - s < 0.1 + 1e-9, length + ' -> ' + s);
   }
+ });
+});
+
+describe('the default start', () => {
+ const line = (length) => ({ length, point: (s, d, out) => Object.assign(out, { x: s, y: d }) });
+ it('is the high point of the run\'s first metres, so a run off a flat top station does not slide back', () => {
+  const climbsFirst = { height: (x) => (x < 40 ? 2460 + x / 20 : 2462 - (x - 40) * 0.25) }; // up 2 m, then down
+  assert.equal(topS(line(2865), climbsFirst), 40);
+  assert.equal(topS(line(2865), { height: (x) => 2000 - x }), 0, 'a run that falls from its first point starts there');
+  assert.equal(topS(line(400), { height: (x) => x }), 100, 'searches at most a quarter of a short run');
  });
 });
