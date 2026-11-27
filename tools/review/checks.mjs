@@ -21,7 +21,7 @@ const NUMBER_RE = /-?\d+(?:\.\d+)?(?:e-?\d+)?/gi;
 export const OWNERS = Object.freeze([
  ['src/view/rider-', 'S3'],
  ['art/gresca-rider-anim.js', 'S3'],
- ['art/gresca-hanga-spec.js', 'S4'],
+ ['art/gresca-hanga-spec.js', 'S6'],
  ['src/input/', 'S1'],
  ['src/ui/', 'S1'],
  ['styles/', 'S1'],
@@ -46,7 +46,7 @@ export const OWNERS = Object.freeze([
  ['package-lock.json', 'Shared'],
 ]);
 
-/** The owner of a repository path ('S1'…'S5', 'Shared'), or null for tests, docs and other neutral files. */
+/** The owner of a repository path ('S1'…'S6', 'Shared'), or null for tests, docs and other neutral files. */
 export function ownerOf(file) {
  if (/(^|\/)(AGENTS|CLAUDE)\.md$/.test(file) || file.startsWith('docs/') || file.endsWith('README.md')) return null;
  const hit = OWNERS.find(([prefix]) => file === prefix || file.startsWith(prefix));

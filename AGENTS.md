@@ -26,7 +26,7 @@ name in the AGENTS.md files above it.
 |---|---|
 | Sim: riding physics, brake, edge, jumps, flips, grinds, spray, timestep, `AnimInput` (S2) | `src/sim/AGENTS.md` |
 | View: camera, renderers, GPU terrain, ski tracks, Look, sky, sprites; rider files (S3) | `src/view/AGENTS.md` |
-| Rider animation and the art spec (S3, spec versions S4) | `art/AGENTS.md` |
+| Rider animation and the art spec (S3, spec versions S6) | `art/AGENTS.md` |
 | Input: bindings, touch and keys (S1) | `src/input/AGENTS.md` |
 | UI: HUD, menu, pause, Controls screen, air hints, `styles/` (S1) | `src/ui/AGENTS.md` |
 | World: terrain, courses, play mountain, map frame, map files, map loader (S5) | `src/world/AGENTS.md` |
@@ -60,8 +60,9 @@ Each stream owns its folders. A PR edits only its stream's folders; anything els
 | S1 controls and UI | `src/input/`, `src/ui/`, `styles/` |
 | S2 sim feel | `src/sim/` |
 | S3 rider animation | `art/gresca-rider-anim.js`, the rider files in `src/view/` |
-| S4 look, camera, render | `src/view/` (with `src/view/look/`) except the rider files, `art/gresca-hanga-spec.js` versions, `vendor/` |
+| S4 look, camera, render | `src/view/` (with `src/view/look/`) except the rider files, `vendor/` |
 | S5 maps | `src/world/`, `tools/`, `maps/` |
+| S6 design and visual | `art/gresca-hanga-spec.js` versions and their notes and boards in docs/art (designs and specs; no render code) |
 | Shared (coordinator) | `src/core/`, `src/app.js`, `src/debug.js`, `src/main.js`, `index.html`, `docs/`, `test/harness.js` |
 
 If you change who owns a folder, change this table and `OWNERS` in `tools/review/checks.mjs` together.

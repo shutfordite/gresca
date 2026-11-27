@@ -2,7 +2,7 @@
 
 - Both files are UMD classic scripts: `window.HANGA` / `window.RiderAnim` in the browser, `require` in Node.
   No canvas, no DOM, no game state. Only `src/main.js` reads them; everything else gets them through `env`.
-- `gresca-hanga-spec.js` (110 KB): never read it whole. Run `node tools/outline.mjs art/gresca-hanga-spec.js 2`
+- `gresca-hanga-spec.js` (110 KB, stream S6): never read it whole. Run `node tools/outline.mjs art/gresca-hanga-spec.js 2`
   for line ranges, then `sed -n`. Change it only as a new version: bump `version` and the header, keep changes
   additive (checked against the previous version in `test/fixtures/` by `test/hanga-v14.test.js`), and write
   `docs/art/HANGA-v<version>.md`. After a new version, re-sync the claude.ai design canvas copy (`docs/STATUS.md`).
