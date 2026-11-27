@@ -1,6 +1,7 @@
 // The colour map the raycaster reads (D2 replaces it with per-pixel shading): snow, rock, lift, trees, park, village.
 import { W0, H0 } from '../world/course.js';
 import { hash } from '../world/noise.js';
+import { paintWindow } from './paint-window.js';
 
 const MINIMAP_W = 42;  // px, the minimap canvas (index.html #mc)
 const MINIMAP_H = 103;
@@ -19,8 +20,12 @@ const DRIFT_SHARE = 0.6;        // 0..1, how much of the grain is drifts (the re
  * so the painted ones are left out).
  */
 export function buildColourMap(view, world, minimap, look, keepSnow = false) {
- view.mapFrame = world.frame;
- paintColourMap(view.mx, world, look, () => {
+ // A real map (no layout) is painted in a window along its run (paint-window.js); the procedural map is its grid.
+ const area = world.layout ? { frame: world.frame, bounds: world.terrain.bounds } : paintWindow(world, W0, H0);
+ view.mapFrame = area.frame;
+ view.mapBounds = area.bounds; // the colour map's rectangle in the world, for the minimap dot
+ view.mapFits = area.fits !== false; // false: the run is larger than the window and its ends are cut off
+ paintColourMap(view.mx, world, area, look, () => {
   if (keepSnow) view.colSnow = view.mx.getImageData(0, 0, W0, H0).data;
  }, !keepSnow);
  view.col = view.mx.getImageData(0, 0, W0, H0).data;
@@ -34,9 +39,15 @@ export function buildColourMap(view, world, minimap, look, keepSnow = false) {
  * shadows, the kickers, the rails, the village and the finish. Reads world.H, world.M, world.treeArr and world.frame.
  * afterSnow() is called between the snow and the rest.
  */
-function paintColourMap(mx, world, look, afterSnow, paintShadows) {
+function paintColourMap(mx, world, area, look, afterSnow, paintShadows) {
  const colour = look.colour;
- const layout = world.layout; // the map's cx, finish, park and lift (world/build.js MAPS)
+ const layout = world.layout; // the procedural map's cx, finish, park and lift (world/build.js MAPS)
+ if (!layout) { // a real map (C4b): snow and trees in the paint window; lifts, park and village come later
+  paintSnow(mx, area.heights, area.groomed, look.terrainTone, area.cx);
+  afterSnow();
+  paintTrees(mx, world.treeArr, area.frame, colour, paintShadows);
+  return;
+ }
  paintSnow(mx, world.H, world.M, look.terrainTone, layout.cx);
  afterSnow();
  paintLift(mx, colour, layout.lift);
