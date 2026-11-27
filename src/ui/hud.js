@@ -1,5 +1,6 @@
 // The compact HUD: score, speed, metres to go, the trick popup (a SimEvent subscriber) and the minimap dot.
 import { on, onStep } from '../core/events.js';
+import { trickName } from './trick-names.js';
 
 const MS_TO_KMH = 3.6;   // km/h per m/s
 const MINIMAP_W_PX = 42; // CSS px, the minimap's size (index.html #mini)
@@ -14,10 +15,11 @@ export function createHud() {
  return { paused: false, popup: { text: '', t: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } };
 }
 
-/** The popup text for a score SimEvent: '+82p 180 Air', '+24p Rail', '+10p Box'. */
+/** The popup text for a score SimEvent: '+82p 180 Air', '+140p Backflip 360', '+24p Rail', '+10p Box'. */
 export function popupText(event) {
- const what = event.kind === 'air' ? (event.degrees ? event.degrees + ' ' : '') + 'Air'
-  : (event.kind === 'box' ? 'Box' : 'Rail');
+ const trick = event.kind === 'air' ? trickName(event.flips, event.degrees) : '';
+ const what = trick || (event.kind === 'air' ? (event.degrees ? event.degrees + ' ' : '') + 'Air'
+  : (event.kind === 'box' ? 'Box' : 'Rail'));
  return '+' + event.points + 'p ' + what;
 }
 

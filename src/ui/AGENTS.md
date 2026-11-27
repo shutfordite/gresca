@@ -8,6 +8,7 @@
 ## Code map
 | To change | Edit | Tests |
 |---|---|---|
+| Trick names for the score popup, from a score event's `flips` and `degrees` (the sim holds no naming code) | `trick-names.js` | `trick-names` |
 | HUD, score popup, minimap | `hud.js`, `styles/hud.css` | `facade`, `features`, `events`, `look-lint` |
 | Menu, rig and stance picker, finish screen | `menu.js`, `styles/menu.css`, `index.html` | `park`, `page`, `events`, `stance` |
 | The map picker (`#maps`, `env.openMap(id)` provided by `main.js`), the map data line and Credits toggle | `menu.js`, `map-catalog.js` (the frozen list; U's map search replaces it), `styles/menu.css`, `index.html` | `map-picker` |
