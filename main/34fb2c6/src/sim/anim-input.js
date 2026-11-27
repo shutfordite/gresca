@@ -6,8 +6,19 @@ const APPROACH_M = 14;      // m before a kicker lip (along s) the rider crouche
 /** A new AnimInput (core/contracts.js), all false or 0: the out object for animInput(). */
 export function createAnimInput() {
  return {
-  wiped: false, grinding: false, braking: false, approach: false,
-  speed: 0, travelDir: 0, facing: 0, riderSide: 1, impact: 0, landings: 0, edge: 0, skid: 0, flipRot: 0,
+  wiped: false,
+  grinding: false,
+  braking: false,
+  approach: false,
+  speed: 0,
+  travelDir: 0,
+  facing: 0,
+  riderSide: 1,
+  impact: 0,
+  landings: 0,
+  edge: 0,
+  skid: 0,
+  flipRot: 0,
   where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the rider projected on the course
  };
 }
