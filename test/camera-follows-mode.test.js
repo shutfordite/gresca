@@ -19,7 +19,7 @@ async function ridden(id, opts = {}) {
 }
 
 describe('mode A is the camera as it was', () => {
- it('gives the same camera numbers as before the change (captured on main with the camera modes, before the camera follows them)', async () => {
+ it('gives the same camera numbers as before the change (captured before the camera followed modes)', async () => {
   const h = await load();
   h.place({ s: 500, vx: 0, vy: 8 });
   h.sim(1);
