@@ -170,6 +170,10 @@ in the sky. Order:
    the spec doesn't list. Today the Look reads `maps.procedural.sun` on every map (`MAP_ID`), so El Tarter rides
    under the play mountain's sun: a small S4 package makes the Look pick the loaded map's entry. TD0 replaces both
    with the real sun for a date and time.
+7. **All three camera framings stay, and tapping the rider switches between them** (spike #87: A classic, B chase,
+   C high). CV1 (Shared: `CAM_MODES` in config, game state, `gresca-cam` key, `?cam=`), CV2 (S4: the camera follows
+   the mode, eased), CV3 (S1: tap the rider, `c` on keys). The default stays A until the owner picks one; the rider
+   scale (F1) is set after, per mode if needed.
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
