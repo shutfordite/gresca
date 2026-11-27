@@ -380,7 +380,8 @@ function liftStep(rider, input, grind, rig, rise, dt) {
 }
 
 // Moves the rider speed (m/s) * dt (s) along the rail, onto the next segments past each vertex: the speed carries,
-// the board turns with a bend, a change of slope counts a kink, and a convex one throws the rider up. Leaves grind.geo on the rider's segment.
+// the board turns with a bend, a change of slope counts a kink, and a convex one throws the rider up. Leaves grind.geo
+// on the rider's segment.
 // Returns true if a kink was ridden over.
 function advance(rider, grind, speed, dt) {
  const r = grind.r;
