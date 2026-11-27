@@ -195,3 +195,37 @@ describe('the game uses the look', () => {
   assert.deepEqual(g.cssProps(), { ...look.ui });
  });
 });
+
+describe('the Look picks the loaded map\'s sun (owner decision 6)', () => {
+ const ELT = HANGA.maps['el-tarter'];
+ const PROC = HANGA.maps.procedural;
+ const COURSE_SUN = { azimuthDeg: 76, elevationDeg: 16 }; // El Tarter's baked sun, which the spec's entry overrides
+ const sunOf = (map) => { const l = createHangaLook(HANGA, RA, map); return [l.sky.sun.azimuthDeg, l.sky.sun.elevationDeg, l.map.sunFrom]; };
+
+ it('no map, or the test slope and play mountain (no id), keep the procedural sun and mean slope', () => {
+  const want = [PROC.sun.azimuthDeg, PROC.sun.elevationDeg, 'default'];
+  assert.deepEqual(sunOf(undefined), want);
+  assert.deepEqual(sunOf({ id: null, courseSun: null }), want);
+  assert.equal(look.rider.meanSlopeDeg, PROC.meanSlopeDeg);
+  assert.deepEqual({ ...look.map }, { id: 'procedural', specId: 'procedural', sunFrom: 'default' });
+ });
+
+ it('a map the spec lists uses its entry, not the course file\'s sun', () => {
+  assert.equal(ELT.sun.azimuthDeg, 110);
+  assert.deepEqual(sunOf({ id: 'el-tarter', courseSun: COURSE_SUN }), [110, ELT.sun.elevationDeg, 'spec']);
+  assert.equal(createHangaLook(HANGA, RA, { id: 'el-tarter', courseSun: COURSE_SUN }).rider.meanSlopeDeg, ELT.meanSlopeDeg);
+ });
+
+ it('a map the spec does not list uses the course file\'s sun, and the procedural one without it', () => {
+  assert.deepEqual(sunOf({ id: 'no-such-map', courseSun: COURSE_SUN }), [76, 16, 'course']);
+  assert.deepEqual(sunOf({ id: 'no-such-map', courseSun: null }), [PROC.sun.azimuthDeg, PROC.sun.elevationDeg, 'default']);
+  assert.equal(createHangaLook(HANGA, RA, { id: 'no-such-map', courseSun: COURSE_SUN }).rider.meanSlopeDeg, PROC.meanSlopeDeg);
+  assert.equal(sunOf({ id: 'toString', courseSun: null })[2], 'default', 'an id is looked up as an own key only');
+ });
+
+ it('each game builds its own look from its own map (nothing is shared between games)', async () => {
+  const a = await load();
+  assert.deepEqual(a.debug.lookSun(), { azimuthDeg: PROC.sun.azimuthDeg, elevationDeg: PROC.sun.elevationDeg });
+  assert.equal(a.debug.mapId, 'procedural');
+ });
+});

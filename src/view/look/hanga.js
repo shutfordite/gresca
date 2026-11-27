@@ -91,7 +91,20 @@ function terrainTone(lit, groomed, stripeWave, rock, out, cavity = 0, grain = 0)
  return out;
 }
 
-function sky(H, colour) {
+// Which map the look is for: the loaded map's entry in the spec's maps (art-directed sun, mean slope) wins; a map the
+// spec does not list uses the course file's sun (courseSun) and the default map's other values (docs/ROADMAP.md,
+// owner decision 6). map: {id, courseSun} from createGame; no map (a lab, a test) is the default map.
+function mapEntry(H, map) {
+ const id = map && map.id ? map.id : null;
+ const listed = id !== null && Object.hasOwn(H.maps, id);
+ const specId = listed ? id : MAP_ID;
+ const courseSun = map && map.courseSun;
+ const sunFrom = listed ? 'spec' : (courseSun ? 'course' : 'default');
+ const sun = sunFrom === 'course' ? courseSun : H.maps[specId].sun;
+ return Object.freeze({ id: id ?? MAP_ID, specId, sunFrom, sun, meanSlopeDeg: H.maps[specId].meanSlopeDeg });
+}
+
+function sky(H, colour, entry) {
  const sun = H.sky.sun;
  return Object.freeze({
   stops: Object.freeze(H.sky.stops.map(([o, role]) => Object.freeze([o, colour(role)]))),
@@ -99,8 +112,8 @@ function sky(H, colour) {
    colour: colour(sun.colour),
    radiusFracOfWidth: sun.radiusFracOfWidth,
    aboveHorizonFrac: sun.aboveHorizonFrac,
-   azimuthDeg: H.maps[MAP_ID].sun.azimuthDeg,
-   elevationDeg: H.maps[MAP_ID].sun.elevationDeg,
+   azimuthDeg: entry.sun.azimuthDeg,
+   elevationDeg: entry.sun.elevationDeg,
   }),
  });
 }
@@ -138,7 +151,7 @@ function camera(H) {
 }
 
 // The rider: named poses through HANGA.projectRider, live animation states through RiderAnim.project.
-function rider(H, riderAnim) {
+function rider(H, riderAnim, entry) {
  const R = H.rider;
  function project(rig, pose, view) {
   if (typeof pose === 'string') return H.projectRider(rig, pose, view.yawDeg, view.pitchDeg, 0, view.stance);
@@ -153,16 +166,19 @@ function rider(H, riderAnim) {
   }),
   project,
   keylineM: R.widths.keyline,
-  meanSlopeDeg: H.maps[MAP_ID].meanSlopeDeg,
+  meanSlopeDeg: entry.meanSlopeDeg,
   stanceStorageKey: R.stance.storageKey,
  });
 }
 
 /**
  * The Hanga Dawn Look from the art spec (HANGA: window.HANGA, passed in through env) and, for live rider poses,
- * riderAnim (RiderAnim). Resolves every colour once; validated before it is returned (throws naming the field).
+ * riderAnim (RiderAnim). map ({id, courseSun}: the loaded map's id and its course file's sun; optional) picks the map's
+ * sun and mean slope (look.map says which entry it used). Resolves every colour once; validated before it is returned
+ * (throws naming the field).
  */
-export function createHangaLook(spec, riderAnim) {
+export function createHangaLook(spec, riderAnim, map) {
+ const entry = mapEntry(spec, map);
  const table = colourTable(spec.palette);
  const colour = (role) => {
   const c = table[role];
@@ -174,11 +190,12 @@ export function createHangaLook(spec, riderAnim) {
   roles: Object.freeze(Object.keys(table)),
   colour,
   terrainTone,
-  sky: sky(spec, colour),
+  map: Object.freeze({ id: entry.id, specId: entry.specId, sunFrom: entry.sunFrom }),
+  sky: sky(spec, colour, entry),
   fog: Object.freeze({ rgb: Object.freeze(spec.terrain.fog.rgb.slice()), amount: spec.fogAmount }),
   sprites: sprites(colour),
   camera: camera(spec),
   ui: UI_TOKENS,
-  rider: rider(spec, riderAnim || null),
+  rider: rider(spec, riderAnim || null, entry),
  }));
 }
