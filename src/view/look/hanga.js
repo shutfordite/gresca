@@ -202,7 +202,7 @@ function spikeEnv(H) {
  * riderAnim (RiderAnim). Resolves every colour once; validated before it is returned (throws naming the field).
  */
 export function createHangaLook(spec, riderAnim, spike = null) {
- const envSpike = spike === 'env' && spec.environment ? spikeEnv(spec) : null;
+ const envSpike = spike && spike.split(',').includes('env') && spec.environment ? spikeEnv(spec) : null;
  const table = colourTable(spec.palette);
  const colour = (role) => {
   const c = table[role];

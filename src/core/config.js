@@ -34,11 +34,13 @@ export const MAX_PARTICLES = 160; // particles alive at once, at most
 export const SWIPE_PX = 36; // CSS px a finger must move down to brake
 
 // ---- camera: behind and well above the rider, looking steeply down the slope ----
-export const FOV = 1.15;     // rad, horizontal field of view
+export let FOV = 1.15;     // rad, horizontal field of view
 export const RAY_SAMPLES = 152; // terrain samples along each screen column
-export const CAM_BACK = 10;  // m behind the rider
-export const CAM_HEIGHT = 7.6; // m above the rider's ground
-export const HORIZON_FRAC = 0.14; // untilted horizon row as a fraction of the render height
+export let CAM_BACK = 10;  // m behind the rider
+export let CAM_HEIGHT = 7.6; // m above the rider's ground
+export let HORIZON_FRAC = 0.14; // untilted horizon row as a fraction of the render height
+export let CAM_FOCAL_FRAC = 0.75; // focal length as a fraction of the render height
+export let CAM_TILT_EXTRA = 0; // tan, SPIKE: extra look-down added to the slope-follow tilt (camera spike variants)
 export const RIDER_SCALE = 0.55; // dimensionless, rider draw scale
 export const MAP_ID = 'procedural'; // picks the map's sun and sky in HANGA.maps
 // m, the raycaster samples the exact terrain surface this close to the camera, the fast path beyond
@@ -51,3 +53,16 @@ export const RAY_FAR = (() => {
  for (let k = 0; k < RAY_SAMPLES - 1; k++) z += 1 + z * RAY_SPREAD;
  return z;
 })();
+
+// SPIKE (?spike=env,camB|camC, throwaway): camera framings to choose between. No cam flag leaves today's camera (camA).
+const CAM_VARIANTS = {
+ camB: { back: 14, height: 2.5, horizon: 0.455, fov: 1.43, focal: 0.6, extra: 0 }, // chase: low, horizon high up
+ camC: { back: 20, height: 3, horizon: 0.535, fov: 0.86, focal: 1.0, extra: 0 }, // high and long, longer lens
+};
+/** SPIKE: sets the camera numbers for a ?spike= list such as 'env,camB'. Call once, before the game is created. */
+export function applyCamSpike(list) {
+ const v = CAM_VARIANTS[(list || '').split(',').find((n) => CAM_VARIANTS[n])];
+ if (!v) return;
+ CAM_BACK = v.back; CAM_HEIGHT = v.height; HORIZON_FRAC = v.horizon; FOV = v.fov; CAM_FOCAL_FRAC = v.focal;
+ CAM_TILT_EXTRA = v.extra;
+}

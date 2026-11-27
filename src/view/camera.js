@@ -1,5 +1,5 @@
 // The camera: its state, following the rider (heading, height, slope), the partial slope-follow tilt, compass heading.
-import { CAM_BACK, CAM_HEIGHT, HORIZON_FRAC } from '../core/config.js';
+import { CAM_BACK, CAM_HEIGHT, HORIZON_FRAC, CAM_FOCAL_FRAC, CAM_TILT_EXTRA } from '../core/config.js';
 import { compassDeg } from '../world/map-frame.js';
 
 const START_HEADING = 1.57; // rad on the map's grid (clockwise from across, MapFrame): just short of straight down
@@ -12,7 +12,6 @@ const SLOPE_MIN = -0.3;     // m/m, the slope estimate's range
 const SLOPE_MAX = 0.8;
 const MIN_CLEARANCE_M = 2.5; // m, the camera stays this far above the ground under it
 const JUMP_FOLLOW = 0.5;    // dimensionless, share of the rider's jump height the camera rises with
-const FOCAL_FRAC = 0.75;    // focal length as a fraction of the render height
 const TRACK_SPEED = 1.5;    // m/s, faster than this the camera turns toward the direction of travel; slower, it holds
 const LOOK_TAU = 0.35;       // s, time constant of the swing to look back uphill and of the swing home again
 const LOOK_DONE = 1e-3;     // dimensionless, a look blend this close to 0 or 1 snaps to it
@@ -119,14 +118,14 @@ export function followRider(camera, terrain, framing, pose, rider, renderW, rend
  const wantH = Math.max(overRider, terrain.height(px, py) + MIN_CLEARANCE_M);
  camera.height += (wantH - camera.height) * Math.min(1, dt * HEIGHT_RATE);
  const hz = renderH * HORIZON_FRAC;
- const sc = renderH * FOCAL_FRAC;
+ const sc = renderH * CAM_FOCAL_FRAC;
  // View tilt: partial slope follow, then clamp so the rider stays riderMarginDeg inside the bottom of the frame.
  const LA = framing.lookAheadM;
  const yMax = renderH - sc * Math.tan(framing.riderMarginDeg * Math.PI / 180);
  const rel = camera.height - gR;
  const tilt = Math.max(cameraTilt(framing, camera.slope, rel, gR - terrain.height(x + dx * LA, y + dy * LA)),
   (rel / CAM_BACK * sc + hz - yMax) / sc);
- camera.tilt = tilt;
+ camera.tilt = tilt + CAM_TILT_EXTRA;
  camera.x = px;
  camera.y = py;
  camera.dirX = dx;
@@ -136,6 +135,6 @@ export function followRider(camera, terrain, framing, pose, rider, renderW, rend
  camera.pixelScale = screenW / renderW;
  camera.focalPx = sc;
  camera.horizonPx = hz;
- camera.pitchPx = sc * tilt;
+ camera.pitchPx = sc * camera.tilt;
  return gR;
 }
