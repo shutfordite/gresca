@@ -47,6 +47,7 @@ Shared files (the coordinator's):
 | What tests can read and set: each area's `fields.js`, composed by the façade | `src/debug.js` | `facade` |
 | Named scenes (`Gresca.scene(name)`, `?scene=<name>`) for screenshots | `src/scenes.js` | `scenes` |
 | Script loading, no orphan modules, globals | `index.html`, `src/main.js` | `page` |
+| Boot load order: three.js import and the real map fetched together (`startLoads`); the `modulepreload` list in `index.html` | `src/core/boot-loads.js`, `src/main.js`, `index.html` | `page` |
 | How tests see the façade; the seam lint (no `cx`, `H[`, "+y is downhill" outside the procedural map) | `test/harness.js`, `test/map-view.js`, `test/frame.test.js` | all, `frame` |
 
 Tests are `test/<name>.test.js`; run one with `node --test test/<name>.test.js`, an area with `npm run test:<area>`
