@@ -49,7 +49,9 @@ for (const [name, g] of Object.entries(maps)) {
    assert.equal(features(FEATURE_KIND.FLAG).length, 2 * course.kickers.length + 2 * bigs + course.rails.length);
    assert.deepEqual(mesh.counts, { kickers: course.kickers.length, rails: course.rails.length,
     flags: 2 * course.kickers.length + 2 * bigs + course.rails.length });
-   assert.ok(course.kickers.length > 0 && course.rails.length > 0);
+   assert.ok(course.rails.length > 0);
+   // the play mountain's jumps are snow in the terrain (K1), not kicker features: only the test slope has kickers
+   assert.equal(course.kickers.length > 0, name === 'test slope');
   });
 
   it('centres each kicker on its lip and each rail on its middle', () => {
@@ -192,7 +194,7 @@ for (const [name, g] of Object.entries(maps)) {
   };
 
   it('keeps every feature clearly in view and drops those behind the camera', () => {
-   const k = course.kickers[1];
+   const k = course.kickers[1] || { s: course.rails[4].s0 + 60 }; // a kicker, or on the play mountain the middle row of the jib (the camera 60 m before it)
    const p = { x: 0, y: 0 };
    course.point(k.s - 60, 0, p);
    const t = { x: 0, y: 0 };
@@ -262,7 +264,7 @@ describe('park mesh on the GPU', () => {
   const attrs = { ...mesh.geometry.attributes };
   const indexArray = mesh.geometry.index.array;
   const p = { x: 0, y: 0 };
-  course.point(course.kickers[2].s - 50, 0, p);
+  course.point((course.kickers[2] || { s: course.rails[2].s0 }).s - 50, 0, p);
   const down = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the piste
   const camera = { x: p.x, y: p.y, dirX: down.x, dirY: down.y, fov: FOV };
   const first = again.update(camera);

@@ -13,8 +13,8 @@ import { powderDepth } from './snow.js';
 // A layer may also have heightFast(x,y) (a cheaper approximation, see heightFast below); without it, height is used.
 //   base      the height grid (procedural build or a baked DEM), Catmull-Rom bicubic: see Terrain.grid
 //   sculpt    grooming along the course (C1/C4): none yet
-//   features  kickers, rails and boxes stamped along the course (C2): none yet; today's kicker ramps are still
-//             baked into the procedural base grid by build()
+//   features  the park's jumps stamped on the base snow (world/park/park-layer.js): the play mountain only; the test
+//             slope's kicker ramps are still baked into its base grid by build()
 //   detail    seeded micro-relief: none yet
 const LAYERS = Object.freeze(['base', 'sculpt', 'features', 'detail']);
 
