@@ -1,7 +1,7 @@
 # Hanga Dawn art spec v1.5.0: the environment
 
 `art/gresca-hanga-spec.js` goes from v1.4.0 to v1.5.0. The change is **additive**: one new top-level `environment`
-object and new keys on `maps['el-tarter']`. Nothing existing changes value; `projectRider` is the v1.4 function.
+object, 20 new `palette` keys and new keys on `maps['el-tarter']`. Nothing existing changes value; `projectRider` is the v1.4 function.
 `test/hanga-v15.test.js` checks this against `test/fixtures/hanga-spec-v1.4.0.cjs` (every key path and value, the
 helper functions' source, and `projectRider` over 1,000+ calls). The game does not read `environment` yet: S4 builds
 from it (see "What S4 builds"). Boards: `docs/art/v1.5/` (`trees`, `rocks`, `sky`, `palette` PNGs), drawn by
@@ -18,7 +18,7 @@ older; S6 V4 re-syncs it.
 | `environment.rocks` | `boulder`, `outcrop`, `screeField`, `cliffBand`, and the `snowRule`: slope thresholds and rock share, wind scour, snow cap. |
 | `environment.sky` | The dawn gradient as `{elevationDeg, role}` stops, how it follows `maps[id].sun`, sun disc (5 degrees) and glow, alpenglow, haze by distance. |
 | `environment.backdrops.pyrenees` | Three layers (near 2-8 km, mid 8-18 km, far 18-60 km), snow cap rule, ridge rule, ten named peaks. |
-| `environment.palette.roles` | 20 new colour roles, hex. |
+| `palette` (new keys) | 20 new colour roles, hex, added to the existing palette; v1.4 roles are unchanged. |
 | `environment.contrastTargets` | 25 contrast minimums for the new roles (tested). |
 | `maps['el-tarter']` | `backdrop`, `treeline` (absolute bands), and data-derived `meanSlopeDegData`, `heightRangeM`, `courseAltitudeM`, `startWorld`, `fallLineCompassDeg`, `sunData`, `dataNote`. |
 
@@ -82,17 +82,15 @@ The files carry no land cover, so the treeline itself stays art-directed.
 3. Bushes and rocks, and rock-through-snow on the terrain shader from `rocks.snowRule`.
 4. Sky gradient, sun and glow from `environment.sky` (with E4 dawn haze), following `maps[id].sun`.
 5. Backdrop ridge from `backdrops.pyrenees` and the baked `horizon`, three layers with haze and caps.
-6. Resolve new roles through `environment.palette.roles` as well as `palette` (Look tokens).
+6. Add the new `palette` roles to the Look tokens.
 
 ## Open questions
 
-- **Palette location.** The 20 new roles are in `environment.palette.roles`, not `palette`, because
-  `test/hanga-v14.test.js` compares `palette` with v1.3.0 whole. Moving them is one data edit plus relaxing that one
-  assertion to "every v1.3 role unchanged". Owner or coordinator to decide.
 - **Which sun.** `maps['el-tarter'].sun` is azimuth 110, which is 124 degrees off the fall line (346), outside the
-  60-120 rule in `terrain.sun.rule`. The baked course file says 76, which is 90 degrees off. I did not change either;
+  60-120 rule in `terrain.sun.rule`. The baked course file says 76, which is 90 degrees off. I did not change either (the owner is being asked);
   the boards follow the spec's 110.
 - **Tree fatness.** `trees.pine` draws a crown about 0.7 times its height wide; real mountain pine is 0.35-0.5. The
   new data uses 0.5. Owner to judge on the boards.
 - **Ridge height.** Real peaks are 1.5-6.5 degrees up, so the ridge is lifted 2x; S4 may tune it.
 - **Treeline value.** 2300 m is a regional rule of thumb; real land cover (R6) would replace it.
+- El Tarter sun: spec 110 (real winter dawn, ESE) vs baked 76 (fall line + 90); the 60-120 degree side-light rule.

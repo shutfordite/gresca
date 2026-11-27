@@ -21,12 +21,14 @@ const COURSE = readJson('el-tarter.course.json');
 const RAD_TO_DEG = 180 / Math.PI;
 const NEW_MAP_KEYS = ['backdrop', 'treeline', 'meanSlopeDegData', 'heightRangeM', 'courseAltitudeM', 'startWorld',
  'fallLineCompassDeg', 'sunData', 'dataNote'];
+const NEW_ROLES = ['pineLit', 'fir', 'firS', 'firLit', 'snowLoad', 'snowLoadS', 'krummholz', 'krummholzS', 'scrub',
+ 'scrubS', 'rhodo', 'rockLit', 'scree', 'screeS', 'cliff', 'mtnMid', 'mtnMidS', 'mtnMidCap', 'alpenglow', 'sunGlow'];
 const HEX = /^#[0-9A-F]{6}$/i;
 const BEARING_TOL_DEG = 0.1;
 const DIST_TOL_M = 1;
 
 const isObject = (v) => v !== null && typeof v === 'object';
-const hasRole = (role) => role in HANGA.palette || role in ENV.palette.roles;
+const hasRole = (role) => role in HANGA.palette;
 const inRange = (v, lo, hi, msg) => assert.ok(Number.isFinite(v) && v >= lo && v <= hi, `${msg}: ${v}`);
 
 const asLeaf = (v) => (typeof v === 'function' ? v.toString() : v);
@@ -70,7 +72,8 @@ test('v1.5 is additive over v1.4.0', async (t) => {
   assert.deepEqual(Object.keys(HANGA).filter((k) => !(k in V14)), ['environment']);
   assert.deepEqual(Object.keys(HANGA.maps['el-tarter']).filter((k) => !(k in V14.maps['el-tarter'])), NEW_MAP_KEYS);
   assert.deepEqual(Object.keys(HANGA.maps.procedural), Object.keys(V14.maps.procedural));
-  assert.deepEqual(HANGA.palette, V14.palette, 'palette is unchanged: the new roles are in environment.palette');
+  const added = Object.keys(HANGA.palette).filter((k) => !(k in V14.palette));
+  assert.deepEqual(added, NEW_ROLES, 'palette gains exactly the new roles');
  });
  await t.test('projectRider gives the v1.4 draw list for a spread of rigs, poses, yaws and options', () => {
   const optionSets = [undefined, {}, { cameraPitchDeg: 37 }, { twistDeg: 15, headYawDeg: -25 },
@@ -101,7 +104,7 @@ test('v1.5 is additive over v1.4.0', async (t) => {
 
 test('environment: structure, roles and numbers', async (t) => {
  await t.test('required sections and sets exist', () => {
-  for (const key of ['trees', 'treeline', 'bushes', 'rocks', 'sky', 'backdrops', 'palette', 'contrastTargets']) {
+  for (const key of ['trees', 'treeline', 'bushes', 'rocks', 'sky', 'backdrops', 'contrastTargets']) {
    assert.ok(isObject(ENV[key]), key);
   }
   assert.deepEqual(Object.keys(ENV.trees.sets), ['pine', 'sugi']);
@@ -113,26 +116,21 @@ test('environment: structure, roles and numbers', async (t) => {
   assert.ok(ENV.trees.sets[TARTER.treeSet] && ENV.backdrops[TARTER.backdrop], 'El Tarter finds its sets');
   assert.equal(HANGA.maps.procedural.treeSet in ENV.trees.sets, true);
  });
- await t.test('every number is finite and no colour is a raw hex outside environment.palette', () => {
+ await t.test('every number is finite and no colour is a raw hex', () => {
   numbers(ENV).forEach((n) => assert.ok(Number.isFinite(n)));
-  const rest = { ...ENV, palette: null };
-  assert.ok(!/#[0-9a-f]{3,8}\b/i.test(JSON.stringify(rest)), 'no raw hex');
-  for (const [role, hex] of Object.entries(ENV.palette.roles)) {
-   assert.match(hex, HEX, role);
-   assert.ok(!(role in HANGA.palette), `${role} is new`);
-  }
-  assert.equal(Object.keys(ENV.palette.roles).length, 20);
+  assert.ok(!/#[0-9a-f]{3,8}\b/i.test(JSON.stringify(ENV)), 'no raw hex');
+  for (const role of NEW_ROLES) assert.match(HANGA.palette[role], HEX, role);
  });
  await t.test('every role the environment names exists', () => {
-  const refs = roleRefs({ ...ENV, palette: null });
+  const refs = roleRefs(ENV);
   assert.ok(refs.length > 90, `${refs.length} references`);
   for (const role of new Set(refs)) assert.ok(hasRole(role), `role ${role}`);
-  for (const role of Object.keys(ENV.palette.roles)) assert.ok(refs.includes(role), `${role} is used`);
+  for (const role of NEW_ROLES) assert.ok(refs.includes(role), `${role} is used`);
  });
  await t.test('contrast targets hold', () => {
   const contrast = (a, b) => {
    const lum = (role) => {
-    const hex = HANGA.palette[role] || ENV.palette.roles[role];
+    const hex = HANGA.palette[role];
     return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);

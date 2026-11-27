@@ -1,7 +1,6 @@
 <!doctype html>
 <!-- Hanga Dawn v1.5 boards: a design tool (S6), not game code. Reads art/gresca-hanga-spec.js and draws one 1600 x 1000
-     board per ?board=trees|rocks|sky|palette. Every colour is a palette role (HANGA.palette or
-     HANGA.environment.palette.roles). Make the PNGs with Playwright: see docs/art/HANGA-v1.5.md. -->
+     board per ?board=trees|rocks|sky|palette. Every colour is a palette role (HANGA.palette). Make the PNGs with Playwright: see docs/art/HANGA-v1.5.md. -->
 <meta charset="utf-8">
 <title>Hanga Dawn v1.5 boards</title>
 <style>html, body { margin: 0; background: #888; } canvas { display: block; }</style>
@@ -17,7 +16,7 @@ const HT = 1000;
 const FONT = 'system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif';
 
 // ---- colour and drawing helpers -------------------------------------------------------------------------------
-const hexOf = (role) => H.palette[role] || E.palette.roles[role];
+const hexOf = (role) => H.palette[role];
 const toRgb = (role) => { const h = hexOf(role); return [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); };
 const mixRole = (a, b, t) => {
   const x = toRgb(a), y = toRgb(b);
@@ -334,7 +333,7 @@ function hazeAt(distM) {
   return { mix: s[s.length - 1].mix, role: s[s.length - 1].role };
 }
 const angDiff = (a, b) => ((a - b + 540) % 360) - 180; // signed degrees, a - b in (-180, 180]
-function skyPanel(y0, h, centre, hfov, caption) {
+function skyPanel(y0, h, centre, hfov, caption, step) {
   const sun = H.maps['el-tarter'].sun, bd = E.backdrops[H.maps['el-tarter'].backdrop], ridge = bd.ridge;
   const ppd = W / hfov, horizon = y0 + Math.round(h * 0.74);
   const xOf = (az) => W / 2 + angDiff(az, centre) * ppd;
@@ -411,7 +410,7 @@ function skyPanel(y0, h, centre, hfov, caption) {
   }
   // labels, staggered
   labels.sort((a, b) => a[0] - b[0]).forEach(([px, apexY, p], i) => {
-    const ly = Math.min(apexY - 16, horizon - 8) - (i % 4) * 22;
+    const ly = Math.min(apexY - 16, horizon - 8) - ((i * step) % 4) * 32;
     ctx.strokeStyle = hexOf('key'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, apexY - 3); ctx.lineTo(px, ly + 4); ctx.stroke();
     text(p.name, px, ly - 12, 13, 'key', 'center', 700);
     text(p.altM + ' m, ' + (p.distM / 1000).toFixed(1) + ' km, ' + p.bearingCompassDeg.toFixed(0) + ' deg', px, ly + 2, 11, 'indigo', 'center');
@@ -423,13 +422,13 @@ function boardSky() {
   title('Dawn sky and the Pyrenees backdrop', 'From the El Tarter course start (2462 m). Real peak bearings, distances and altitudes; ridge height lifted x'
     + E.backdrops.pyrenees.ridge.verticalExaggeration + ' (ridge.verticalExaggeration)');
   const A = H.maps['el-tarter'];
-  skyPanel(90, 440, A.fallLineCompassDeg, 150, 'Looking down the course, compass ' + A.fallLineCompassDeg + ' deg (the sky and sun follow maps[el-tarter].sun, azimuth ' + A.sun.azimuthDeg + ')');
-  skyPanel(540, 456, A.sun.azimuthDeg, 150, 'Looking toward the sun, compass ' + A.sun.azimuthDeg + ' deg, elevation ' + A.sun.elevationDeg + ' deg: glow, alpenglow on far and mid caps');
+  skyPanel(90, 440, A.fallLineCompassDeg, 150, 'Looking down the course, compass ' + A.fallLineCompassDeg + ' deg (the sky and sun follow maps[el-tarter].sun, azimuth ' + A.sun.azimuthDeg + ')', 3);
+  skyPanel(540, 456, A.sun.azimuthDeg, 150, 'Looking toward the sun, compass ' + A.sun.azimuthDeg + ' deg, elevation ' + A.sun.elevationDeg + ' deg: glow, alpenglow on far and mid caps', 1);
 }
 
 // ---- board 4: palette and contrast --------------------------------------------------------------------------------
 function boardPalette() {
-  title('New palette roles and contrast', 'environment.palette.roles (hex) and environment.contrastTargets: every pair measured as WCAG contrast');
+  title('New palette roles and contrast', 'the 20 new roles in palette (hex) and environment.contrastTargets: every pair measured as WCAG contrast');
   const groups = [
     ['Trees', ['pineLit', 'fir', 'firS', 'firLit', 'snowLoad', 'snowLoadS']],
     ['Bushes', ['krummholz', 'krummholzS', 'scrub', 'scrubS', 'rhodo']],
@@ -450,13 +449,13 @@ function boardPalette() {
     });
     y += 128;
   });
-  text('Roles live in environment.palette; the top-level palette is unchanged.', 40, y + 4, 12, 'indigo');
+  text('The new roles are additive keys of HANGA.palette; v1.4 roles are unchanged.', 40, y + 4, 12, 'indigo');
   // contrast table
-  const list = E.contrastTargets, colW = 430, x0 = 770;
+  const list = E.contrastTargets, colW = 380, x0 = 770;
   const rows = Math.ceil(list.length / 2), rowH = 33;
   text('Contrast targets: a on b, measured / minimum', x0, 100, 14, 'indigo', 'left', 700);
   list.forEach((t, i) => {
-    const col = Math.floor(i / rows), row = i % rows, x = x0 + col * (colW + 20), yy = 112 + row * rowH;
+    const col = Math.floor(i / rows), row = i % rows, x = x0 + col * (colW + 14), yy = 112 + row * rowH;
     const ratio = contrast(t.a, t.b);
     ctx.fillStyle = hexOf(t.b); ctx.fillRect(x, yy, 62, 28);
     ctx.fillStyle = hexOf(t.a); ctx.fillRect(x + 12, yy + 7, 38, 14);

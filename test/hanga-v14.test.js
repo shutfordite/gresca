@@ -57,7 +57,8 @@ test('v1.4 metadata', async (t) => {
       assert.deepEqual(HANGA.rider.equipment[rig].shapes, V13.rider.equipment[rig].shapes);
     }
     assert.deepEqual(HANGA.rider.widths, V13.rider.widths);
-    assert.deepEqual(HANGA.palette, V13.palette, 'palette roles unchanged');
+    // Later versions add roles; every v1.3 role keeps its colour.
+    for (const [role, hex] of Object.entries(V13.palette)) assert.equal(HANGA.palette[role], hex, `palette role ${role}`);
     assert.equal(HANGA.camera.chasePitchDeg, V13.camera.chasePitchDeg);
   });
   await t.test('new geometry uses palette roles only, and the file stays safe to inline', async () => {
