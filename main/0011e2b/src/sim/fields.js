@@ -1,5 +1,6 @@
 // The sim's façade fields (debug.js state() and set()): the rider, the session and the spray, by their state() names.
 import { field, prop } from '../core/facade-fields.js';
+import { sprayCount } from './particles.js';
 
 /**
  * The sim's fields, in state() order. r: RiderState, s: the session, spray: {particles}, course: the Course (its rails
@@ -47,7 +48,7 @@ export function simFields(r, s, spray, course) {
   landingSpeed: prop(r, 'landingSpeed'), // m/s downward at the last touchdown
   rig: prop(s, 'rig'),               // 'board' | 'ski' (set() writes the state only: no menu, no storage)
   stance: prop(s, 'stance'),         // 'regular' | 'goofy'
-  particles: field(() => spray.particles.length), // live spray, read only (see clearParticles, emitParticles)
+  particles: field(() => sprayCount(spray)), // live spray, read only (see clearParticles, emitParticles)
   // RiderState fields derived after each step, read only (core/contracts.js)
   travelHeading: field(() => r.travelHeading), // rad, direction of travel
   boardHeading: field(() => r.boardHeading),   // rad, direction the board points

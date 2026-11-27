@@ -6,7 +6,7 @@
 // the last two steps by the leftover fraction (alpha), so motion stays smooth when frames and steps don't line up.
 import { SIM_DT, SIM_MAX, SIM_EPS } from '../core/config.js';
 import { step } from './step.js';
-import { stepParticles } from './particles.js';
+import { stepSpray } from './particles.js';
 import { publish, afterStep } from '../core/events.js';
 import { recordInput } from '../core/input-log.js';
 
@@ -30,7 +30,7 @@ export function snapInterpolation(timestep, rider) {
 export function simTick(sim, dt = SIM_DT) {
  recordInput(sim.inputLog, sim.input);
  const events = step(sim.state, sim.input, sim.world, dt);
- stepParticles(sim.state.spray.particles, dt);
+ stepSpray(sim.state.spray, dt);
  publish(sim.bus, events);
  afterStep(sim.bus, dt);
 }

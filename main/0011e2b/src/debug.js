@@ -14,7 +14,7 @@ import { on, publish, afterStep } from './core/events.js';
 import { startRecording, stopRecording, readInput } from './core/input-log.js';
 import { worldFacade } from './world/fields.js';
 import { step } from './sim/step.js';
-import { emit, stepParticles } from './sim/particles.js';
+import { emit, stepSpray, clearSpray, sprayCopies } from './sim/particles.js';
 import { simTick, snapInterpolation } from './sim/timestep.js';
 import { applyScene, SCENES } from './scenes.js';
 import { simFields } from './sim/fields.js';
@@ -107,6 +107,14 @@ export function createFacade(g) {
  }
  const facade = {
   state,
+  // Frames drawn since the game began. The loop skips the draw while nothing can change (app.js), so this stands
+  // still while paused, hidden or behind the Controls screen. A function, not a state() field: it is a counter, not
+  // part of the game's state (two games that reached the same state differ in it).
+  draws: () => g.idle.draws,
+  // Replaces the renderer's report as a lost or restored WebGL context does (view/gl/context-loss.js), for tests: the
+  // loop then draws one still frame even while paused. report: {name, fallback, ...} as debug.renderer() gives.
+  reportRenderer: (report) => { g.view.renderer = { ...report }; },
+  requestDraw: g.requestDraw, // asks the start screen for a few more frames (app.js)
   set,
   // New run (start()), then put the rider at {x, y (world m) or s, d (course m), vx, vy (m/s), heading (rad), z, vz}:
   // defaults s 500 (the empty practice stretch), d 0 (the piste centreline), at rest, heading straight down the map
@@ -154,17 +162,17 @@ export function createFacade(g) {
    publish(g.bus, step(g.sim.state, input, g.sim.world, dt));
    afterStep(g.bus, dt);
   },
-  stepParticles(dt) { stepParticles(spray.particles, dt); }, // one spray step only
+  stepParticles(dt) { stepSpray(spray, dt); }, // one spray step only
   cycleCamera: () => g.cycleCamera(),   // the next camera mode (A, B, C, A); returns its id, saved under gresca-cam
   setCameraMode: (id) => g.setCameraMode(id), // pick the camera mode by id; throws on an unknown id
   frame(dt) { g.frame(dt, 1); },        // move the camera and draw one frame (terrain, rider, HUD), dt in s
   start() { g.startRun(); },            // what the Drop in button does
   input(o) { set({ input: o }); },      // {left,right,brake,jump}, any subset; bypasses touch and keyboard
   resetInput() { resetInput(input); },  // lift every finger and key
-  clearParticles() { spray.particles.length = 0; },
+  clearParticles() { clearSpray(spray); },
   // copies of the live spray: m, m/s, s
   particles() {
-   return spray.particles.map((p) => ({ x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, vz: p.vz, t: p.t, life: p.life }));
+   return sprayCopies(spray);
   },
   // m, m, m, m/s, m/s, m/s, m/s
   emitParticles(n, px, py, pz, spread, up, dvx, dvy) { emit(spray, n, px, py, pz, spread, up, dvx, dvy); },

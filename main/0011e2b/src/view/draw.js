@@ -7,6 +7,7 @@ import { projectInto, drawFlags, drawRails, drawPistePoles } from './sprites.js'
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
 import { cssRgba } from './look/look.js';
+import { sprayPool } from '../sim/particles.js';
 import { STAGE, TREE_SLICES, treeStyle } from './view-state.js';
 import { TREE_FAR_M, TREE_HEIGHT_M } from './gl/tree-mesh.js'; // m: the sprites and the GPU trees share them
 
@@ -76,7 +77,7 @@ export function updateCamera(view, scene, dt, alpha) {
 /**
  * Draws one frame from the camera and pose updateCamera() set. dt: s since the last drawn frame (animation).
  * scene: {canvas, ctx (the screen), camera, rider, session, input, terrain, course, frame (the MapFrame), treeArr,
- * particles, timestep, look (the Look), riderAnim}. Mutates view (render buffers, animation, counts); reads the
+ * spray, timestep, look (the Look), riderAnim}. Mutates view (render buffers, animation, counts); reads the
  * rest.
  */
 export function draw(view, scene, dt) {
@@ -115,7 +116,7 @@ export function drawSprites(view, scene, dt, objectsOnGpu = false) {
   view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
   view.polesDrawn = drawPistePoles(ctx, camera, terrain, scene.course, view, scene.pistePoles, look.sprites);
  }
- drawSpray(ctx, camera, terrain, view, scene.particles, look.sprites.spray);
+ drawSpray(ctx, camera, terrain, view, sprayPool(scene.spray), look.sprites.spray);
  if (timer !== null) timer.lap(STAGE.SPRITES);
  drawRiderOnSnow(ctx, view, scene, view.groundM, dt);
  if (timer !== null) timer.lap(STAGE.RIDER);
@@ -352,15 +353,15 @@ function sortTrees(buf) {
 }
 
 // Snow spray particles, fading and growing as they age (near the camera no bigger than SPRAY_NEAR_SCALE), each its
-// own size (p.r: a powder plume's puffs are bigger and fade slower, sim/particles.js). spray: the Look's
-// sprites.spray. view: its projection scratch.
-function drawSpray(ctx, camera, terrain, view, particles, spray) {
+// own size (r: a powder plume's puffs are bigger and fade slower, sim/particles.js). pool: the spray's ParticlePool.
+// spray: the Look's sprites.spray. view: its projection scratch.
+function drawSpray(ctx, camera, terrain, view, pool, spray) {
  const P = view.projA;
  const most = camera.focalPx / camera.back * camera.pixelScale * SPRAY_NEAR_SCALE; // px per m: puffs nearer the camera
- for (const p of particles) {
-  if (!projectInto(camera, p.x, p.y, terrain.height(p.x, p.y) + p.z, P)) continue;
-  const k = p.t / p.life;
-  const r = p.r || 1;
+ for (let i = 0; i < pool.count; i++) {
+  const t = pool.t[i], life = pool.life[i], r = pool.r[i] || 1;
+  if (!projectInto(camera, pool.x[i], pool.y[i], terrain.height(pool.x[i], pool.y[i]) + pool.z[i], P)) continue;
+  const k = t / life;
   const fade = r > 1 ? (1 - k) * (1 - k * 0.5) : 1 - k; // a plume hangs, then thins
   ctx.fillStyle = cssRgba(spray.rgb, spray.maxAlpha * fade);
   ctx.beginPath();
