@@ -7,6 +7,7 @@ import { createEventBus, onStep } from './core/events.js';
 import { createInputLog } from './core/input-log.js';
 import { createRider, createSession, resetDerived } from './sim/state.js';
 import { createTimestep, snapInterpolation, advance } from './sim/timestep.js';
+import { createSpray, clearSpray } from './sim/particles.js';
 import { createInput } from './input/input.js';
 import { bindInput } from './input/bind-input.js';
 import { createView, resizeScreen } from './view/view-state.js';
@@ -31,6 +32,10 @@ const START_SPEED = 2;  // m/s down the map at the drop
 const MENU_HEADING = 1.57; // rad on the map's grid: just short of straight down
 const CAM_KEY = 'gresca-cam'; // localStorage: the id of the camera mode last used
 const BOOT_DELAY_MS = 60; // ms, lets the page paint "Building the mountain..." before the build blocks
+const DRAW_NONE = 0; // wantsDraw(): skip this tick
+const DRAW_FULL = 1; // step the sim, move the camera and draw
+const DRAW_STILL = 2; // draw once with no step and dt 0
+const MENU_SETTLE_S = 2; // s, how long the start screen keeps drawing after something changed (the camera easing in)
 
 // The menu text on a real map: its run and its data credits (ODbL attribution must show with real map data).
 function mapMenuText(world) {
@@ -74,10 +79,20 @@ export function createGame(env) {
  const look = createHangaLook(env.HANGA, env.RiderAnim); // every colour, tone and style the view draws with
  const world = env.world || createWorld({ rotationRad: env.mapRotationRad || 0, map: env.map || 'test' });
  const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
+ // Idle frames: what the loop needs to know to skip a draw. draws: frames drawn (the façade's draws); settleS: s the
+ // start screen still draws; the last* fields are what the picture depended on at the last tick (a change redraws).
+ const idle = {
+  draws: 0, settleS: MENU_SETTLE_S,
+  wasHidden: false, stillDue: false,
+  lastRig: '', lastStance: '', lastCam: -1, lastCssW: 0, lastW: 0, lastH: 0, lastRenderer: null,
+ };
  const view = createView(env.document, look);
  const ui = getUi(env.document);
  applyUiTokens(env.document, look.ui);
- const resize = () => resizeScreen(view, ui.canvas, env.devicePixelRatio);
+ const resize = () => {
+  resizeScreen(view, ui.canvas, env.devicePixelRatio);
+  requestDraw();
+ };
  env.window.addEventListener('resize', resize);
  resize();
 
@@ -87,7 +102,7 @@ export function createGame(env) {
  const session = createSession();
  const input = createInput();
  const rng = createRng(1);
- const spray = { particles: [], rng };
+ const spray = createSpray(rng); // snow spray (sim/particles.js)
  const timestep = createTimestep();
  const clock = { lastMs: 0, dt: 0 }; // ms, the last frame's timestamp; s, the last frame's real duration
  const render = { draw }; // the frame drawer: the CPU raycaster until the boot picks (view/renderer.js)
@@ -119,12 +134,54 @@ export function createGame(env) {
   frame: mapFrame,
   treeArr: world.treeArr,
   pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
-  particles: spray.particles, timestep, look, riderAnim: env.RiderAnim, camMode,
+  spray, timestep, look, riderAnim: env.RiderAnim, camMode,
  };
+
+ // Asks for a frame: the start screen draws for MENU_SETTLE_S more seconds. Anything that changes the picture calls it.
+ function requestDraw() {
+  idle.settleS = MENU_SETTLE_S;
+ }
+
+ // What the loop does this tick: DRAW_NONE, DRAW_FULL (step the sim, move the camera, draw) or DRAW_STILL (draw one
+ // frame with no step and dt 0). Nothing while paused, hidden or behind the Controls screen, except one still frame
+ // when the size or the renderer changed or the page became visible again. On the start screen only while it settles
+ // after a change; the run, the finish and the load draw every frame.
+ function wantsDraw(dt) {
+  if (env.document.hidden) {
+   idle.wasHidden = true;
+   return DRAW_NONE;
+  }
+  let changed = idle.wasHidden;
+  idle.wasHidden = false;
+  if (view.cssW !== idle.lastCssW || view.W !== idle.lastW || view.Hh !== idle.lastH ||
+   view.renderer !== idle.lastRenderer) {
+   idle.lastCssW = view.cssW;
+   idle.lastW = view.W;
+   idle.lastH = view.Hh;
+   idle.lastRenderer = view.renderer;
+   changed = true;
+  }
+  if (hud.paused || !ui.ctl.hidden) {
+   idle.stillDue = idle.stillDue || changed;
+   if (!idle.stillDue) return DRAW_NONE;
+   idle.stillDue = false;
+   return DRAW_STILL;
+  }
+  if (session.phase !== 'ready') return DRAW_FULL;
+  if (changed || session.rig !== idle.lastRig || session.stance !== idle.lastStance || camMode.index !== idle.lastCam) {
+   idle.lastRig = session.rig;
+   idle.lastStance = session.stance;
+   idle.lastCam = camMode.index;
+   requestDraw();
+  }
+  idle.settleS -= dt;
+  return idle.settleS > 0 ? DRAW_FULL : DRAW_NONE;
+ }
 
  // Picks the camera mode at index (0 to the last) and remembers it. Returns the mode's id.
  function pickCameraMode(index) {
   camMode.index = index;
+  requestDraw();
   saveCameraMode(env, index);
   showCameraLabel(ui, CAM_MODES[index].label);
   return CAM_MODES[index].id;
@@ -162,7 +219,7 @@ export function createGame(env) {
   session.events.length = 0;
   rider.airTime = 0;
   rider.fromKicker = false;
-  spray.particles.length = 0;
+  clearSpray(spray);
   rider.z = rider.vz = input.jump = 0;
   rider.rotation = 0;
   input.both = false;
@@ -180,6 +237,7 @@ export function createGame(env) {
 
  // Moves the camera, then draws a frame and the HUD. dt: s since the last frame; alpha: see view/draw.js riderPose().
  function frame(dt, alpha) {
+  idle.draws++;
   const t0 = fps ? env.now() : 0;
   updateCamera(view, scene, dt, alpha);
   render.draw(view, scene, dt);
@@ -194,6 +252,21 @@ export function createGame(env) {
  function loop(ts) {
   const dt = Math.max(0, (ts - clock.lastMs) / 1000 || 0);
   clock.lastMs = ts;
+  const want = session.phase === 'load' ? DRAW_FULL : wantsDraw(dt);
+  if (want === DRAW_NONE) {
+   // nothing can change: no step, no draw. lastMs keeps ticking, so resuming starts from one frame's dt, not the
+   // whole stop; the step count is capped by advance() anyway
+   clock.dt = 0;
+   env.requestAnimationFrame(loop);
+   return;
+  }
+  if (want === DRAW_STILL) {
+   // a size, renderer or visibility change while paused: the last pose once more, nothing moves
+   clock.dt = 0;
+   frame(0, timestep.acc / SIM_DT);
+   env.requestAnimationFrame(loop);
+   return;
+  }
   clock.dt = dt;
   // paused: no steps, the accumulator and the camera stand still (dt 0), the last pose is drawn again
   const alpha = hud.paused ? timestep.acc / SIM_DT : advance(sim, timestep, dt);
@@ -233,7 +306,8 @@ export function createGame(env) {
   rider.wipeoutSpin = 0;
   rider.z = rider.vz = 0;
   rider.grind = null;
-  spray.particles.length = 0;
+  clearSpray(spray);
+  requestDraw();
   menuCamera(camera, world.terrain.height(rider.x, rider.y), view.mapFrame, CAM_MODES[camMode.index]);
   ui.msgT.textContent = world.layout ? MENU_TEXT : mapMenuText(world);
   ui.go.textContent = 'Drop in';
@@ -255,7 +329,7 @@ export function createGame(env) {
 
  const facade = createFacade({
   rider, session, input, camera, view, world, rng, spray, timestep, sim, scene, look, hud, bus, inputLog, startRun,
-  frame, camMode, cycleCamera, setCameraMode,
+  frame, camMode, cycleCamera, setCameraMode, idle, requestDraw,
  });
  return facade;
 }
