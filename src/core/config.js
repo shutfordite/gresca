@@ -16,26 +16,26 @@ export const TAU = Math.PI * 2; // rad, one full turn
 // float: m/s, the speed at which it planes on top of deep powder instead of ploughing through it.
 export const RIGS = Object.freeze({
  board: Object.freeze({
-  turn: 1,
-  spin: 7,
-  sidecut: 5.5,
-  edgeRate: 2.2,
-  releaseRate: 4.5,
-  edgeGrip: 28,
-  skidGrip: 0.72,
-  yawLag: 0.09,
-  float: 9,
+  turn: 1, // dimensionless, low-speed pivot gain
+  spin: 7, // rad/s in the air
+  sidecut: 5.5, // m, carve radius at 90 degrees of edge
+  edgeRate: 2.2, // rad/s, tipping onto an edge
+  releaseRate: 4.5, // rad/s, flattening or rolling over
+  edgeGrip: 28, // m/s², sideways hold of a full edge on firm snow
+  skidGrip: 0.72, // 0..1 of edgeGrip once sliding
+  yawLag: 0.09, // s, swing weight
+  float: 9, // m/s, planes on deep powder
  }),
  ski: Object.freeze({
-  turn: 1.12,
-  spin: 8,
-  sidecut: 7.5,
-  edgeRate: 3.6,
-  releaseRate: 5.5,
-  edgeGrip: 32,
-  skidGrip: 0.78,
-  yawLag: 0.05,
-  float: 13,
+  turn: 1.12, // dimensionless, low-speed pivot gain
+  spin: 8, // rad/s in the air
+  sidecut: 7.5, // m, carve radius at 90 degrees of edge
+  edgeRate: 3.6, // rad/s, tipping onto an edge
+  releaseRate: 5.5, // rad/s, flattening or rolling over
+  edgeGrip: 32, // m/s², sideways hold of a full edge on firm snow
+  skidGrip: 0.78, // 0..1 of edgeGrip once sliding
+  yawLag: 0.05, // s, swing weight
+  float: 13, // m/s, planes on deep powder
  }),
 });
 
