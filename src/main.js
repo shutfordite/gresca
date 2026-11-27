@@ -1,5 +1,6 @@
 // Entry point: builds the browser environment and starts one game. The only file that reads browser globals.
 import { createGame } from './app.js';
+import { startLoads } from './core/boot-loads.js';
 import { loadMapSteps } from './world/map-loader.js';
 
 // What the game needs from the browser. devicePixelRatio and localStorage are getters, read at each use as before:
@@ -15,6 +16,7 @@ import { loadMapSteps } from './world/map-loader.js';
 // ?map=<id> for any other id loads the real map maps/<id>.terrain.json and maps/<id>.course.json (C4b, ADR 0011):
 // fetched here, built in chunks with the progress on the menu, then handed to the game. If either file fails, the
 // game warns and opens on the play mountain.
+// The three.js import starts before the map fetch and both are awaited together (core/boot-loads.js, G2).
 const query = (name) => new URLSearchParams(window.location.search).get(name);
 const REAL_MAP_ID = /^[a-z0-9-]{1,40}$/; // a real map's id: the file names in maps/
 const LOAD_YIELD_MS = 0; // ms between load chunks: lets the page paint the progress
@@ -55,15 +57,13 @@ async function loadRealMap(id) {
 const mapParam = query('map');
 const realMapId = mapParam && mapParam !== 'test' && mapParam !== 'play' && !query('scene') &&
  REAL_MAP_ID.test(mapParam) ? mapParam : null;
-const world = realMapId ? await loadRealMap(realMapId) : null;
 const rotDeg = Number(query('rot'));
 const renderer = query('renderer') === 'cpu' ? 'cpu' : 'gl';
-const THREE = renderer === 'gl'
- ? await import('../vendor/three/three.module.js').catch((e) => {
-  console.warn('Gresca: three.js did not load (' + e.message + ')');
-  return null;
- })
- : null;
+// The three.js import and the real map's files load together (core/boot-loads.js); index.html preloads both for it.
+const { THREE, world } = await startLoads({
+ renderer, mapId: realMapId, loadMap: loadRealMap, warn: (message) => console.warn(message),
+ importThree: () => import('../vendor/three/three.module.js'),
+});
 
 const env = Object.freeze({
  scene: query('scene'),
