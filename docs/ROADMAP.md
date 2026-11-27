@@ -291,3 +291,17 @@ K0 goes first and alone (a contract PR). Then K1, K2 and K3 in parallel (K2 and 
 files; K3 waits for K1 only for the play mountain layout, and tests on its own fixtures). K4 starts when K1, K4a and #67 are
 in; K5 and K6 after K3. Acceptance for K: on the iPad, ride the play mountain's park top to bottom, land every jump
 size on its landing at the speed its run-in gives, and grind a down-flat-down rail and a C-rail without falling off.
+
+**Notes for K1–K3** (coordinator, 27 Nov, after K0 #100 and G1–G3; the owner holds the start):
+- Read ADR 0012 first: the fields and units, the world points (N1) and what stays until K1–K3. Heights are above the
+  **base snow** (`heightAt` without the features layer): K1 stamps from it and K3's rail contact measures from it.
+- The golden trace: K2 and K3 each re-record it once. They run in parallel, so the second to merge merges `main`,
+  re-records again and says so in its PR; neither loosens a tolerance.
+- K3 sends `style` and `kinks` on `grindStart`/`grindEnd` (declared optional in K0) and fills `RiderState.grind`
+  `seg`, `style` and `balance` (-1..1, off at ±1; the range is the contract, the drift is K3's tuning).
+- Spray (G1, #103): emit through `emit()` and reach it through the `sim/particles.js` accessors; the spray is a fixed
+  typed-array pool (`createSpray` in tests, not `{ particles: [] }`).
+- Frames (G3, #101): the loop skips the sim while paused and the menu stops drawing when settled. Anything that changes
+  the picture outside a run (K4's park on the menu camera, say) calls `requestDraw()`.
+- Loading (G2, #102): every new `src/` file needs a `modulepreload` line in `index.html`; `test/page.test.js` fails
+  until it is there.
