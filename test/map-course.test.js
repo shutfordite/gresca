@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { compileCourse, stringifyMap } from '../tools/map-compiler/core.js';
+import { compileCourse, lastPointS, stringifyMap } from '../tools/map-compiler/core.js';
 import { runCli } from '../tools/map-compiler/cli.mjs';
 import { MEAN_SLOPE_TOLERANCE_DEG } from '../tools/map-compiler/course-format.js';
 import { validateCourse, validateTerrain, widthAtS } from '../tools/map-compiler/validate.js';
@@ -252,6 +252,20 @@ describe('the course CLI', () => {
    assert.equal(await runCli(['--course', '--terrain', terrainPath, '--run', 'way/8'], quiet), 1);
   } finally {
    fs.rmSync(dir, { recursive: true });
+  }
+ });
+});
+
+describe('the default finish', () => {
+ it('is the run length on the point step, never rounded past the end of the run', () => {
+  assert.equal(lastPointS(2864.76), 2864.7); // Àliga: 2864.8 would be past the end
+  assert.equal(lastPointS(2864.72), 2864.7);
+  assert.equal(lastPointS(2864.7), 2864.7);
+  assert.equal(lastPointS(1000), 1000);
+  for (let i = 0; i < 1000; i++) {
+   const length = 300 + i * 1.237;
+   const s = lastPointS(length);
+   assert.ok(s <= length && length - s < 0.1 + 1e-9, length + ' -> ' + s);
   }
  });
 });

@@ -288,13 +288,23 @@ const SUN_ROUND_DEG = 1; // deg, the default sun azimuth's rounding
  * 1). The far horizon layer repeats the near one: only the terrain grid is known here. Throws an Error when the run
  * is not in the terrain or does not join. Write it with stringifyMap().
  */
+/**
+ * m, the default finish: the run's length (m) rounded to the file's point step, never past the end. Rounding to the
+ * nearest step could round up past the end, which the course validator rejects (the first El Tarter bake, Àliga).
+ */
+export function lastPointS(length) {
+ const steps = Math.floor(length / POINT_ROUND_M + 1e-6); // the 1e-6 keeps an exact multiple from flooring one short
+ const s = roundTo(steps * POINT_ROUND_M, POINT_ROUND_M);
+ return s <= length ? s : roundTo((steps - 1) * POINT_ROUND_M, POINT_ROUND_M);
+}
+
 export function compileCourse({ terrain, run, name, widthM, startS = 0, finishS, kickers = [], rails = [], sun,
  treeSet = 'pine', horizonStepDeg = 1 }) {
  const layer = terrainLayer(terrain);
  const { parts, problems } = selectParts(terrain, run);
  if (problems.length > 0) throw new Error('compileCourse: ' + problems.join('; '));
  const course = runCourse(terrain, parts, layer);
- const end = finishS ?? course.length;
+ const end = finishS ?? lastPointS(course.length);
  const difficulty = difficultyOf(parts);
  const width = widthM ?? DIFFICULTY_WIDTH_M[difficulty];
  const top = course.point(startS, 0, {});
