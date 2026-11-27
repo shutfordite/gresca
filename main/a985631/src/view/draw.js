@@ -3,7 +3,7 @@
 import { FOV, RAY_SAMPLES, RAY_EXACT_M, RAY_START_M, RAY_SPREAD, CAM_BACK, RIDER_SCALE } from '../core/config.js';
 import { followRider } from './camera.js';
 import { fogAt, drawSky, drawSun } from './sky.js';
-import { projectInto, drawFlags, drawRails } from './sprites.js';
+import { projectInto, drawFlags, drawRails, drawPistePoles } from './sprites.js';
 import { animTick } from './rider-animation.js';
 import { drawRider } from './rider-draw.js';
 import { cssRgba } from './look/look.js';
@@ -100,6 +100,7 @@ export function drawSprites(view, scene, dt, objectsOnGpu = false) {
  if (!objectsOnGpu) {
   view.railsDrawn = drawRails(ctx, camera, terrain, scene.course, view, look.sprites);
   view.flagsDrawn = drawFlags(ctx, camera, terrain, scene.course, view, scene.frame, look.sprites);
+  view.polesDrawn = drawPistePoles(ctx, camera, terrain, scene.course, view, scene.pistePoles, look.sprites);
  }
  drawSpray(ctx, camera, terrain, view, scene.particles, look.sprites.spray);
  if (timer !== null) timer.lap(STAGE.SPRITES);
