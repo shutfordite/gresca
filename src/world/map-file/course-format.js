@@ -3,7 +3,7 @@
 
 /** What kind of gresca-map-1 file a course is (the terrain file is 'terrain', format.js). */
 export const KIND_COURSE = 'course';
-/** The course file versions a reader takes: 1 (absent: kickers and rails) and 2 (adds the park's features, ADR 0012). */
+/** The course file versions a reader takes: 1 (absent; kickers and rails) and 2 (adds park features, ADR 0012). */
 export const COURSE_VERSIONS = Object.freeze([1, 2]);
 /** The first course file version with park features (ADR 0012). */
 export const FEATURES_VERSION = 2;
