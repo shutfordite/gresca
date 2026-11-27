@@ -14,7 +14,10 @@ const START_SPEED = 12;    // m/s straight down the map
 // deg, the other placements: the suite's own (37 when it runs unrotated) and 123, where a clamp at the map edge reads
 // back an ulp past it
 const ROTATED = [...new Set([MAP_ROTATION_DEG || 37, 123])];
-const TOL = 1e-9;          // m, m/s, rad: the most any compared value may differ
+// m, m/s, rad: the most any compared value may differ. H2 raised it from 1e-9: the turn rate's inertia and the slow
+// skids feed a rounding difference back into the line, so it grows ten times faster (1e-9 after 23 s, 2e-9 by 25 s,
+// on the piste the whole way). An axis assumption left in the code differs by metres; 1e-8 still catches one.
+const TOL = 1e-8;
 
 // Input by step number only (no feedback, so both rides get exactly the same input): carve left and right in turn,
 // jump now and then, a short brake.

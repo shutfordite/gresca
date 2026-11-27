@@ -239,8 +239,10 @@ describe('the course through the façade (Gresca.world.course)', async () => {
   assert.ok(Object.isFrozen(C));
   g.place({ y: 700, vy: 10, heading: 0.3 });
   g.sim(SIM_DT);
-  const s = g.state();
-  assert.ok(Math.abs(s.fallLine - g.world.course.fallLine(s.x, s.y).heading) < 1e-12);
+  // in world metres (g.raw): through the map view the position rounds by about 1e-13 m, and where the piste is nearly
+  // level across (here after H2's step) the fall line turns by about 10 rad per m, past 1e-12 at 300 degrees
+  const s = g.raw.state();
+  assert.ok(Math.abs(s.fallLine - g.raw.world.course.fallLine(s.x, s.y).heading) < 1e-12);
   assert.ok([1, -1].includes(s.downhillSide));
  });
 });
