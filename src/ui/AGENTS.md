@@ -13,4 +13,5 @@
 | The Controls screen (generated from `src/input/bindings.js`; gesture diagrams) | `controls.js`, `styles/menu.css` | `controls` |
 | Pause: the button, the panel, hidden-page auto-pause (`hud.paused`; the loop in `app.js` honours it) | `pause.js`, `styles/hud.css` | `pause` |
 | Air hints (flip and spin arrows for the first 3 jumps, `gresca-hints`) | `air-hints.js`, `styles/hud.css` | `air-controls` |
+| The camera view's name label after a switch (`#cam-label`, fades in CSS) | `camera-label.js`, `styles/hud.css`, `index.html` | `tap-rider` |
 | What tests can read of the UI | `fields.js` | `facade` |
