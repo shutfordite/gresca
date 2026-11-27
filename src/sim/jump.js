@@ -14,7 +14,6 @@ const CRASH_LAND_SPEED = -8; // m/s vertical, landing harder than this ...
 const CRASH_MISALIGN = 0.6; // rad ... with the board this far off the direction of travel is a crash
 const MIN_SCORED_AIR = 0.35; // s, shorter hops score nothing
 const FULL_TURN = 2 * Math.PI; // rad
-const FLIP_WORDS = Object.freeze(['', '', 'Double ', 'Triple ', 'Quad ']); // the prefix for n flips; more are '5x '
 
 // A {s, d, tx, ty} scratch object for Course.project (m, m, unit tangent).
 const newWhere = () => ({ s: 0, d: 0, tx: 0, ty: 1 });
@@ -25,9 +24,9 @@ const newWhere = () => ({ s: 0, d: 0, tx: 0, ty: 1 });
  * course: the Course whose kickers launch the rider; where: a {s,d,tx,ty} scratch object for it.
  * Flips (F3): in the air input.flip (-1..1, + front flip) turns rider.flipRot at FLIP.RATE (rad/s), held keeps
  * turning, alongside the spin in rider.rotation. One SimEvent 'flip' ({flips}) goes out on each clean landing of one or
- * more whole rotations, before its 'score' (the count is in the points; trickName names it). Landing within
+ * more whole rotations, before its 'score' (its flips field is the signed count; ui/trick-names.js names it). Landing within
  * FLIP.LAND_WINDOW of a whole number of rotations is clean, otherwise a crash (cause 'landing'). A clean flip scores
- * FLIP.POINTS * n * (n + 1) / 2 on top of the air score; trickName(n, degrees) names it ('Backflip 360'). flipRot is
+ * FLIP.POINTS * n * (n + 1) / 2 on top of the air score; flipRot is
  * 0 on the snow, on a rail and at every take-off.
  */
 export function jumpStep(rider, input, session, spray, dt, course = DEFAULT_COURSE, where = newWhere()) {
@@ -77,18 +76,6 @@ function takeOff(rider, input, s, course, where) {
 // Turns the rider about its across axis by input.flip (-1..1) for dt (s).
 function flipStep(rider, input, dt) {
  rider.flipRot += input.flip * FLIP.RATE * dt;
-}
-
-/**
- * The name of a trick: turns is the signed whole flip rotations (+ front, - back, 0 none), degrees the spin rounded to
- * 180. '' with no flip (a plain spin keeps its '<degrees> Air'), else 'Front flip', 'Double backflip 360', ...
- */
-export function trickName(turns, degrees) {
- const n = Math.abs(turns);
- if (n === 0) return '';
- const count = n < FLIP_WORDS.length ? FLIP_WORDS[n] : n + 'x ';
- const base = turns > 0 ? (count ? 'front flip' : 'Front flip') : (count ? 'backflip' : 'Backflip');
- return count + base + (degrees ? ' ' + degrees : '');
 }
 
 // Touchdown (event land), then a crash or a score. Twin tip: the board only has to line up with the direction of
