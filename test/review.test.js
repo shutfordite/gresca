@@ -62,6 +62,7 @@ test('ownership: one stream is fine, two streams or a contract mixed with code a
  assert.equal(ownerOf('src/view/camera.js'), 'S4');
  assert.equal(ownerOf('tools/bench/core.mjs'), 'S4');
  assert.equal(ownerOf('tools/map-compiler/core.js'), 'S5');
+ assert.equal(ownerOf('art/gresca-hanga-spec.js'), 'S6');
  assert.equal(ownerOf('src/sim/AGENTS.md'), null);
  assert.equal(ownerOf('test/sim.test.js'), null);
  assert.deepEqual(severities(ownershipChecks(['src/sim/step.js', 'test/sim.test.js', 'docs/STATUS.md'])), [INFO]);

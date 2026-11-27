@@ -73,6 +73,8 @@ Updated 27 Nov 2026, main after PR #72 (X1), with X2 open. Only the coordinator 
 - **Real mountains first (X2):** the El Tarter bake (one tap, "Waiting on the owner"), then **C4b** (S5, with its
   Shared `app.js` prep PR) runs **alongside K**, not after it. K's acceptance is ridden on the play mountain and, once
   C4b is in, on El Tarter's park.
+- **S6 (new, owner 27 Nov):** **V1** art spec v1.5, environment (trees, rocks, sky, backdrops for real maps), then
+  **K4a/V2** the park look in the spec, ready before K4. Spec and docs only, so it runs alongside K1 to K3.
 - **K0 park contract and format (ADR 0012), Shared, alone, right after X2** (`docs/ROADMAP.md`, "K: a real snow
   park"). Then K1 (S5 shape library), K2 (S2 flight over the snow) and K3 (S2 grinds) in parallel; K4 (S4) once K1
   is in; K5 (S3) and K6 (S1) after K3.
@@ -115,7 +117,7 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 | Ski lead code allocates two arrays and two closures per frame: use a plain loop | S3 | #66 | next S3 package |
 | C2 leftovers: `START_HEADING`/`MENU_HEADING` grid headings until C4b starts the rider on the course tangent; minimap in grid orientation (north-up for real maps?) | S5, S1 | #26 | C4b |
 | The view keeps the spec's clockwise sign for `pathTurn` and `riderYaw` (#58); tidy it | S3 | #58 | optional |
-| The design canvas copy of the art spec (claude.ai "Gresca Rider Style Prototypes") must be re-synced after every spec version | S4 | #18 | each spec version |
+| The design canvas copy of the art spec (claude.ai "Gresca Rider Style Prototypes") must be re-synced after every spec version | S6 | #18 | each spec version |
 
 `?rot=<deg>` places the procedural map rotated (debug).
 

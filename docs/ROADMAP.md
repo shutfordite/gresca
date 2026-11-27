@@ -51,10 +51,12 @@ The freeze is about four PRs (B2a, B2b, B2c and C2), plus the P1 docs PR between
 | **S2** sim feel | `src/sim` (+ `sim/tuning.js`) | F5 brake as a skid across the fall line → F6 edge and carve model, remove the heading clamp, ollie preload → F3 flip physics and scoring → (optional) gravity slope-law A/B |
 | **S3** rider animation | `art/gresca-rider-anim.js`, `src/view/rider` | body twist → F5 brake counter-rotation → F6 edge-driven lean and unweighting → F7 fakie look-over-shoulder (goggles wait for spec v1.4) → F3 flip tuck |
 | **S4** look, camera, render | `src/view/look`, `src/view/camera`, render | **D1** frame-time harness → **E0** GPU terrain renderer test (three.js, ADR 0008; accepted) → **E1** GPU renderer by default (`?renderer=cpu` as the fallback), lost-context handling, texture memory budget, softer corduroy, the shared ray constants in `core/config.js` → **E2** light: soft sun shadows from the terrain, rider and tree shadows drawn on the GPU (replacing the blocky painted ones) → **E3** trees, rails, flags and kickers as GPU objects → **E4** post: tilt-shift, dawn haze. F1 sizing and D3 data-driven trees fold into E1 and E3; D2 is replaced by E0 |
+| **S6** design and visual | `art/gresca-hanga-spec.js` versions, with their notes and boards in `docs/art/` | **V1** art spec v1.5, environment: trees, rocks, bushes, treeline, sky, sun and backdrop peaks for real maps (Pyrenees set first, El Tarter), with boards → **V2** park look in the spec (snow kickers, tables, landings, groomed sidewalls, lip and knuckle dye lines, rail and box materials and colours), before K4 → **V3** visual review: every PR touching `view/` or `art/` gets a check of its screenshots against the spec, findings as spec fixes or S4 issues → **V4** design canvas re-synced to each spec version |
 | **S5** maps | `src/world`, `tools/`, `maps/` | **C1** polyline `Course.fromRun` (R4) → C3 course half (`<id>.course.json`) → **C4** map loading, corridor detail, load-your-own file, slope and data-defect rules (R5) |
 
 S2 and S3 meet only through `RiderState`, `AnimInput` and `SimEvent`. S1 and S2 meet only through `InputState`. S4 and
-S3 meet through `Look.rider.project`. All of these are fixed in B2b, B2c and P4.
+S3 meet through `Look.rider.project`. S6 and S4 meet through the spec and the Look tokens: S6 designs and writes the
+numbers in `art/gresca-hanga-spec.js`, S4 renders them and never changes the spec's values itself. All of these are fixed in B2b, B2c and P4.
 
 ### X1: conflict-proofing (Shared, owner asked 26 Nov; a short freeze)
 On 26 Nov ten PR conflicts needed hand merges. Nine came from one cause, one from the next two:
@@ -138,6 +140,10 @@ coordinator, behaviour change none:
 1. **The retrospective's changes are all accepted** (X2 above).
 2. **Real mountains don't wait behind K:** C4b (loading El Tarter in the game) runs alongside K0–K3, as soon as the
    Bake map workflow has produced the files.
+3. **A design and visual stream, S6.** It owns art direction and the Hanga spec (moved from S4) and environment art:
+   trees, rocks, sky, backdrops and the look of park features. S6 designs, S4 builds: S6 writes specs, boards and the
+   spec's data; all render code stays with S4. UI and menu visual design stay with S1; brand and store art are not
+   planned yet.
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
@@ -189,11 +195,12 @@ fixed drag. K replaces this with park features that are part of the snow and phy
 | K1 | park shape library | S5 | `src/world/park/`: pure functions from a feature to its snow height (takeoff curve to the lip angle, table, knuckle, landing sized for `designSpeed`, run-out, sidewalls) and its rail polylines; the `features` layer stamps the jumps into the terrain; the play mountain's park layout. The test slope is unchanged (AGENTS.md "Do not break"). Tests: every size's landing catches a rider at its design speed between knuckle and bottom (a pure trajectory check) |
 | K2 | flight and landing over the snow | S2 | `sim/jump.js`: world-height flight, takeoff from the lip's shape, landing impact normal to the snow, knuckle and flat-bottom crashes. One flight model for every map: the test slope's physics assertions still pass unchanged; the golden hash is re-recorded once, with the trace differences measured in the PR |
 | K3 | grind physics | S2 | `sim/grind.js` on polylines: gravity along the segment, rail and box friction, kinks (carry speed, lift off over convex kinks), bends (lean, slide off the outside), styles from the board angle, balance, ollie-on entry, side and leg crashes. Tests per shape at fixed speeds |
-| K4 | park features on screen | S4 | after E3b (#67): rails and boxes as GPU meshes from the polylines (tubes bent at kinks and bends, box tops and sides, legs into the snow); jumps drawn as snow with groomed sidewalls and the dyed lip and knuckle lines from the Look; CPU fallback stays simple |
+| K4a | park look in the spec | S6 | spec v1.5 (V2): the colours, dye lines and materials K4 draws, with boards; written while K1 to K3 run |
+| K4 | park features on screen | S4 | after E3b (#67) and K4a: rails and boxes as GPU meshes from the polylines (tubes bent at kinks and bends, box tops and sides, legs into the snow); jumps drawn as snow with groomed sidewalls and the dyed lip and knuckle lines from the Look; CPU fallback stays simple |
 | K5 | grind poses | S3 | 50-50, boardslide and lipslide, and lean into bends from `AnimInput.grindStyle` and the balance (art spec version if poses are new) |
 | K6 | trick names for grinds | S1 | after the `trickName` move to `src/ui/`: the popup names grinds and combos from the `grindEnd` fields |
 
 K0 goes first and alone (a contract PR). Then K1, K2 and K3 in parallel (K2 and K3 both touch `src/sim/` but different
-files; K3 waits for K1 only for the play mountain layout, and tests on its own fixtures). K4 starts when K1 and #67 are
+files; K3 waits for K1 only for the play mountain layout, and tests on its own fixtures). K4 starts when K1, K4a and #67 are
 in; K5 and K6 after K3. Acceptance for K: on the iPad, ride the play mountain's park top to bottom, land every jump
 size on its landing at the speed its run-in gives, and grind a down-flat-down rail and a C-rail without falling off.
