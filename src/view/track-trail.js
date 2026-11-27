@@ -3,6 +3,7 @@
 
 export const TRAIL_CAPACITY = 16384; // samples in the ring, shared by both lines (2 lines x 8192, or 1 line x 16384)
 export const SAMPLE_FLOATS = 8;      // floats per sample: x, y, prevX, prevY, halfWidth, prevHalfWidth, depth, smear
+// (depth: 0..1 on firm snow, past 1 for a powder trench)
 export const TRAIL_BYTES = TRAIL_CAPACITY * SAMPLE_FLOATS * 4; // bytes of the ring (512 KiB)
 export const SPACING_M = 0.12;       // m the rider moves along a line before it adds another sample
 export const MAX_GAP_M = 4;          // m between steps beyond which the rider was moved (a restart), not ridden
@@ -14,6 +15,8 @@ export const EDGE_FULL_RAD = 1;      // rad of edge angle (RiderState.edge) that
 export const EDGE_DEPTH_GAIN = 0.4;  // extra depth (0..1 scale) at EDGE_FULL_RAD; the edge is 0 until package F6
 export const MAX_HALF_WIDTH_M = 1.2; // m, the widest swath half-width
 export const BLEND_PER_SAMPLE = 0.12; // 0..1 per sample: most that depth and smear change
+export const TRENCH_PER_M = 3;       // extra groove depth (past 1) per m the equipment is sunk in powder (rider.sink)
+export const TRENCH_WIDEN = 0.9;     // m of extra half-width per m sunk: the powder caves in around a trench
 
 // Equipment on the snow, by rig (session.rig): contact lines and their size (the art spec's board and skis).
 export const EQUIPMENT = Object.freeze({
@@ -71,11 +74,12 @@ export function recordTrail(trail, rider, rig) {
  }
  const equip = EQUIPMENT[rig] || EQUIPMENT.board;
  const slip = rider.boardHeading - rider.travelHeading;
- const half = swathHalfWidth(equip, slip);
+ const sink = rider.sink || 0; // m, deep powder cuts a trench
+ const half = Math.min(MAX_HALF_WIDTH_M, swathHalfWidth(equip, slip) + TRENCH_WIDEN * sink);
  const smear = Math.min(1, Math.abs(Math.sin(slip)));
  const cutting = rider.isBraking || rider.skid > SKID_DEEP;
  const edge = Math.min(1, Math.abs(rider.edge) / EDGE_FULL_RAD);
- const depth = Math.min(1, (cutting ? DEPTH_DEEP : DEPTH_CARVE) + EDGE_DEPTH_GAIN * edge);
+ const depth = Math.min(1, (cutting ? DEPTH_DEEP : DEPTH_CARVE) + EDGE_DEPTH_GAIN * edge) + TRENCH_PER_M * sink;
  const nx = -Math.sin(rider.boardHeading); // unit vector across the board, to its left
  const ny = Math.cos(rider.boardHeading);
  for (let line = 0; line < equip.lines; line++) {

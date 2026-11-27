@@ -13,9 +13,9 @@ const FRAME_EVERY = 48;  // steps between drawn frames (2.5 Hz of sim time, to k
 const FRAME_DT = 1 / 30; // s, the frame time each drawn frame advances the camera and animation
 const RUN_STEPS = 120 * 45; // steps, the most one ride takes
 
-// Steer toward the piste centreline 15 m ahead, offset to hit a rail line now and then (s: Gresca.state(), W: world).
+// Steer toward the piste centreline 8 m ahead (15 m until H2), offset to hit a rail line now and then (s: Gresca.state(), W: world).
 function aim(s, W, off) {
- const ty = s.y + 15;
+ const ty = s.y + 8;
  const ang = Math.atan2(ty - s.y, W.centre(ty) + off - s.x);
  if (s.z > 0.05) return { left: 0, right: 0 };
  if (ang > s.heading + 0.03) return { left: 0, right: 1 };
