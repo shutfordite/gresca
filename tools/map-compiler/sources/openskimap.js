@@ -1,6 +1,8 @@
 // The piste and lift sources: OpenSkiMap runs and lifts GeoJSON, and Overpass JSON as the fallback (R3).
 // Both are untrusted downloads: only known fields are read, strings are capped, and sizes are bounded. Output lines are
 // [lon, lat] degree pairs; core.js projects them into the map's ENU metres and clips them to its bounds.
+// The world's OpenSkiMap files are larger than the longest string Node can hold (about 512 MB), so raw bytes are
+// read one feature at a time (`eachFeature`) and features outside the map's box are dropped as they are read.
 
 const MAX_FEATURES = 500000; // features or elements in one download (the world's OpenSkiMap runs are ~150k)
 const MAX_POINTS = 100000; // points in one line
@@ -11,9 +13,11 @@ const NOT_LIFT_LINES = new Set(['station', 'pylon', 'goods']); // aerialway valu
 /**
  * The downhill runs of an OpenSkiMap runs FeatureCollection: [{id, osm: ['way/1', ...], name, difficulty, grooming,
  * area (true for a polygon run, outer rings only), lines: [[[lon, lat], ...], ...]}], sorted by id.
+ * geojson is the parsed object or the raw bytes (Uint8Array); box {south, west, north, east} (degrees), when given,
+ * keeps only the features whose extent meets it.
  */
-export function parseOpenSkiMapRuns(geojson) {
- return features(geojson, 'runs').filter((f) => text(f.properties.type) === 'run')
+export function parseOpenSkiMapRuns(geojson, box) {
+ return features(geojson, 'runs', box).filter((f) => text(f.properties.type) === 'run')
   .filter((f) => Array.isArray(f.properties.uses) && f.properties.uses.includes('downhill'))
   .map((f) => ({
    id: text(f.properties.id),
@@ -29,8 +33,8 @@ export function parseOpenSkiMapRuns(geojson) {
 }
 
 /** The lifts of an OpenSkiMap lifts FeatureCollection: [{id, osm, name, kind (liftType), lines}], sorted by id. */
-export function parseOpenSkiMapLifts(geojson) {
- return features(geojson, 'lifts').filter((f) => text(f.properties.type) === 'lift')
+export function parseOpenSkiMapLifts(geojson, box) {
+ return features(geojson, 'lifts', box).filter((f) => text(f.properties.type) === 'lift')
   .map((f) => ({
    id: text(f.properties.id),
    osm: osmIds(f.properties.sources),
@@ -69,13 +73,104 @@ export function parseOverpass(json) {
  return { pistes: pistes.sort(byId), lifts: lifts.sort(byId) };
 }
 
-function features(geojson, what) {
+function features(geojson, what, box) {
+ const usable = (f) => isObject(f) && isObject(f.properties) && isObject(f.geometry) &&
+  typeof f.geometry.type === 'string' && (!box || meets(f.geometry.coordinates, box));
+ if (geojson instanceof Uint8Array) {
+  const kept = [];
+  eachFeature(geojson, what, (f) => {
+   if (usable(f)) kept.push(f);
+  });
+  return kept;
+ }
  if (!isObject(geojson) || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
   throw new Error('openskimap ' + what + ': not a GeoJSON FeatureCollection');
  }
  if (geojson.features.length > MAX_FEATURES) throw new Error('openskimap ' + what + ': too many features');
- return geojson.features.filter((f) => isObject(f) && isObject(f.properties) && isObject(f.geometry) &&
-  typeof f.geometry.type === 'string');
+ return geojson.features.filter(usable);
+}
+
+const QUOTE = 0x22;
+const BACKSLASH = 0x5c;
+const OPEN_BRACE = 0x7b;
+const CLOSE_BRACE = 0x7d;
+const OPEN_BRACKET = 0x5b;
+const CLOSE_BRACKET = 0x5d;
+const FEATURES_KEY = '"features"';
+
+/**
+ * Calls fn(feature) for each element of the top-level "features" array of a GeoJSON FeatureCollection given as raw
+ * UTF-8 bytes, parsing one element at a time, so the whole file is never one string. Throws on a file that is not a
+ * FeatureCollection, is cut short, or has more than MAX_FEATURES features.
+ */
+export function eachFeature(bytes, what, fn) {
+ const decoder = new TextDecoder();
+ let depth = 0; // nesting of {} and []
+ let inString = false;
+ let stringStart = -1;
+ let lastKey = ''; // the last string closed at depth 1 (a key of the collection)
+ let isCollection = false;
+ let featuresDepth = -1; // depth inside the features array, once it opens
+ let featureStart = -1;
+ let count = 0;
+ for (let i = 0; i < bytes.length; i++) {
+  const b = bytes[i];
+  if (inString) {
+   if (b === BACKSLASH) i++;
+   else if (b === QUOTE) {
+    inString = false;
+    if (depth === 1) {
+     const s = i - stringStart < 32 ? decoder.decode(bytes.subarray(stringStart, i + 1)) : '';
+     if (s === '"FeatureCollection"' && lastKey === '"type"') isCollection = true;
+     lastKey = s;
+    }
+   }
+   continue;
+  }
+  if (b === QUOTE) {
+   inString = true;
+   stringStart = i;
+  } else if (b === OPEN_BRACE || b === OPEN_BRACKET) {
+   depth++;
+   if (b === OPEN_BRACKET && depth === 2 && lastKey === FEATURES_KEY) featuresDepth = 2;
+   else if (b === OPEN_BRACE && featuresDepth === 2 && depth === 3) featureStart = i;
+  } else if (b === CLOSE_BRACE || b === CLOSE_BRACKET) {
+   if (b === CLOSE_BRACE && featuresDepth === 2 && depth === 3 && featureStart >= 0) {
+    if (++count > MAX_FEATURES) throw new Error('openskimap ' + what + ': too many features');
+    fn(JSON.parse(decoder.decode(bytes.subarray(featureStart, i + 1))));
+    featureStart = -1;
+   }
+   if (b === CLOSE_BRACKET && depth === 2 && featuresDepth === 2) featuresDepth = -2; // the array is done
+   depth--;
+   if (depth < 0) break;
+  }
+ }
+ if (!isCollection || featuresDepth !== -2 || depth !== 0) {
+  throw new Error('openskimap ' + what + ': not a complete GeoJSON FeatureCollection');
+ }
+}
+
+// Whether any [lon, lat] in nested coordinate arrays lies in box, or the coordinates' extent overlaps it.
+function meets(coordinates, box) {
+ let west = Infinity;
+ let east = -Infinity;
+ let south = Infinity;
+ let north = -Infinity;
+ const visit = (c, level) => {
+  if (!Array.isArray(c) || level > 4) return;
+  if (typeof c[0] === 'number') {
+   if (isLonLat(c)) {
+    west = Math.min(west, c[0]);
+    east = Math.max(east, c[0]);
+    south = Math.min(south, c[1]);
+    north = Math.max(north, c[1]);
+   }
+   return;
+  }
+  for (const x of c) visit(x, level + 1);
+ };
+ visit(coordinates, 0);
+ return west <= box.east && east >= box.west && south <= box.north && north >= box.south;
 }
 
 // The lines of a LineString, MultiLineString, Polygon (outer ring) or MultiPolygon (outer rings), each >= 2 points.

@@ -160,8 +160,8 @@ async function loadLines(p, box, cache) {
   const runs = await cache.get(p.runsUrl, { url: p.runsUrl });
   const lifts = await cache.get(p.liftsUrl, { url: p.liftsUrl });
   return {
-   pistes: parseOpenSkiMapRuns(json(runs.bytes)),
-   lifts: parseOpenSkiMapLifts(json(lifts.bytes)),
+   pistes: parseOpenSkiMapRuns(runs.bytes, box),
+   lifts: parseOpenSkiMapLifts(lifts.bytes, box),
    sources: [record('pistes', p.runsUrl, runs.entry), record('lifts', p.liftsUrl, lifts.entry)],
   };
  }
