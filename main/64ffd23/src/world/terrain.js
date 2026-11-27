@@ -236,7 +236,7 @@ function create(o) {
  * ax, ay (unit world vector along the grid's columns, +u), bx, by (unit world vector down its rows, +v), width,
  * length (m), and the world-axis box around it, minX..maxY (m). Frozen.
  */
-function mapBounds(frame, width, length) {
+export function mapBounds(frame, width, length) {
  const a = { x: frame.ux, y: frame.uy };
  const b = { x: frame.vx, y: frame.vy };
  const xs = [0, a.x * width, b.x * length, a.x * width + b.x * length].map((v) => frame.originX + v);
