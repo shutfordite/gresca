@@ -244,7 +244,7 @@ Each package is one PR. **Every PR keeps `npm test` green and changes no gamepla
 - Load one map with `fetch` from `maps/` (or from a file the player picks). Build in chunks with progress, or in a Worker, so the menu never freezes (M2).
 - Keep the coarse baked grid (about 14 m) for the whole map, for the backdrop and far field. Upsample to 2 m (bicubic) **only within a corridor** (piste plus about 150 m each side), in tiles made on demand along s. Memory budget: under 60 MB total on El Tarter.
 - Accept when: El Tarter loads and is rideable start to finish with the autopilot, and the procedural map still passes everything.
-- **C4a (done, ADR 0011):** `src/world/map-loader.js` builds the world from the parsed pair in chunks, with the corridor tiles of `corridor-layer.js`. **C4b** fetches the files, runs the loader without freezing the menu, registers the map and wires `app.js`/`main.js`.
+- **C4a (done, ADR 0011):** `src/world/map-loader.js` builds the world from the parsed pair in chunks, with the corridor tiles of `corridor-layer.js`. **C4b (in progress):** `?map=<id>` makes `src/main.js` fetch `maps/<id>.terrain.json` and `.course.json`, run the loader in chunks with the progress on the menu, and hand the world to `createGame` (`env.world`). The view paints a 1000 × 2450 m window along the run (`src/view/paint-window.js`): the colour map, the GPU terrain and the minimap cover it, and the start heading and camera follow its grid. The menu shows the run and the data credits. Still to come: a menu entry (S1), the map's sun and horizon (S4), lifts in the paint, and D2 for the far field.
 
 ### Phase D: rendering to the spec
 
