@@ -163,6 +163,8 @@ in the sky. Order:
    planned yet.
 4. **The sun can sit in different places later** (TD above): a date and time of day per course or chosen by the
    player, after K and C4b. Until TD0, El Tarter keeps one fixed sun (V1, #80, asks the owner which).
+5. **V1's environment look is accepted** (trees, sky, Pyrenees backdrop, seen in game in spike #83). S4 builds it
+   after a camera framing spike: the riding camera shows too little sky for the peaks to be seen.
 
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
