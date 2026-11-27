@@ -303,6 +303,13 @@ RA.applyBody = function (s, inp, onSnow) {
   g.upper.forEach(function (j) { J[j][1] += b; });
  }
  if (!onSnow) return J;
+ if (inp.powderPose && inp.sink > 0) {
+  // Spike: deep powder. A subtle, B stronger: the hips and knees drop, the upper body leans back.
+  var pw = clamp(inp.sink / 0.5, 0, 1) * (inp.powderPose > 1 ? 1 : 0.5), pk;
+  for (pk = 0; pk < g.hips.length; pk++) { J[g.hips[pk]][1] -= 0.12 * pw; J[g.hips[pk]][f] -= 0.15 * pw; }
+  for (pk = 0; pk < g.knees.length; pk++) { J[g.knees[pk]][1] -= 0.06 * pw; J[g.knees[pk]][f] += 0.08 * pw; }
+  for (pk = 0; pk < g.upper.length; pk++) { J[g.upper[pk]][1] -= 0.12 * pw; J[g.upper[pk]][f] -= (0.1 + 0.25 * Math.max(0, J[g.upper[pk]][1] - J.hipC[1])) * pw; }
+ }
  // Angulation: the legs take the lean, the upper body leans back toward upright.
  var sr = Math.sin(s.roll * D2R), hipY = J.hipC[1];
  g.upper.forEach(function (j) { J[j][0] += (J[j][1] - hipY) * sr * T.angulation; });
