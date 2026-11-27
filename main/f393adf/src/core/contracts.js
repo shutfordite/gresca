@@ -59,13 +59,18 @@ export const INPUT_FIELDS = Object.freeze([
  *  flat ground
  * @property {number} downhillSide +1 when the fall line is counter-clockwise from boardHeading (by less than PI), -1
  *  when clockwise, 0 on flat ground (a board pointing straight down the fall line counts as +1)
+ * @property {number} yawRate rad/s, how fast the equipment is turning on the snow, counter-clockwise + (pre-added, 0
+ *  until S2)
+ * @property {number} snowDepth m of loose (ungroomed) snow under the rider, terrain.powder (pre-added, 0 until S2)
+ * @property {number} sink m the equipment rides below the snow's surface: deep at low speed in deep powder, less as
+ *  it planes; 0 on groomed snow, in the air, crashed or grinding (pre-added, 0 until S2)
  */
 
 /** Every RiderState field, by the type its value has (grind is null or an object). */
 export const RIDER_FIELDS = Object.freeze({
  number: Object.freeze(['x', 'y', 'vx', 'vy', 'heading', 'z', 'vz', 'airTime', 'rotation', 'crashTimer',
   'wipeoutSpin', 'grindDist', 'landings', 'landingSpeed', 'travelHeading', 'boardHeading', 'edge', 'skid',
-  'flipRot', 'spinRot', 'fallLine', 'downhillSide']),
+  'flipRot', 'spinRot', 'fallLine', 'downhillSide', 'yawRate', 'snowDepth', 'sink']),
  boolean: Object.freeze(['fromKicker', 'isSwitch', 'isBraking']),
  object: Object.freeze(['grind']),
 });
@@ -146,12 +151,14 @@ export const COURSE_FIELDS = Object.freeze({
  * @property {number} edge rad, the edge angle (RiderState.edge): + tips the equipment onto its left-turn edge
  * @property {number} skid m/s, sideways slip on the snow this step (RiderState.skid)
  * @property {number} flipRot rad, flip rotation this jump (RiderState.flipRot), + is a front flip
+ * @property {number} sink m the equipment rides below the snow's surface (RiderState.sink): the rider leans back and
+ *  the powder hides the board or skis
  */
 
 /** Every AnimInput field, by the type its value has. */
 export const ANIM_INPUT_FIELDS = Object.freeze({
  number: Object.freeze(['speed', 'travelDir', 'facing', 'riderSide', 'impact', 'landings', 'edge', 'skid',
-  'flipRot']),
+  'flipRot', 'sink']),
  boolean: Object.freeze(['wiped', 'grinding', 'braking', 'approach']),
 });
 

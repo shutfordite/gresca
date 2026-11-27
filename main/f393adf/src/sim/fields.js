@@ -53,5 +53,8 @@ export function simFields(r, s, spray, course) {
   isBraking: field(() => r.isBraking), // the brake was held on the last step
   fallLine: field(() => r.fallLine), // rad, heading of the fall line under the rider
   downhillSide: field(() => r.downhillSide), // +1 fall line counter-clockwise of the board, -1 clockwise, 0 flat
+  yawRate: field(() => r.yawRate),   // rad/s, the equipment's turn rate on the snow, counter-clockwise +
+  snowDepth: field(() => r.snowDepth), // m of loose snow under the rider (0 on the groomed piste)
+  sink: field(() => r.sink),         // m the equipment rides below the snow's surface (deep powder at low speed)
  };
 }
