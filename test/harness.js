@@ -149,6 +149,7 @@ export async function load(opts = {}) {
     THREE: opts.THREE,
     warn: opts.warn,
     cam: opts.cam, // ?cam=<id> in the browser: the camera mode to start in (core/camera-modes.js)
+    openMap: opts.openMap, // main.js's reload into another map
     world: opts.world, // a loaded real map (world/map-loader.js), as main.js passes for ?map=<id>
   };
   const raw = createGame(env);
@@ -196,6 +197,7 @@ export async function load(opts = {}) {
     place: (o = {}) => G().place(o),
   };
 
+  g.el('ctl').hidden = true; // as in index.html: the Controls screen starts closed (the loop skips draws behind it)
   while (timers.length) timers.shift()(); // runs build() and shows the start screen
   return g;
 }
