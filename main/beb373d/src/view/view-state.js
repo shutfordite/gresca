@@ -80,6 +80,8 @@ export function createView(doc, look) {
   where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the camera projected on the course (sprites.js)
   point: { x: 0, y: 0 }, // scratch: a course point in the world (sprites.js)
   mapFrame: null, // the MapFrame placing the colour map's texels in the world (set with col, colour-map.js)
+  mapBounds: null, // the colour map's rectangle in the world (terrain.js mapBounds shape), for the minimap
+  mapFits: true, // false when a real map's run is larger than the painted window (paint-window.js)
   texel: { u: 0, v: 0 }, // scratch: a world point in colour map texels (draw.js, ski-tracks.js)
   rayTexel: { u: 0, v: 0 }, // scratch: a ray direction in texels (draw.js)
   flagsDrawn: 0,
