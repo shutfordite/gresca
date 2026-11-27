@@ -4,7 +4,7 @@ import { nested, prop } from '../core/facade-fields.js';
 import { cameraTilt, camCompass } from './camera.js';
 import { fogAt, sunDisc, sunAzimuthDeg } from './sky.js';
 import { project } from './sprites.js';
-import { riderScreenBox } from './rider-box.js';
+import { riderScreenBox } from './touch-box.js';
 import { riderPose } from './draw.js';
 import { animTick } from './rider-animation.js';
 import { STAGE, GL_STAGE } from './view-state.js';

@@ -15,7 +15,7 @@ import { buildColourMap } from './view/colour-map.js';
 import { pistePoles } from './view/piste-poles.js';
 import { createCamera, resetCamera, menuCamera } from './view/camera.js';
 import { updateCamera, draw } from './view/draw.js';
-import { riderScreenBox } from './view/rider-box.js';
+import { riderScreenBox } from './view/touch-box.js';
 import { chooseRenderer } from './view/renderer.js';
 import { createFpsMeter, tickFps, drawFps } from './view/fps-meter.js';
 import { markTrack, clearTracks } from './view/ski-tracks.js';
