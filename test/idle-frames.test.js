@@ -117,4 +117,32 @@ describe('idle frames', () => {
   g.tick(3);
   assert.ok(draws(g) > n);
  });
+ it('paused: a resize, the page becoming visible or a renderer swap draws one still frame, then idles', async () => {
+  const g = await game();
+  g.el('go').fire('click');
+  g.tick(30);
+  g.el('pz').fire('click');
+  g.tick(3);
+  const rest = JSON.stringify([g.state().x, g.state().y, g.state().time]);
+  const still = (change, label) => {
+   const n = draws(g);
+   change();
+   g.tick(20);
+   assert.equal(draws(g), n + 1, label + ' draws exactly one frame');
+   assert.equal(JSON.stringify([g.state().x, g.state().y, g.state().time]), rest, label + ' moves nothing');
+  };
+  still(() => { g.el('c').clientWidth = 60; g.fire('resize'); }, 'a resize');
+  still(() => { g.setHidden(true); g.tick(5); g.setHidden(false); }, 'hidden then visible');
+  still(() => g.game.reportRenderer({ name: 'cpu', fallback: 'context lost', lost: true }), 'a renderer swap');
+  // while hidden nothing is drawn, even for a change
+  g.setHidden(true);
+  const n = draws(g);
+  g.el('c').clientWidth = 80;
+  g.fire('resize');
+  g.tick(20);
+  assert.equal(draws(g), n);
+  g.setHidden(false);
+  g.tick(5);
+  assert.equal(draws(g), n + 1);
+ });
 });

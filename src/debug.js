@@ -111,6 +111,9 @@ export function createFacade(g) {
   // still while paused, hidden or behind the Controls screen. A function, not a state() field: it is a counter, not
   // part of the game's state (two games that reached the same state differ in it).
   draws: () => g.idle.draws,
+  // Replaces the renderer's report as a lost or restored WebGL context does (view/gl/context-loss.js), for tests: the
+  // loop then draws one still frame even while paused. report: {name, fallback, ...} as debug.renderer() gives.
+  reportRenderer: (report) => { g.view.renderer = { ...report }; },
   requestDraw: g.requestDraw, // asks the start screen for a few more frames (app.js)
   set,
   // New run (start()), then put the rider at {x, y (world m) or s, d (course m), vx, vy (m/s), heading (rad), z, vz}:
