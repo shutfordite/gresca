@@ -36,7 +36,7 @@
 | The snow contact: edge hold and skid, powder sink, plough and drag (`SNOW`) | `contact.js`, `tuning.js` | `snow-ride`, `edge`, `brake`, `golden` |
 | Jumps, air, landing, crash, air scoring; flips (`flipRot`, the ±40° landing window, trick names) | `jump.js`, `tuning.js` (`FLIP`) | `physics`, `park`, `sim`, `flip` |
 | Rails and boxes | `grind.js` | `park`, `sim` |
-| Snow spray (puff size `r` and life; powder plumes are emitted in `step.js`) | `particles.js` | `features`, `sim`, `snow-ride` |
+| Snow spray: a fixed pool of typed arrays (`createSpray`, `MAX_PARTICLES` long, no allocation after; puff size `r` and life; powder plumes are emitted in `step.js`); read it only through `sprayPool` / `sprayCount` / `sprayCopies` | `particles.js` | `spray-pool`, `features`, `sim`, `snow-ride` |
 | Fixed timestep and interpolation | `timestep.js` | `timestep`, `facade` |
 | Rider and session state fields (+ `fields.js` to expose them to tests) | `state.js`, `fields.js` | `facade`, `sim` |
 | What the rider animation reads from the sim (`AnimInput`) | `anim-input.js` | `course`, `rider-anim` |

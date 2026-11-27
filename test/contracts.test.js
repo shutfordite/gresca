@@ -12,6 +12,7 @@ import { createRider, createSession } from '../src/sim/state.js';
 import { createInput, pointerDown, pointerUp, keyDown, keyUp, resetInput } from '../src/input/input.js';
 import { jumpStep } from '../src/sim/jump.js';
 import { SIM_DT } from '../src/core/config.js';
+import { createSpray } from '../src/sim/particles.js';
 
 describe('core/contracts.js', () => {
  it('the field lists are frozen and complete', () => {
@@ -67,7 +68,7 @@ describe('core/contracts.js', () => {
   input.jump = 1;
   const seen = [];
   for (let n = 0; n < 200; n++) {
-   jumpStep(rider, input, session, { particles: [], rng: { seed: 1, state: 1 } }, SIM_DT);
+   jumpStep(rider, input, session, createSpray({ seed: 1, state: 1 }), SIM_DT);
    seen.push(...session.events.splice(0));
   }
   assert.deepEqual(seen.map((e) => e.type), ['land', 'score']);
