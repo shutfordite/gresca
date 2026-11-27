@@ -177,7 +177,9 @@ function grid(data, nx, ny, cellM = 1, frame = UNPLACED) {
 function create(o) {
  const base = o.base;
  if (!base || typeof base.cell !== 'function') throw new Error('Terrain.create: base must be a Terrain.grid');
- for (const k in o) if (!LAYERS.includes(k) && k !== 'groomed' && k !== 'powder') throw new Error('Terrain.create: unknown layer ' + k);
+ for (const k in o) {
+  if (!LAYERS.includes(k) && k !== 'groomed' && k !== 'powder') throw new Error('Terrain.create: unknown layer ' + k);
+ }
  const extra = LAYERS.slice(1).map((k) => o[k]).filter(Boolean);
  const n = extra.length;
  const g0 = { gx: 0, gy: 0 };

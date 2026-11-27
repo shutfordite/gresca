@@ -50,7 +50,9 @@ export function powderDepth(height, gradient, groomed, bounds) {
   const ay = bounds.ay * R;
   const bx = bounds.bx * R;
   const by = bounds.by * R;
-  const around = (height(x + ax, y + ay) + height(x - ax, y - ay) + height(x + bx, y + by) + height(x - bx, y - by)) / 4;
+  const across = height(x + ax, y + ay) + height(x - ax, y - ay);
+  const down = height(x + bx, y + by) + height(x - bx, y - by);
+  const around = (across + down) / 4;
   d += POWDER.HOLLOW_GAIN * (around - h);
   gradient(x, y, g);
   const shed = smooth(POWDER.SHED_FROM, POWDER.SHED_TO, Math.hypot(g.gx, g.gy));
