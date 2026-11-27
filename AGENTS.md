@@ -13,6 +13,8 @@ Where things stand: `docs/STATUS.md`. The order of work: `docs/ROADMAP.md`. Arch
 - Rebase on or merge main before review. Don't merge your own PR. Don't stack PRs unless the brief says so.
 - If the change is visible or changes feel, say in the PR what to try in the preview, and whether the owner's verdict
   is needed before more is built on it (feel, input and look are judged on the iPad, not by tests).
+  Give the owner links, not paths: the preview URL, and for boards, images or docs
+  `https://github.com/shutfordite/gresca/blob/<branch>/<path>` (the owner reviews on an iPad).
 - **Don't edit `docs/STATUS.md`** in a stream PR: report what's done, what's left and any debt in the PR body; the
   coordinator updates STATUS after merging (the PR check warns).
 - Before opening a PR, run `npm run review -- --title "<title>" --body-file <body.md>` and fix what it flags.
