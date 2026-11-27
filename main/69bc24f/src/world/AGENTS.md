@@ -15,6 +15,7 @@
 | The play mountain (the map the game opens on) and which map loads (`?map=test`, `MAPS`; ADR 0009) | `play-slope.js`, `build.js`, `src/main.js` | `play-slope`, `frame`, `terrain` |
 | The polyline course and `Course.fromRun(ways)` (ADR 0004, R4) | `polyline-course.js`, `run-geometry.js` | `polyline-course`, `course` |
 | The world frame: a map's grid placed in ENU, compass degrees | `map-frame.js` (ADR 0005) | `course`, `golden`, `rotated` (`npm run test:rotated`) |
+| Loose snow: powder depth off the piste, light or deep (`terrain.powder`, `POWDER`, `snowKind`) | `snow.js` | `snow`, `terrain` |
 | Building the world (grids, trees) | `build.js` | `build`, `terrain` |
 | The baked terrain file `gresca-map-1` (fields, height encoding, limits; ADR 0006) | `map-file/format.js` | `map-compiler`, `map-validate` |
 | Map validators (terrain and course) | `map-file/validate.js` | `map-validate`, `map-course` |
