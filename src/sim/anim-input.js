@@ -19,6 +19,7 @@ export function createAnimInput() {
   edge: 0,
   skid: 0,
   flipRot: 0,
+  sink: 0,
   where: { s: 0, d: 0, tx: 0, ty: 1 }, // scratch: the rider projected on the course
  };
 }
@@ -52,6 +53,7 @@ export function animInput(rider, session, course, out) {
  out.edge = rider.edge;
  out.skid = rider.skid;
  out.flipRot = rider.flipRot;
+ out.sink = rider.sink;
  const p = course.project(rider.x, rider.y, out.where);
  out.approach = speed > APPROACH_SPEED && isApproaching(course, p.s, p.d); // the view adds "on the snow"
  return out;
