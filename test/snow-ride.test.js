@@ -14,6 +14,7 @@ import { step } from '../src/sim/step.js';
 import { EDGE } from '../src/sim/tuning.js';
 import { sinkFor, edgeHold, powderDrag } from '../src/sim/contact.js';
 import { edgeCap } from '../src/sim/edge.js';
+import { createSpray, sprayCount, sprayPool } from '../src/sim/particles.js';
 
 const N = 900;        // cells (1 m) each way: room for a long ride
 const SLOPE = 0.25;   // m/m down +y (14 degrees, like the test slope's piste)
@@ -36,7 +37,7 @@ function ride(terrain, { rig = 'board', speed = 10, heading = DOWN } = {}) {
  const session = createSession();
  session.rig = rig;
  session.phase = 'run';
- const state = { rider, session, spray: { particles: [], rng: createRng(1) }, gradient: { gx: 0, gy: 0 } };
+ const state = { rider, session, spray: createSpray(createRng(1)), gradient: { gx: 0, gy: 0 } };
  const world = { terrain, trees: NO_TREES };
  return {
   rider,
@@ -156,8 +157,8 @@ describe('H2 loose snow', () => {
    let most = 0;
    let size = 0;
    r.go(1, {}, () => {
-    most = Math.max(most, r.spray.particles.length);
-    for (const p of r.spray.particles) size = Math.max(size, p.r);
+    most = Math.max(most, sprayCount(r.spray));
+    for (let i = 0; i < sprayCount(r.spray); i++) size = Math.max(size, sprayPool(r.spray).r[i]);
    });
    return { most, size };
   };

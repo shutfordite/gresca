@@ -16,6 +16,7 @@ import { step } from '../src/sim/step.js';
 import { createAnimInput, animInput } from '../src/sim/anim-input.js';
 import { createInput } from '../src/input/input.js';
 import { load } from './harness.js';
+import { createSpray } from '../src/sim/particles.js';
 
 // A plane n x n m that falls `fall` m per m in the unit direction (ux, uy).
 function tilted(ux, uy, fall, n = 64) {
@@ -28,7 +29,7 @@ function tilted(ux, uy, fall, n = 64) {
 function stepOn(terrain, heading) {
  const rider = createRider();
  Object.assign(rider, { x: 32, y: 32, heading });
- const state = { rider, session: createSession(), spray: { particles: [], rng: { seed: 1, state: 1 } },
+ const state = { rider, session: createSession(), spray: createSpray({ seed: 1, state: 1 }),
   gradient: { gx: 0, gy: 0 }, where: { s: 0, d: 0, tx: 0, ty: 1 } };
  const world = { terrain, trees: NO_TREES, course: createProceduralCourse(terrain) };
  step(state, createInput(), world, SIM_DT);

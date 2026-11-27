@@ -14,6 +14,7 @@ import { createInput, pointerDown, pointerUp, keyDown, keyUp, resetInput } from 
 import { jumpStep } from '../src/sim/jump.js';
 import { SIM_DT, JUMP_GRAVITY } from '../src/core/config.js';
 import { railCheck } from '../src/sim/grind.js';
+import { createSpray } from '../src/sim/particles.js';
 import { createAnimInput, animInput } from '../src/sim/anim-input.js';
 import { DEFAULT_COURSE } from '../src/world/course.js';
 import { parkAt } from './park-fixtures.js';
@@ -72,7 +73,7 @@ describe('core/contracts.js', () => {
   input.jump = 1;
   const seen = [];
   for (let n = 0; n < 200; n++) {
-   jumpStep(rider, input, session, { particles: [], rng: { seed: 1, state: 1 } }, SIM_DT);
+   jumpStep(rider, input, session, createSpray({ seed: 1, state: 1 }), SIM_DT);
    seen.push(...session.events.splice(0));
   }
   assert.deepEqual(seen.map((e) => e.type), ['land', 'score']);
@@ -100,7 +101,7 @@ describe('the park contract (docs/adr/0012-park-features.md)', () => {
   const at = DEFAULT_COURSE.point(r.s0 + 1, r.d, {});
   const phi = Math.atan2(r.dy, r.dx);
   Object.assign(rider, { x: at.x, y: at.y, vx: r.dx * 10, vy: r.dy * 10, heading: phi });
-  railCheck(rider, input, { particles: [], rng: { seed: 1, state: 1 } }, DEFAULT_COURSE);
+  railCheck(rider, input, createSpray({ seed: 1, state: 1 }), DEFAULT_COURSE);
   assert.ok(rider.grind, 'on the rail');
   assert.deepEqual([rider.grind.seg, rider.grind.style, rider.grind.balance], [0, '5050', 0]);
   assert.deepEqual(checkRiderState(rider), []);

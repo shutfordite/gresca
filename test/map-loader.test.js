@@ -13,6 +13,7 @@ import { createRider, createSession } from '../src/sim/state.js';
 import { createInput } from '../src/input/input.js';
 import { step } from '../src/sim/step.js';
 import { SIM_DT } from '../src/core/config.js';
+import { createSpray } from '../src/sim/particles.js';
 import { parkAt } from './park-fixtures.js';
 
 const CENTRE = Object.freeze({ lat: 42.58, lon: 1.65 });
@@ -320,7 +321,7 @@ describe('riding it', () => {
   const rider = createRider();
   const session = createSession();
   const input = createInput();
-  const state = { rider, session, spray: { particles: [] }, gradient: { gx: 0, gy: 0 },
+  const state = { rider, session, spray: createSpray({ seed: 1, state: 1 }), gradient: { gx: 0, gy: 0 },
    where: { s: 0, d: 0, tx: 0, ty: 1 }, near: new Array(world.trees.maxNear).fill(null) };
   const c = world.course;
   c.point(c.startS, 0, rider);

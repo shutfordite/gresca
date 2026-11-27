@@ -14,14 +14,14 @@ import { KICK, RAILS, cx, bump, DEFAULT_COURSE } from '../src/world/course.js';
 import { NO_TREES } from '../src/world/build.js';
 import { Terrain } from '../src/world/terrain.js';
 import { createRider, createSession } from '../src/sim/state.js';
-import { emit, stepParticles } from '../src/sim/particles.js';
+import { createSpray, emit, sprayCount, sprayCopies, stepParticles } from '../src/sim/particles.js';
 import { jumpStep } from '../src/sim/jump.js';
 import { railCheck } from '../src/sim/grind.js';
 import { step } from '../src/sim/step.js';
 import { createTimestep, advance } from '../src/sim/timestep.js';
 import { createInput, applyInput, pointerDown, keyDown } from '../src/input/input.js';
 
-const spray = (seed = 1) => ({ particles: [], rng: createRng(seed) });
+const spray = (seed = 1) => createSpray(createRng(seed));
 
 // A plane falling `slope` m per m down +y, n × n cells of 1 m, with the whole of it groomed.
 function plane(slope, n = 64) {
@@ -70,12 +70,12 @@ describe('sim/ on plain objects', () => {
   const a = spray(3), b = spray(3);
   emit(a, 5, 1, 2, 0.1, 2, 1, 0, 0);
   emit(b, 5, 1, 2, 0.1, 2, 1, 0, 0);
-  assert.deepEqual(a.particles, b.particles);
-  assert.equal(a.particles.length, 5);
+  assert.deepEqual(sprayCopies(a), sprayCopies(b));
+  assert.equal(sprayCount(a), 5);
   stepParticles(a.particles, 0.1);
-  assert.ok(a.particles.every((p) => p.t > 0.09));
+  assert.ok(sprayCopies(a).every((p) => p.t > 0.09));
   for (let i = 0; i < 20; i++) stepParticles(a.particles, 0.1);
-  assert.equal(a.particles.length, 0, 'all spray dies within a second or two');
+  assert.equal(sprayCount(a), 0, 'all spray dies within a second or two');
  });
 
  it('jumpStep: a jump request takes off, flies and lands with a count and a landing speed', () => {
@@ -91,7 +91,7 @@ describe('sim/ on plain objects', () => {
   assert.ok(rider.landingSpeed > 5);
   assert.equal(rider.crashTimer, 0, 'lined up with travel: a clean landing');
   assert.ok(session.score > 0, 'air time scores');
-  assert.ok(s.particles.length > 0, 'landing spray');
+  assert.ok(sprayCount(s) > 0, 'landing spray');
  });
 
  it('jumpStep: landing hard and sideways is a crash', () => {
