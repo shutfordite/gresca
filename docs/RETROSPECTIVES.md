@@ -3,6 +3,16 @@
 Each one ends with changes to the method (`.claude/skills/gresca-architect/SKILL.md`, the `AGENTS.md` files, CI),
 not only notes. Newest first.
 
+## 27 Nov 2026: the H stack merged into itself
+
+**What happened.** H0–H3 (#84, #85, #88, #89) were opened as a stack, each PR based on the branch below it. The owner
+merged all four within a minute, bottom first. #84 went into `main`, but GitHub doesn't retarget a PR when its base
+merges (only when the base branch is deleted), so #85, #88 and #89 merged into `shared/h0-snow-contract`,
+`s5/h1-powder-depth` and `s2/h2-snow-contact`, already-merged branches. They showed "merged", but `main` had only H0.
+**Change:** the skill's "Merging and keeping branches current" now says: before the owner merges the next PR of a stack,
+the coordinator retargets it to `main` (`gh api -X PATCH …/pulls/<n> -f base=main`) and merges `main` into it, and
+it checks `main`'s log after the batch. The H work landed through #90.
+
 ## 27 Nov 2026: the first 72 PRs (18–27 Nov), applied in X2
 
 **What worked.** Settling the seams first (contracts, the `Course`, the ENU frame, the Look) let S1–S5 run in
