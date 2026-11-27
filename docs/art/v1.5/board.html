@@ -419,7 +419,7 @@ function skyPanel(y0, h, centre, hfov, caption, step) {
   ctx.restore();
 }
 function boardSky() {
-  title('Dawn sky and the Pyrenees backdrop', 'From the El Tarter course start (2462 m). Real peak bearings, distances and altitudes; ridge height lifted x'
+  title('Dawn sky and the Pyrenees backdrop', 'From the El Tarter course start (' + H.maps['el-tarter'].courseAltitudeM.start + ' m). Real peak bearings, distances and altitudes; ridge height lifted x'
     + E.backdrops.pyrenees.ridge.verticalExaggeration + ' (ridge.verticalExaggeration)');
   const A = H.maps['el-tarter'];
   skyPanel(90, 440, A.fallLineCompassDeg, 150, 'Looking down the course, compass ' + A.fallLineCompassDeg + ' deg (the sky and sun follow maps[el-tarter].sun, azimuth ' + A.sun.azimuthDeg + ')', 3);

@@ -201,7 +201,7 @@ test('environment: trees, treeline, bushes and rocks', async (t) => {
   const starts = tl.courseBandStartS;
   const order = ['krummholz', 'open', 'thinning', 'forest'].map((id) => starts[id]);
   assert.deepEqual(order, [...order].sort((a, b) => a - b), 'down the run: krummholz, open, thinning, forest');
-  assert.ok(order[0] > 0 && order[3] < COURSE.finishS);
+  assert.ok(order[0] > COURSE.startS && order[3] < COURSE.finishS);
  });
  await t.test('bushes and rocks: sizes, slopes and the snow rule', () => {
   const depth = ENV.bushes.snowDepthByAltM;
@@ -272,7 +272,7 @@ test('Pyrenees peaks: stored bearings and distances match a recompute from lat/l
  const projection = createProjection(TERRAIN.origin.lat, TERRAIN.origin.lon);
  const layer = terrainLayer(TERRAIN);
  const course = runCourse(TERRAIN, selectParts(TERRAIN, COURSE.run).parts, layer);
- const start = course.point(0, 0, {});
+ const start = course.point(COURSE.startS, 0, {});
  const peaks = ENV.backdrops.pyrenees.peaks;
  await t.test('the start is the course start', () => {
   assert.ok(Math.abs(TARTER.startWorld.x - start.x) < 0.1 && Math.abs(TARTER.startWorld.y - start.y) < 0.1);
@@ -328,18 +328,18 @@ test('El Tarter: the data-derived keys match the baked files', async (t) => {
  };
  await t.test('slope, height range, start and finish altitude', () => {
   assert.equal(TARTER.meanSlopeDegData, COURSE.meanSlopeDeg);
-  const drop = heightAt(0) - heightAt(COURSE.finishS);
-  const slope = Math.atan(drop / COURSE.finishS) * RAD_TO_DEG;
+  const drop = heightAt(COURSE.startS) - heightAt(COURSE.finishS);
+  const slope = Math.atan(drop / (COURSE.finishS - COURSE.startS)) * RAD_TO_DEG;
   assert.ok(Math.abs(slope - TARTER.meanSlopeDegData) < 0.01, 'atan(drop / length)');
   assert.deepEqual(TARTER.heightRangeM, { min: TERRAIN.heights.minM, max: TERRAIN.heights.maxM });
-  assert.ok(Math.abs(heightAt(0) - TARTER.courseAltitudeM.start) < 0.1);
+  assert.ok(Math.abs(heightAt(COURSE.startS) - TARTER.courseAltitudeM.start) < 0.1);
   assert.ok(Math.abs(heightAt(COURSE.finishS) - TARTER.courseAltitudeM.finish) < 0.1);
   assert.equal(TARTER.meanSlopeDeg, 16.5, 'the art-directed value is kept');
   assert.deepEqual(TARTER.sunData, { azimuthDeg: COURSE.sun.azimuthDeg, elevationDeg: COURSE.sun.elevationDeg });
  });
  await t.test('fall line bearing and the altitude where the course passes each band limit', () => {
   const end = course.point(COURSE.finishS, 0, {});
-  const start = course.point(0, 0, {});
+  const start = course.point(COURSE.startS, 0, {});
   const bearing = (Math.atan2(end.x - start.x, end.y - start.y) * RAD_TO_DEG + 360) % 360;
   assert.ok(Math.abs(bearing - TARTER.fallLineCompassDeg) < 0.5, `fall line ${bearing}`);
   const tl = TARTER.treeline;
