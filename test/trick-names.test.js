@@ -17,8 +17,10 @@ const PLAIN_AIR = 0.8; // s of air for a jump with no flip
 // flip.test.js's, so here the rotations are turned before a plain air and only the name is read.
 function popupAfter(turns, spinDeg = 0) {
  g.place({ vy: 12 });
- g.set({ airTime: 0, z: 0.01, vz: GRAVITY * PLAIN_AIR / 2, score: 0, fromKicker: true, rotation: spinDeg * Math.PI / 180,
-  flipRot: turns * FULL_TURN, popup: { t: 0, text: '' } });
+ g.set({
+  airTime: 0, z: 0.01, vz: GRAVITY * PLAIN_AIR / 2, score: 0, fromKicker: true, rotation: spinDeg * Math.PI / 180,
+  flipRot: turns * FULL_TURN, popup: { t: 0, text: '' },
+ });
  for (let n = 0; (g.state().z > 0 || g.state().vz > 0) && n < 3000; n++) g.sim(1 / 120);
  assert.equal(g.state().crashes, 0, 'a clean landing');
  return g.state().popup.text.replace(/^\+\d+p /, '');

@@ -18,12 +18,13 @@
 // shared/flips-events re-recorded the sim hash only: the trace hashes each event as JSON, and score and flip events
 // gained `flips` (every score now carries flips: 0 or the landed rotations). No rider, HUD or anim field changed
 // (the anim hash is the same), and the rotated rides still match.
-// K2 re-recorded both (on top of the flips fields): the flight is in world height and lands where it meets the snow, the impact normal to it, and
-// kickers throw by their shape (no launch gain). Every ride's first ollie (step 150) flies up to 1.4 m differently over
-// the uneven snow; the landing turns the fall into speed along the slope, so the lines part from step 246-253 and are a
-// metre apart by step 330. The park ride from 1960 finishes 928 steps sooner; the ride from the top grinds a rail and
-// crashes once (a 32 m/s landing off the piste); the ride from 740 grinds once, then sticks in the trees at y 908 (20
-// tree crashes). The rotated rides match to 2e-9 (riding over a roll keeps the motion, so the bumps add no chaos).
+// K2 re-recorded both, on top of the flips fields: the flight is in world height and lands where it meets the snow,
+// the impact normal to it, and kickers throw by their shape (no launch gain). Every ride's first ollie (step 150) flies
+// up to 1.4 m differently over the uneven snow; the landing turns the fall into speed along the slope, so the lines
+// part from step 246-253 and are a metre apart by step 330. The park ride from 1960 finishes 928 steps sooner; the
+// ride from the top grinds a rail and crashes once (a 32 m/s landing off the piste); the ride from 740 grinds once,
+// then sticks in the trees at y 908 (20 tree crashes). The rotated rides match to 2e-9 (riding over a roll keeps the
+// motion, so the bumps add no chaos).
 // The same rides with the map rotated (docs/adr/0005-enu-frame.md) must match it step for step, within ROTATED_TOL:
 // not bit for bit, because turning every position, velocity and gradient through cos and sin of an angle that is not a
 // multiple of 90 degrees rounds in the last bits, and those differences carry along the ride. Since F6 they grow

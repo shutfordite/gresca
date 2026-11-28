@@ -43,9 +43,9 @@ const FLAT_SNOW = Object.freeze({
  * Flips (F3): in the air input.flip (-1..1, + front flip) turns rider.flipRot at FLIP.RATE (rad/s), held keeps
  * turning, alongside the spin in rider.rotation. One SimEvent 'flip' ({flips}) goes out on each clean landing of
  * one or more whole rotations, before its 'score' (its flips field is the signed count; ui/trick-names.js names it).
- * Landing within FLIP.LAND_WINDOW of a whole number of rotations is clean, otherwise a crash (cause 'landing'). A clean flip scores
- * FLIP.POINTS * n * (n + 1) / 2 on top of the air score; flipRot is
- * 0 on the snow, on a rail and at every take-off.
+ * Landing within FLIP.LAND_WINDOW of a whole number of rotations is clean, otherwise a crash (cause 'landing'). A
+ * clean flip scores FLIP.POINTS * n * (n + 1) / 2 on top of the air score; flipRot is 0 on the snow, on a rail and at
+ * every take-off.
  */
 export function jumpStep(rider, input, session, spray, dt, course = DEFAULT_COURSE, where = newWhere(),
  terrain = FLAT_SNOW, grad = { gx: 0, gy: 0 }) {
