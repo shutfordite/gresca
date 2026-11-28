@@ -15,6 +15,12 @@
 // the equipment is held, not banked as speed, powder off the piste) gives every ride a new line. The pilot now aims
 // 8 m ahead (was 15 m): with the slower edge its bang-bang steering swung wide off the piste and stalled in a gully.
 // Every ride still jumps, grinds (5 rails) and the park ride finishes; the rotated rides differ by at most 2.4e-8.
+// K2 re-recorded both: the flight is in world height and lands where it meets the snow, the impact normal to it, and
+// kickers throw by their shape (no launch gain). Every ride's first ollie (step 150) flies up to 1.4 m differently over
+// the uneven snow; the landing turns the fall into speed along the slope, so the lines part from step 246-253 and are a
+// metre apart by step 330. The park ride from 1960 finishes 928 steps sooner; the ride from the top grinds a rail and
+// crashes once (a 32 m/s landing off the piste); the ride from 740 grinds once, then sticks in the trees at y 908 (20
+// tree crashes). The rotated rides match to 2e-9 (riding over a roll keeps the motion, so the bumps add no chaos).
 // The same rides with the map rotated (docs/adr/0005-enu-frame.md) must match it step for step, within ROTATED_TOL:
 // not bit for bit, because turning every position, velocity and gradient through cos and sin of an angle that is not a
 // multiple of 90 degrees rounds in the last bits, and those differences carry along the ride. Since F6 they grow
@@ -26,8 +32,8 @@ import assert from 'node:assert/strict';
 import { goldenTrace } from '../tools/golden-trace.mjs';
 import { MAP_ROTATION_DEG } from './harness.js';
 
-const GOLDEN_SIM_HASH = '09748474c68e5023df2e260c19c080593860b528cdc44d0d25ba685faf7ffd80';
-const GOLDEN_ANIM_HASH = '5796ad992f79c75a7336ceb42d5f8c0edef1b2343b16556a2ec16fa98c37008b';
+const GOLDEN_SIM_HASH = '64d129db5817d9c2304494a53c803039143dba87087fe9f1a83cdeddc19f8aa2';
+const GOLDEN_ANIM_HASH = '1f34631a131e43cae8ba0e0c3b1dad5ae32d1e79ef2f44111ae317614340da74';
 const ROW_FIELDS = ['r', 'e', 'hud', 'dot', 'drawn', 'yaw', 'anim']; // what a row holds: each in one of the two hashes
 const ROTATED_DEG = MAP_ROTATION_DEG || 37; // deg, the placement the rotated rides use (npm run test:rotated sets it)
 const ROTATED_TOL = 1e-7; // m, m/s, rad, points, px: the most any number in the rotated trace may differ (was 1e-9)

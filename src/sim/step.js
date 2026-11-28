@@ -75,7 +75,7 @@ function ride(state, input, world, dt, course, where) {
  const slip = rider.crashTimer > 0 ? 0 : glide(state, brake, world.terrain, s, dt);
  rider.x += rider.vx * dt;
  rider.y += rider.vy * dt;
- jumpStep(rider, input, session, state.spray, dt, course, where);
+ jumpStep(rider, input, session, state.spray, dt, course, where, world.terrain, state.gradient);
  railCheck(rider, input, state.spray, course, where);
  if (rider.grind) {
   pushEvent(session, 'grindStart', { rail: course.rails.indexOf(rider.grind.r), kind: rider.grind.r.t });
@@ -183,6 +183,8 @@ function glide(state, brake, terrain, s, dt) {
  const snowLoss = air ? 0 : powderDrag(sink, s) * dt; // m/s
  const sn = Math.hypot(vx, vy);
  const f = Math.max(0, 1 - (DRAG_PER_SPEED * s + SNOW_FRICTION) * dt - (sn > 0 ? snowLoss / sn : 0));
+ // in the air vz is relative to the snow's slope under the rider (jump.js): the world vertical speed stays as it was
+ if (air) rider.vz -= grav.gx * (vx * f - rider.vx) + grav.gy * (vy * f - rider.vy);
  rider.vx = vx * f;
  rider.vy = vy * f;
  return slip;
