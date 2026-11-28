@@ -166,3 +166,37 @@ describe('riding the park', () => {
   }
  });
 });
+
+describe('grinding the jib', () => {
+ const RUN_IN_SPEED = 9;   // m/s: the jib's pitch gives about 9.6 m/s at its first row
+ const RUN_IN_M = 4;       // m before a rail's first point the rider starts, riding along its first segment
+ const SECONDS = 4;        // s ridden at most
+ const shapeAt = (n) => features.rails[n];
+
+ // Sends a rider at RUN_IN_SPEED down the first segment of features.rails[n] from RUN_IN_M before it; returns the
+ // grindStart and grindEnd events the façade logged.
+ async function sendDown(n) {
+  const g = await load({ map: 'play' });
+  const w = shapeAt(n).world;
+  const heading = Math.atan2(w[1].y - w[0].y, w[1].x - w[0].x);
+  g.raw.start();
+  g.raw.set({
+   x: w[0].x - Math.cos(heading) * RUN_IN_M, y: w[0].y - Math.sin(heading) * RUN_IN_M, heading,
+   vx: Math.cos(heading) * RUN_IN_SPEED, vy: Math.sin(heading) * RUN_IN_SPEED,
+  });
+  const dt = 1 / 120;
+  for (let t = 0; t < SECONDS && g.game.events.list('grindEnd').length === 0; t += dt) g.raw.sim(dt, dt);
+  return g.game.events.list().filter((e) => e.type === 'grindStart' || e.type === 'grindEnd');
+ }
+
+ it('a rider at the run-in speed grinds the down-flat-down rail (2 kinks) and the C-rail (a bend)', async () => {
+  const dfd = features.rails.findIndex((r) => r.points.length === 4);
+  const c = features.rails.findIndex((r) => r.points.length > 10 && r.points[0].d < 0);
+  assert.ok(dfd >= 0 && c >= 0);
+  const kinked = await sendDown(dfd);
+  assert.deepEqual(kinked.map((e) => e.type), ['grindStart', 'grindEnd']);
+  assert.equal(kinked[1].kinks, 2, 'down-flat-down has two kinks');
+  const bent = await sendDown(c);
+  assert.deepEqual(bent.map((e) => e.type), ['grindStart', 'grindEnd']);
+ });
+});

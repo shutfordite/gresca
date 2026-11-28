@@ -23,9 +23,9 @@ const JIB = Object.freeze([
 ].map((r) => Object.freeze(r)));
 
 /**
- * The park of the play mountain: {authored(), legacyRails}. pitchAt(y): m/m the piste falls along y; sOfY(y): m of s at
+ * The park of the play mountain: {authored()}. pitchAt(y): m/m the piste falls along y; sOfY(y): m of s at
  * grid row y. authored() returns {jumps, rails} as the course's features are authored (core/contracts.js, no world
- * points); legacyRails is [y, length, d, 'rail' | 'box'] for each of the jib's, the straight rails today's grind reads.
+ * points).
  */
 export function createPlayPark({ pitchAt, sOfY }) {
  function authored() {
@@ -40,6 +40,5 @@ export function createPlayPark({ pitchAt, sOfY }) {
   }));
   return { jumps, rails };
  }
- const legacyRails = JIB.map(([y, d, profile, , length]) => Object.freeze([y, length, d, profile]));
- return Object.freeze({ authored, legacyRails: Object.freeze(legacyRails) });
+ return Object.freeze({ authored });
 }

@@ -99,8 +99,7 @@ describe('the play mountain course', () => {
  it('has no kickers: its jumps are snow in the features layer (K1); its rails and boxes are the jib', () => {
   assert.equal(c.kickers.length, 0);
   assert.equal(play.raw.world.rampHeight(c.point(900, 0).x, c.point(900, 0).y), 0);
-  assert.ok(play.raw.world.rails.length >= 5);
-  assert.ok(play.raw.world.rails.some((r) => r.t === 'box') && play.raw.world.rails.some((r) => r.t === 'rail'));
+  assert.equal(play.raw.world.rails.length, 0, 'no straight stand-in rails: the jib is features, K3 grinds on them');
   assert.deepEqual([...play.raw.world.layers], ['base', 'features']);
  });
 });

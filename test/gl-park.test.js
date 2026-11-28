@@ -26,7 +26,9 @@ function makeWorld(map) {
  buildWorld(world);
  return world;
 }
-const maps = { 'test slope': makeWorld('test'), 'play mountain': makeWorld('play') };
+// The play mountain's park is features, not kickers and rails (K1): K4 draws them; its GPU mesh is empty until then.
+const maps = { 'test slope': makeWorld('test') };
+const play = makeWorld('play');
 const worldOf = (w) => ({ course: w.course, terrain: w.terrain, frame: w.frame });
 const near = (a, b, tol, what) => assert.ok(Math.abs(a - b) <= tol, what + ': ' + a + ' vs ' + b);
 
@@ -49,9 +51,7 @@ for (const [name, g] of Object.entries(maps)) {
    assert.equal(features(FEATURE_KIND.FLAG).length, 2 * course.kickers.length + 2 * bigs + course.rails.length);
    assert.deepEqual(mesh.counts, { kickers: course.kickers.length, rails: course.rails.length,
     flags: 2 * course.kickers.length + 2 * bigs + course.rails.length });
-   assert.ok(course.rails.length > 0);
-   // the play mountain's jumps are snow in the terrain (K1), not kicker features: only the test slope has kickers
-   assert.equal(course.kickers.length > 0, name === 'test slope');
+   assert.ok(course.kickers.length > 0 && course.rails.length > 0);
   });
 
   it('centres each kicker on its lip and each rail on its middle', () => {
@@ -194,8 +194,7 @@ for (const [name, g] of Object.entries(maps)) {
   };
 
   it('keeps every feature clearly in view and drops those behind the camera', () => {
-   // a kicker, or on the play mountain the middle row of the jib (the camera 60 m before it)
-   const k = course.kickers[1] || { s: course.rails[4].s0 + 60 };
+   const k = course.kickers[1];
    const p = { x: 0, y: 0 };
    course.point(k.s - 60, 0, p);
    const t = { x: 0, y: 0 };
@@ -248,7 +247,7 @@ function fakeThree() {
 }
 
 describe('park mesh on the GPU', () => {
- const { course, terrain, frame } = worldOf(maps['play mountain']);
+ const { course, terrain, frame } = worldOf(maps['test slope']);
  const shared = Object.fromEntries(['uCam', 'uDir', 'uScreen', 'uClip', 'uFar', 'uFogLut', 'uFog', 'uAux', 'uMapSize',
   'uGridOrigin', 'uGridU', 'uGridV', 'uObjSun', 'uObjSunLight'].map((n) => [n, { value: null }]));
 
@@ -265,7 +264,7 @@ describe('park mesh on the GPU', () => {
   const attrs = { ...mesh.geometry.attributes };
   const indexArray = mesh.geometry.index.array;
   const p = { x: 0, y: 0 };
-  course.point((course.kickers[2] || { s: course.rails[2].s0 }).s - 50, 0, p);
+  course.point(course.kickers[2].s - 50, 0, p);
   const down = frame.vecToWorld(0, 1, { x: 0, y: 0 }); // down the piste
   const camera = { x: p.x, y: p.y, dirX: down.x, dirY: down.y, fov: FOV };
   const first = again.update(camera);
@@ -335,5 +334,12 @@ describe('sun visibility for GPU objects', () => {
   assert.match(SUN_VISIBILITY_GLSL, /\(grid \+ 0\.5\) \/ uMapSize/);
   assert.match(SUN_VISIBILITY_GLSL, /\)\.a;/);
   assert.match(SUN_LIGHT_GLSL, /sunLit\(vec3 n, vec3 ambient, float visibility\)/);
+ });
+});
+
+describe('park mesh on the play mountain', () => {
+ it('has no kickers or rails to draw: its park is features (K4 draws them)', () => {
+  const mesh = buildParkMesh(play.course, play.terrain, look, play.frame);
+  assert.deepEqual(mesh.counts, { kickers: 0, rails: 0, flags: 0 });
  });
 });

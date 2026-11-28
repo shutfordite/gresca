@@ -124,10 +124,9 @@ function fillHeights(heights, mask) {
  }
 }
 
-// The park (K1): the jumps and rails designed for this mountain's pitches, and the straight stand-ins for its rails
-// that today's grind still slides on (until K3 grinds on the features' own lines).
+// The park (K1): the jumps and rails designed for this mountain's pitches.
 const PARK = createPlayPark({ pitchAt, sOfY });
-const RAIL_DEF = PARK.legacyRails;
+const RAIL_DEF = Object.freeze([]); // no stand-in rails: the jib's rails are features (K3 grinds on their lines)
 
 /**
  * The play mountain's layout, the same fields as the test slope's (world/build.js MAPS): the grid W, H (m), the finish
