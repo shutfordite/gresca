@@ -8,11 +8,13 @@ import { checkSimEvent, SIM_EVENT_TYPES } from '../src/core/contracts.js';
 
 const DT = 1 / 120;
 
-// One step's input from a simple autopilot: down the piste, 9 m left of the centre from y 1960 to 2040 (onto the
+// One step's input from a simple autopilot: down the piste, 9.5 m left of the centre from y 1960 to 2040 (onto the
 // rail at y 2020), no steering in the air, braking from 3 s to 3.6 s. It aims 8 m ahead (15 m until H2: the edge now
-// builds over half a second, so a pilot aiming further ahead swings wide of the rail).
+// builds over half a second, so a pilot aiming further ahead swings wide of the rail). It aims at 9.5 m (the rail is
+// at 9) since K2: with the flight and landing over the snow the pilot's weave meets the rail 0.8 m later at 9 m, short
+// of grinding 20 m of it.
 function pilot(s, W) {
- const off = s.y > 1960 && s.y < 2040 ? -9 : 0;
+ const off = s.y > 1960 && s.y < 2040 ? -9.5 : 0;
  const ty = s.y + 8;
  const ang = Math.atan2(ty - s.y, W.centre(ty) + off - s.x);
  let left = 0, right = 0;
@@ -41,8 +43,10 @@ describe('Gresca.events', async () => {
  it('a fixed-seed run emits land, grind and finish events in order, each meeting the SimEvent contract', async () => {
   await ride(g);
   const ev = g.game.events.list();
+  // K2: the kicker at 1990 throws the rider by its shape now (half a second of air, no launch gain), so it lands
+  // before the brake at 3 s starts
   assert.deepEqual(ev.map((e) => e.type + (e.kind ? ':' + e.kind : '')), [
-   'brakeStart', 'land', 'score:air', 'brakeEnd', 'grindStart:rail', 'grindEnd:rail', 'score:rail', 'land', 'land',
+   'land', 'score:air', 'brakeStart', 'brakeEnd', 'grindStart:rail', 'grindEnd:rail', 'score:rail', 'land', 'land',
    'score:air', 'finish',
   ]);
   for (const e of ev) assert.deepEqual(checkSimEvent(e), [], JSON.stringify(e));
