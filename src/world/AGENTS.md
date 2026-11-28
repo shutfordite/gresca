@@ -23,4 +23,5 @@
 | The course file (ADR 0010; version 2 adds `features`, ADR 0012) and the run behind it | `map-file/course-format.js`, `map-file/course-run.js` | `map-course` |
 | Loading a real map (C4a, ADR 0011): files to a world, progress per chunk (`loadMapSteps`) | `map-loader.js`, `map-trees.js` | `map-loader` |
 | The corridor detail layer (2 m tiles within 150 m of the piste, LRU, 60 MB budget) | `corridor-layer.js` | `map-loader` |
+| Whole-mountain height tiles (G7a, ADR 0015): five levels (1 to 16 m) of 64-texel tiles from the terrain, the 4 x 4 ring each level needs around the camera, the memory figure; not yet sampled by the view (G7b) | `height-tiles.js` | `height-tiles` |
 | What tests can read of the world | `fields.js` | `facade` |
