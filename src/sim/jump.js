@@ -38,8 +38,8 @@ const FLAT_SNOW = Object.freeze({
  * and input.jump is an ollie, JUMP_SPEED up on top of it. The take-off model K1 sizes its jumps against
  * (world/park/): designSpeed is the sim's horizontal speed at the lip, and the take-off velocity is that speed along
  * the rider's heading and that speed times tan(lip angle) up (the snow's gradient along the motion at the lip). In
- * the air the horizontal speed keeps losing step.js's air drag. It lands where the flight meets the snow; the impact is the
- * speed into the snow along its normal (LANDING, sim/tuning.js). Mutates rider, input.jump (the one-shot request it
+ * the air the horizontal speed keeps losing step.js's air drag. It lands where the flight meets the snow; the impact
+ * is the speed into the snow along its normal (LANDING, sim/tuning.js). Mutates rider, input.jump (the one-shot request it
  * uses up), session (crashes, score, events: land, crash, flip, score), spray (landing snow) and grad (a {gx, gy}
  * scratch object). course (a Course; where: a {s,d,tx,ty} scratch for it) only names the take-off: rider.fromKicker
  * is true when the snow threw the rider inside a kicker's launch zone (course.kickerAt); kickers launch by their shape.
