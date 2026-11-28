@@ -11,6 +11,8 @@
  *  (piste), stripeWave -1..1 (the corduroy wave at this texel), rock 0..1 (how much bare rock), cavity -1..1 (ridge
  *  to hollow, default 0), grain -1..1 (the snow's texture at this texel, default 0); fills out [r, g, b] (0..255,
  *  unrounded) and returns it
+ * @property {{id: string, specId: string, sunFrom: 'spec' | 'course' | 'default'}} map  the loaded map's id, the key of
+ *   the art spec's maps entry the look read, and where the sun came from (spec entry, course file, or the default map)
  * @property {{stops: ReadonlyArray<readonly [number, string]>, sun: LookSun}} sky  gradient stops from the top of the
  *  screen (0) to the horizon (1), CSS colours; and the sun disc
  * @property {{rgb: readonly number[], amount: (dM: number, farM: number) => number}} fog  fog colour (0..255) and how

@@ -1,5 +1,5 @@
 // The view's façade fields (debug.js): the camera in state() and set(), and Gresca.debug, the render internals.
-import { MAP_ID, RAY_FAR, RAY_SAMPLES } from '../core/config.js';
+import { RAY_FAR, RAY_SAMPLES } from '../core/config.js';
 import { nested, prop } from '../core/facade-fields.js';
 import { cameraTilt, camCompass } from './camera.js';
 import { fogAt, sunDisc, sunAzimuthDeg } from './sky.js';
@@ -71,7 +71,10 @@ export function viewDebug(g) {
    fillHorizon(view, camera, world.terrain, horizonSamples());
    return Array.from(view.occ.subarray(0, view.lo.width * RAY_SAMPLES));
   },
-  mapId: MAP_ID,
+  mapId: look.map.specId, // the art spec's maps key the active look read (its sun and mean slope)
+  lookMap: () => ({ ...look.map }), // {id, specId, sunFrom: 'spec' | 'course' | 'default'}
+  // compass deg, before the map frame turns it
+  lookSun: () => ({ azimuthDeg: look.sky.sun.azimuthDeg, elevationDeg: look.sky.sun.elevationDeg }),
   // fog colour, distance of the last terrain sample (m), samples per column
   fog: () => ({ rgb: view.fog.slice(), far: RAY_FAR, samples: RAY_SAMPLES }),
   fogAt: (z) => fogAt(look.fog, z),
