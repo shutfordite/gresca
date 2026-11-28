@@ -85,6 +85,8 @@ Updated 28 Nov 2026, round/1 (Round 1 PR) on main after #105. Only the coordinat
 Round 1 PR, waiting on the owner's iPad session and merge. No stream branches open beyond it.
 
 ## Next, in order
+- **Test-health (QA, Round 2):** `test/camera-follows-mode.test.js` rides one game across the camera modes instead of a
+  game per mode (about 4 s saved; the suite is 6.4% over main after Round 1 and must pay it back).
 - **G4** answer (ADR 0014, proposed: CPU renderer frozen fallback), then **G7b** (S4: clipmap sampling of the height
   tiles, `paint-window.js` gone in GPU mode; the open questions in the Debt row below), with **G8** bakes in a worker
   alongside; then G5 and G6.
@@ -151,6 +153,10 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 | `state.railSegment` is made lazily in `sim/step.js`: make it with the sim state | S2, Shared | Round 1 K3 | next sim package |
 | `launchGain` is still in the world data and its validator, unused since K2 | S5 | Round 1 K2 | next S5 package |
 | `MAP_ID` in `core/config.js` may be redundant now the Look takes the map id from the world | Shared | Round 1 | next config change |
+| Untested tunables: landing speed loss (`LANDING.SOFT_LOSS`, `HARD_LOSS`, `MAX_LOSS`); `GRIND.CRASH_PUSH`, `DROP_SIDE_SPEED`, `LIFT_MIN_SPEED` (bounds in flight and grind tests) | S2 | Round 1 QA | next S2 package |
+| `alpha-style.test.js` asserts `<= 101`, not that a second identical stretch adds none | S4 | Round 1 QA | next S4 package |
+| `real-map` two-boot sun test repeats `look-contract`'s cases: one boot will do | S4 | Round 1 QA | next S4 package |
+| `play-slope.test.js` steep band 28–36° over the finish needs a comment on why 36 | S5 | Round 1 QA | next S5 package |
 
 `?rot=<deg>` places the procedural map rotated (debug).
 
