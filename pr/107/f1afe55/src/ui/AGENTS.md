@@ -1,0 +1,19 @@
+# src/ui: HUD, menu and screens (stream S1, with `styles/`)
+
+- UI subscribes to SimEvents on the bus (`src/core/events.js`) and reads state; it never writes the rider or the sim.
+- Colours are `var(--…)` tokens from the Look's `ui` (`test/look-lint.test.js`); CSS lives in `styles/*.css`, never
+  inline.
+- Storage keys `gresca-rig`, `gresca-stance` and `gresca-hints` must keep working (root `AGENTS.md`, "Do not break").
+
+## Code map
+| To change | Edit | Tests |
+|---|---|---|
+| Trick names for the score popup, from a score event's `flips` and `degrees` (the sim holds no naming code) | `trick-names.js` | `trick-names` |
+| HUD, score popup, minimap | `hud.js`, `styles/hud.css` | `facade`, `features`, `events`, `look-lint` |
+| Menu, rig and stance picker, finish screen | `menu.js`, `styles/menu.css`, `index.html` | `park`, `page`, `events`, `stance` |
+| The map picker (`#maps`, `env.openMap(id)` provided by `main.js`), the map data line and Credits toggle | `menu.js`, `map-catalog.js` (the frozen list; U's map search replaces it), `styles/menu.css`, `index.html` | `map-picker` |
+| The Controls screen (generated from `src/input/bindings.js`; gesture diagrams) | `controls.js`, `styles/menu.css` | `controls` |
+| Pause: the button, the panel, hidden-page auto-pause (`hud.paused`; the loop in `app.js` honours it) | `pause.js`, `styles/hud.css` | `pause` |
+| Air hints (flip and spin arrows for the first 3 jumps, `gresca-hints`) | `air-hints.js`, `styles/hud.css` | `air-controls` |
+| The camera view's name label after a switch (`#cam-label`, fades in CSS) | `camera-label.js`, `styles/hud.css`, `index.html` | `tap-rider` |
+| What tests can read of the UI | `fields.js` | `facade` |
