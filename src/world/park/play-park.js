@@ -10,10 +10,10 @@ import { railLine } from './rail-shapes.js';
 // with no brake (test/park-play.test.js keeps them honest). The speeds climb along a line as the rider settles into its
 // pitch, so each jump is sized for its own.
 const JUMP_LINES = Object.freeze([
- Object.freeze({ name: 'S line', lips: [[490, 's', 13.5], [550, 's', 14.5], [610, 's', 15.5], [670, 's', 16]] }),
- Object.freeze({ name: 'M line', lips: [[880, 'm', 17], [960, 'm', 18], [1040, 'm', 18.5]] }),
- Object.freeze({ name: 'L line', lips: [[1260, 'l', 19], [1350, 'l', 19.5], [1440, 'l', 20]] }),
- Object.freeze({ name: 'mega ramp', lips: [[1920, 'xl', 22]] }),
+ Object.freeze({ name: 'S line', lips: [[490, 's', 13.9], [550, 's', 15.1], [610, 's', 15.3], [670, 's', 15.4]] }),
+ Object.freeze({ name: 'M line', lips: [[880, 'm', 16.9], [960, 'm', 17.1], [1040, 'm', 17.4]] }),
+ Object.freeze({ name: 'L line', lips: [[1260, 'l', 16.6], [1350, 'l', 17.2], [1440, 'l', 17.6]] }),
+ Object.freeze({ name: 'mega ramp', lips: [[1920, 'xl', 16.9]] }),
 ]);
 // The jib section, three rows of three: [y of the start (m), d (m to the left), profile, shape, length (m)].
 const JIB = Object.freeze([
@@ -23,9 +23,9 @@ const JIB = Object.freeze([
 ].map((r) => Object.freeze(r)));
 
 /**
- * The park of the play mountain: {authored(), legacyRails}. pitchAt(y): m/m the piste falls along y; sOfY(y): m of s at
+ * The park of the play mountain: {authored()}. pitchAt(y): m/m the piste falls along y; sOfY(y): m of s at
  * grid row y. authored() returns {jumps, rails} as the course's features are authored (core/contracts.js, no world
- * points); legacyRails is [y, length, d, 'rail' | 'box'] for each of the jib's, the straight rails today's grind reads.
+ * points).
  */
 export function createPlayPark({ pitchAt, sOfY }) {
  function authored() {
@@ -40,6 +40,5 @@ export function createPlayPark({ pitchAt, sOfY }) {
   }));
   return { jumps, rails };
  }
- const legacyRails = JIB.map(([y, d, profile, , length]) => Object.freeze([y, length, d, profile]));
- return Object.freeze({ authored, legacyRails: Object.freeze(legacyRails) });
+ return Object.freeze({ authored });
 }

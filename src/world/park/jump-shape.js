@@ -11,8 +11,9 @@
 //    `angle` above the horizontal, whatever the base slope g (m/m, downhill) is, so the rise is relative to the snow;
 //  - table: a straight surface from the lip (h) to the knuckle (landing.height), or a gap: the snow falls to the base
 //    snow and rises again in front of the knuckle;
-//  - landing: from the knuckle, `landing.angle` below the horizontal at first, flattening smoothly into the base
-//    snow at the foot (the bottom); past the foot there is nothing: the run-out is the base snow itself.
+//  - landing: from the knuckle, straight at `landing.angle` below the horizontal for most of its length (the sweet
+//    spot), then flattening smoothly into the base snow at the foot (the bottom); past the foot there is nothing: the
+//    run-out is the base snow itself.
 // Across, d is metres to the left of the centre line: full height within the jump's half width (the landing widens a
 // quarter), then groomed sidewalls fall to the base snow.
 
@@ -25,7 +26,7 @@ const SIDEWALL_MAX_M = 4.5;    // m across, the widest
 const SIDEWALL_BASE_M = 0.9;   // m across, a sidewall's width at no height
 const SIDEWALL_PER_M = 0.6;    // m across per m of the jump's peak height
 // An XL jump's built drop-in, in m: the hump it rides up onto, a deck, then a steep roll-in down to the takeoff.
-export const DROP_IN = Object.freeze({ height: 4.5, rise: 12, deck: 6, drop: 20 });
+export const DROP_IN = Object.freeze({ height: 4.5, rise: 14, deck: 6, drop: 32 });
 
 const smooth = (t) => t * t * (3 - 2 * t);
 const smoothSlope = (t) => 6 * t * (1 - t);
@@ -85,20 +86,41 @@ function tableAt(x, jump, out) {
  }
 }
 
-// The landing at u = 0..1 along it: a cubic from the knuckle (height K, slope matching `angle` below the horizontal)
-// into the base snow (no height, no slope) at the foot. Never below the base snow.
+// The landing at u = 0..1 along it: straight at `landing.angle` below the horizontal from the knuckle to
+// LANDING_STRAIGHT
+// (the sweet spot, where a rider at the design speed comes down), then easing into the base snow, which it meets at the
+// foot with the base's own slope. Never below the base snow.
 function landingAt(u, jump, slope, out) {
  const K = jump.landing.height;
  const len = jump.landing.length;
- const s0 = (slope - Math.tan(jump.landing.angle)) * len; // m, the knuckle's slope relative to the base, times len
- const r = K * (1 - 3 * u * u + 2 * u * u * u) + s0 * (u - 2 * u * u + u * u * u);
+ const steep = Math.tan(jump.landing.angle) - slope; // m/m, how much steeper than the base snow the landing falls
+ let fall; // m/m of the landing's length, the steepness relative to the base at u
+ let drop; // m, how far the landing has fallen below the knuckle (relative to the base) by u
+ if (u <= LANDING_STRAIGHT) {
+  fall = steep;
+  drop = steep * u * len;
+ } else {
+  const t = (u - LANDING_STRAIGHT) / (1 - LANDING_STRAIGHT);
+  fall = steep * (1 - smooth(t));
+  drop = steep * len * (LANDING_STRAIGHT + (1 - LANDING_STRAIGHT) * (t - t * t * t + t * t * t * t / 2));
+ }
+ const r = K - drop;
  if (r <= 0) {
   out.r = 0;
   out.dr = 0;
   return;
  }
  out.r = r;
- out.dr = (K * (-6 * u + 6 * u * u) + s0 * (1 - 4 * u + 3 * u * u)) / len;
+ out.dr = -fall;
+}
+
+/** The share (0..1) of a landing's length that is straight at its angle; the rest eases into the base snow. */
+export const LANDING_STRAIGHT = 0.7;
+
+/** m, the knuckle's height above the base snow: a landing of `length` m, `angle` rad, base falling `slope` m/m. */
+export function landingHeight(length, angle, slope) {
+ const share = LANDING_STRAIGHT + (1 - LANDING_STRAIGHT) / 2;
+ return (Math.tan(angle) - slope) * length * share;
 }
 
 /**
