@@ -39,7 +39,7 @@ describe('the play mountain\'s park layout', () => {
   assert.equal(bySize('xl')[0].table.gap, true, 'a gap');
  });
 
- it('has steady speeds along each line, and faster ones further down', () => {
+ it('has steady speeds along each line, and faster ones further down the mountain', () => {
   const speeds = (size) => bySize(size).map((j) => j.designSpeed);
   for (const size of ['s', 'm', 'l']) {
    const v = speeds(size);
@@ -47,7 +47,8 @@ describe('the play mountain\'s park layout', () => {
   }
   assert.ok(Math.max(...speeds('s')) < Math.min(...speeds('m')) + 1.5);
   assert.ok(Math.max(...speeds('m')) < Math.min(...speeds('l')) + 1.5);
-  assert.ok(Math.min(...speeds('xl')) > Math.max(...speeds('l')));
+  const gap = Math.abs(speeds('xl')[0] - Math.max(...speeds('l')));
+  assert.ok(gap <= 1.5, 'the mega ramp is built for about the L speed');
  });
 
  it('has a jib section of 6 to 10 rails and boxes close together, rails and boxes of several shapes', () => {
@@ -76,7 +77,7 @@ describe('the play mountain\'s park layout', () => {
   for (const j of features.jumps) {
    const run = Math.hypot(j.world[3].x - j.world[0].x, j.world[3].y - j.world[0].y);
    const slope = (j.world[0].z - j.world[3].z) / run;
-   const x = touchdownOf(j, slope, j.designSpeed);
+   const { x } = touchdownOf(j, slope, j.designSpeed);
    assert.ok(x >= j.table.length && x <= j.table.length + j.landing.length,
     j.size + ' at s ' + j.s.toFixed(0) + ' lands at ' + x.toFixed(1) + ' m of ' + j.table.length.toFixed(1) +
     ' to ' + (j.table.length + j.landing.length).toFixed(1));
@@ -143,27 +144,49 @@ describe('the jumps are snow, measured from the base snow', () => {
 });
 
 describe('riding the park', () => {
- // A fixed-step ride down the centre line with no brake, as test/play-slope.test.js, to the mega ramp's lip. Over 1 s:
- // the speed at the last lip is only there after about 110 s of riding (13,000 steps) and a game load, and no module
- // call gives the rider's speed.
- it('arrives at every lip at the speed that jump was sized for', async () => {
+ const MIDDLE_THIRD = [1 / 3, 2 / 3]; // of the landing's length, from its knuckle
+ const SOFT_IMPACT = 5.1;  // m/s into the snow along its normal: the S, M and L landings (5 with a hair of tolerance)
+ const MEGA_IMPACT = 7;    // m/s: the mega ramp's landing is capped at 10 m of knuckle (contract), so it is no softer
+                           // than the sim's SOFT_IMPACT; it is still a soft landing, not a hard one
+
+ // A fixed-step ride down the centre line with no brake, as test/play-slope.test.js, to the finish. About 14 s
+ // of game time per 1000 steps and 110 s to the last lip: one ride is asserted several ways, over 1 s in all.
+ it('arrives at every lip at its design speed and lands in the middle third, softly', async () => {
   const g = await load({ map: 'play' });
   const raw = g.raw;
   const course = raw.world.course;
-  const lips = features.jumps.map((j) => ({ j, speed: null }));
+  const jumps = features.jumps;
+  const lipSpeed = new Array(jumps.length).fill(null);
+  const landed = new Array(jumps.length).fill(null); // {fraction down the landing, impact} of the first landing
+  let seen = 0;
   raw.start();
   const dt = 1 / 120;
-  for (let t = 0; t < 200 && lips.some((l) => l.speed === null); t += dt) {
+  for (let t = 0; t < 220; t += dt) {
    const st = raw.state();
    const p = course.project(st.x, st.y);
+   if (p.s >= jumps.at(-1).s + 120) break;
    raw.set({ heading: Math.atan2(p.ty, p.tx) - Math.max(-0.25, Math.min(0.25, p.d * 0.03)) });
    raw.sim(dt, dt);
-   for (const l of lips) if (l.speed === null && p.s >= l.j.s) l.speed = raw.state().speed;
+   jumps.forEach((j, i) => { if (lipSpeed[i] === null && p.s >= j.s) lipSpeed[i] = st.speed; });
+   const lands = g.game.events.list('land');
+   for (; seen < lands.length; seen++) {
+    const q = course.project(raw.state().x, raw.state().y);
+    const i = jumps.findIndex((j) => q.s > j.s && q.s < j.s + j.table.length + j.landing.length + 15);
+    if (i >= 0 && landed[i] === null) {
+     const fraction = (q.s - jumps[i].s - jumps[i].table.length) / jumps[i].landing.length;
+     landed[i] = { fraction, impact: lands[seen].speed };
+    }
+   }
   }
-  for (const { j, speed } of lips) {
-   assert.ok(Math.abs(speed - j.designSpeed) <= SPEED_TOL,
-    j.size + ' at s ' + j.s.toFixed(0) + ': arrives at ' + speed.toFixed(1) + ' m/s, sized for ' + j.designSpeed);
-  }
+  jumps.forEach((j, i) => {
+   const name = j.size + ' at s ' + j.s.toFixed(0);
+   assert.ok(Math.abs(lipSpeed[i] - j.designSpeed) <= SPEED_TOL,
+    name + ': arrives at ' + lipSpeed[i] + ' m/s, sized for ' + j.designSpeed);
+   const { fraction, impact } = landed[i] ?? { fraction: NaN, impact: NaN };
+   const where = name + ': lands ' + fraction.toFixed(2) + ' down';
+   assert.ok(fraction >= MIDDLE_THIRD[0] && fraction <= MIDDLE_THIRD[1], where);
+   assert.ok(impact < (j.size === 'xl' ? MEGA_IMPACT : SOFT_IMPACT), name + ': impact ' + impact.toFixed(1) + ' m/s');
+  });
  });
 });
 

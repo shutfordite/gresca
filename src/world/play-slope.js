@@ -19,9 +19,9 @@ const START_ALT_M = 2600;      // m of altitude at the top of the map
 const PITCH = Object.freeze([  // [y (m), fall m/m along the piste]: the pitch at each y, eased between
  [0, 0.04], [330, 0.04],       // the start and the jib section: nearly level, about 10 m/s
  [400, 0.09], [700, 0.09],     // the S line
- [790, 0.115], [1080, 0.115],  // the M line
- [1170, 0.14], [1540, 0.14],   // the L line
- [1620, 0.18], [2010, 0.18],   // the mega ramp: its run-in, drop-in and landing
+ [790, 0.105], [1080, 0.105],  // the M line
+ [1170, 0.12], [1540, 0.12],   // the L line
+ [1620, 0.13], [2010, 0.13],   // the mega ramp: its run-in, drop-in and landing
  [2090, 0.66], [2450, 0.66],   // the steep finish run
 ].map((p) => Object.freeze(p)));
 const PARK_FROM_Y = 100;       // m, the roll and the noise are gone from here on (the park is groomed flat)...
