@@ -56,6 +56,24 @@ export const FLIP = Object.freeze({
 });
 
 /**
+ * Landing (K2, sim/jump.js): the impact is the speed into the snow along its normal, so matching the landing slope is
+ * soft at any height and the knuckle, the table or a flat bottom is hard. JUMP_GRAVITY (core/config.js) gives a fall
+ * of h metres onto the flat an impact of sqrt(2 · 15 · h): 7 m/s is about 1.6 m, 26 m/s about 22 m. CRASH_IMPACT is
+ * high while the play mountain still has its old ramps (4.6 m kickers taken at 40 m/s land at up to 24 m/s); with
+ * K1's jumps sized for their speed it can come down to about 15 (a flat bottom from 7 to 8 m).
+ */
+export const LANDING = Object.freeze({
+ HOLD: 15,            // m/s², more than JUMP_GRAVITY the rider holds the snow with over a roll (legs absorbing it)
+ SOFT_IMPACT: 7,      // m/s into the snow, up to this a landing is soft (an ollie onto the flat is 6.5)
+ CRASH_IMPACT: 26,    // m/s into the snow, harder than this is a crash however the board lands
+ MISALIGN_IMPACT: 8,  // m/s into the snow, harder than this with the board across the travel is a crash
+ MISALIGN: 0.6,       // rad, the board this far off the direction of travel counts as across it
+ SOFT_LOSS: 0.004,    // fraction of speed lost per m/s of impact (a small loss on every landing)
+ HARD_LOSS: 0.015,    // fraction of speed lost per m/s of impact above SOFT_IMPACT (more on a hard landing)
+ MAX_LOSS: 0.35,      // fraction, the most speed a landing that holds takes
+});
+
+/**
  * Grinds (K3, sim/grind.js): on a rail or box the rider moves along its polyline. Gravity along the segment's slope and
  * the friction of the surface (a round rail is slicker than a plastic box top) set the speed; the balance (-1..1, off
  * at +-1) drifts with leaning more or less than a bend needs and with the board off its line, and settles back on its

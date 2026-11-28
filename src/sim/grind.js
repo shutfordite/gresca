@@ -306,7 +306,7 @@ export function grindStep(rider, input, session, spray, dt, course = DEFAULT_COU
  let speed = Math.hypot(rider.vx, rider.vy) * Math.hypot(1, rise); // m/s along the rail
  let push = 0; // 1/s, how hard the balance is pushed this step
  if (isLifted(grind)) {
-  liftStep(rider, input, grind, RIGS[session.rig], rise, dt);
+  liftStep(rider, input, grind, RIGS[session.rig], dt);
  } else {
   speed = slide(speed, rise, kindOf(r), dt);
   push = balanceStep(rider, input, grind, g, speed / Math.hypot(1, rise), dt);
@@ -365,13 +365,15 @@ function balanceStep(rider, input, grind, g, along, dt) {
  return push;
 }
 
-// In the air over a kink: the rider rises and falls (JUMP_GRAVITY, across the rail's slope rise), the steer spins the
-// board (rig.spin, rad/s); on touching down the board's angle picks the grind again, or null (a crash) if it is off.
-function liftStep(rider, input, grind, rig, rise, dt) {
+// In the air over a kink: the world-height flight of sim/jump.js over the rail's line: grind.lift is m above the rail's
+// top, grind.liftV m/s up relative to riding along the rail's slope, so the rider falls at JUMP_GRAVITY and the rail
+// turning under the flight at a vertex changes liftV (advance). The steer spins the board (rig.spin, rad/s); on
+// touching down the board's angle picks the grind again, or null (a crash) if it is off.
+function liftStep(rider, input, grind, rig, dt) {
  input.jump = 0;
  rider.heading -= steerOf(input) * rig.spin * dt;
- grind.liftV -= JUMP_GRAVITY / Math.hypot(1, rise) * dt;
- grind.lift += grind.liftV * dt;
+ grind.lift += grind.liftV * dt - 0.5 * JUMP_GRAVITY * dt * dt;
+ grind.liftV -= JUMP_GRAVITY * dt;
  if (grind.lift > 0) return;
  grind.lift = 0;
  grind.liftV = 0;
@@ -392,16 +394,19 @@ function advance(rider, grind, speed, dt) {
  let kinked = false;
  while (grind.seg < segCount(r) - 1 && grind.t - grind.segStart >= g.len) {
   const pitch = Math.atan(g.rise);
+  const riseBefore = g.rise; // m/m
   grind.segStart += g.len;
   grind.seg++;
   // the board turns with the rail at a bend (in the air over a kink too: it turns only what the steer spins it)
   if (!isLifted(grind)) rider.heading += turnAt(r.world, grind.seg);
   segment(r, grind.seg, g);
   const bend = Math.atan(g.rise) - pitch; // rad, - where the rail drops away
+  // m/s up relative to the new segment's slope, of a rider moving on along the old one (world-height flight)
+  const up = speed / Math.hypot(1, riseBefore) * (riseBefore - g.rise);
+  if (isLifted(grind)) grind.liftV += up; // the rail turns under the flight
   if (Math.abs(bend) < GRIND.KINK_MIN) continue;
   grind.kinks++;
   kinked = true;
-  const up = speed * Math.sin(-bend); // m/s off the new segment
   if (up >= GRIND.LIFT_MIN_SPEED && !isLifted(grind)) grind.liftV = up;
  }
  return kinked;

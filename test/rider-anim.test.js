@@ -215,6 +215,11 @@ test('in the game', async (t) => {
     assert.equal(st().landings, n + 1, 'landed');
     assert.ok(st().landingSpeed > 3, 'landing speed recorded');
     assert.equal(pose(), 'land');
+    assert.ok(g.debug.anim().comp > 0, 'the landing starts compressing the legs at once');
+    // K2: the ollie lands on the snow's own slope now, a little sooner and faster; the landing frame shows the first
+    // 1/60 s of the compression (0.018, was 0.020), so its depth is checked a frame later (0.030, was 0.034)
+    frames(1);
+    assert.equal(pose(), 'land');
     assert.ok(g.debug.anim().comp > 0.02, 'the landing compresses the legs');
     frames(30);
     assert.equal(pose(), 'ride');

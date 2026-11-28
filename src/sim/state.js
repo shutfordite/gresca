@@ -3,10 +3,10 @@
 
 /**
  * A new rider state (RiderState, core/contracts.js), all in map units: x, y (m), vx, vy (m/s), heading (rad, the
- * direction the board points; twin tip, so heading + PI is the same board ridden switch), z (m above the ground),
- * vz (m/s, + up), airTime (s), rotation (rad turned in the air this jump), fromKicker, crashTimer (s of wipeout left),
- * wipeoutSpin (rad), grind (null or {r: rail, t: m along it, seg, style, balance}: core/contracts.js), grindDist
- * (m ground this grind), landings (count),
+ * direction the board points; twin tip, so heading + PI is the same board ridden switch), z (m above the snow under
+ * the rider), vz (m/s, + up, relative to riding along that snow: sim/jump.js), airTime (s), rotation (rad turned in
+ * the air this jump), fromKicker, crashTimer (s of wipeout left), wipeoutSpin (rad), grind (null or {r: rail, t: m
+ * along it, seg, style, balance}: core/contracts.js), grindDist (m ground this grind), landings (count),
  * landingSpeed (m/s); derived after each step: travelHeading, boardHeading (rad), skid (m/s), spinRot (rad), isSwitch,
  * isBraking, fallLine (rad), downhillSide (+1, -1, 0); edge (rad, + turns left, sim/edge.js); pre-added for S2 (0):
  * flipRot (rad), yawRate (rad/s, counter-clockwise +), snowDepth (m of loose snow under the rider), sink (m the
