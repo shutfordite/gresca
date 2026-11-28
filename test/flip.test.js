@@ -74,6 +74,19 @@ describe('flips', () => {
   assert.equal(events.filter((e) => e === 'flip').length, 1);
  });
 
+ it('the flip and score events carry the signed whole rotations: + front, - back, 0 for a plain air', () => {
+  const flipsOf = (r, type) => r.session.events.find((e) => e.type === type).flips;
+  const front = fly(airborne(1), 1);
+  const back = fly(airborne(1), -1);
+  const doubleBack = fly(airborne(2), -1);
+  const plain = fly(airborne(1), 0);
+  assert.deepEqual([flipsOf(front, 'flip'), flipsOf(front, 'score')], [1, 1]);
+  assert.deepEqual([flipsOf(back, 'flip'), flipsOf(back, 'score')], [-1, -1]);
+  assert.deepEqual([flipsOf(doubleBack, 'flip'), flipsOf(doubleBack, 'score')], [-2, -2]);
+  assert.equal(flipsOf(plain, 'score'), 0);
+  assert.ok(!plain.events.includes('flip'), 'a plain air has no flip event');
+ });
+
  it('a double flip lands clean, scores more, and emits one flip event', () => {
   const single = fly(airborne(1), 1);
   const double = fly(airborne(2), 1);

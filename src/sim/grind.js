@@ -93,7 +93,7 @@ function endGrind(rider, input, session, course, jump) {
  const pts = Math.round(rider.grindDist * GRIND_POINTS_PER_M);
  session.score += pts;
  pushEvent(session, 'grindEnd', { rail: course.rails.indexOf(r), kind: r.t, dist: rider.grindDist, jumped: jump });
- pushEvent(session, 'score', { points: pts, kind: r.t, degrees: 0 });
+ pushEvent(session, 'score', { points: pts, kind: r.t, degrees: 0, flips: 0 });
  rider.grind = null;
  rider.grindDist = 0;
  rider.z = r.h;
