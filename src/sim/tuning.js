@@ -54,3 +54,27 @@ export const FLIP = Object.freeze({
  LAND_WINDOW: 40 * Math.PI / 180, // rad (40 degrees), within this of a whole rotation is clean, beyond it a crash
  POINTS: 90,          // points for the first rotation; n rotations score POINTS * n * (n + 1) / 2 (90, 270, 540, ...)
 });
+
+/**
+ * Grinds (K3, sim/grind.js): on a rail or box the rider moves along its polyline. Gravity along the segment's slope and
+ * the friction of the surface (a round rail is slicker than a plastic box top) set the speed; the balance (-1..1, off
+ * at +-1) drifts with leaning more or less than a bend needs and with the board off its line, and settles back on its
+ * own. Gravity along a rail is GRAVITY * GRAVITY_GAIN, as on the snow, so a down rail is as quick as the slope.
+ */
+export const GRIND = Object.freeze({
+ RAIL_FRICTION: 0.06, // dimensionless, friction coefficient of a round rail (deceleration RAIL_FRICTION g on the flat)
+ BOX_FRICTION: 0.13,  // dimensionless, of a box top: a flat box slows the rider to a stop in about v / 2 s
+ AIR_DRAG: 0.0035,    // 1/m, air drag on the rail: fraction of speed lost per second per m/s (as on the snow)
+ STALL_SPEED: 0.6,    // m/s, slower than this the rider steps off the side
+ MAX_LEAN: 0.6,       // rad, the lean into a bend at full steer
+ LEAN_RATE: 4,        // rad/s, how fast the lean follows the steer
+ ALIGN_RATE: 2,       // 1/s, how fast the board swings onto its grind's line (lined up or square across)
+ BALANCE_LEAN: 3,     // 1/s of balance per unit of tan(lean) more than the bend needs (leaning left tips it +)
+ BALANCE_MISALIGN: 3, // 1/s of balance per rad of the board off its line (counter-clockwise tips it +)
+ BALANCE_RECOVER: 1.2, // 1/s, the balance settles back toward 0 at this rate: a lean off by under 0.4 (tan) holds
+ CRASH_PUSH: 2.5,     // 1/s, losing balance pushed harder than this (the drift before it settles back) is a crash
+ DROP_SIDE_SPEED: 1.5, // m/s, sideways push when the rider drops off the side
+ KINK_MIN: 0.05,      // rad, a change of slope at a vertex counts as a kink from this angle
+ LIFT_MIN_SPEED: 1,   // m/s, a convex kink throws the rider up off the rail when it would at this speed or more
+ LAND_ALIGN: 0.6,     // rad, after a lift the board must land within this of a grind's line (lined up or across)
+});
