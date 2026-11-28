@@ -135,7 +135,7 @@ export function createGame(env) {
   frame: mapFrame,
   treeArr: world.treeArr,
   pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
-  spray, timestep, look, riderAnim: env.RiderAnim, camMode,
+  spray, timestep, look, riderAnim: env.RiderAnim, camMode, powderPose: env.powderPose || 0,
  };
 
  // Asks for a frame: the start screen draws for MENU_SETTLE_S more seconds. Anything that changes the picture calls it.

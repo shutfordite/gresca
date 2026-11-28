@@ -43,6 +43,7 @@ function riderAnimInput(view, game, dt) {
  // deg, + with the rider turned to the right of the camera's view (clockwise)
  view.riderYaw = wrap(camera.heading - a.facing) * 180 / Math.PI;
  return {
+  powderPose: game.powderPose || 0, sink: a.sink,
   wiped: a.wiped,
   grinding: a.grinding,
   airborne: air,

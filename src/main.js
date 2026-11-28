@@ -79,6 +79,7 @@ const env = Object.freeze({
  },
  cam: query('cam'), // ?cam=<id>: the camera mode to start in (A, B or C)
  showFps: query('fps') === '1',
+ powderPose: query('spike') === 'powder-pose2' ? 2 : query('spike') === 'powder-pose' ? 1 : 0, // spike: deep powder pose A or B
  now: () => performance.now(),
  warn: (message) => console.warn(message),
  mapRotationRad: Number.isFinite(rotDeg) ? rotDeg * Math.PI / 180 : 0,
