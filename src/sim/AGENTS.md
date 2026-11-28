@@ -34,8 +34,8 @@
 | The brake (yaw across the fall line, skid friction) and its tunables | `brake.js`, `tuning.js` | `brake`, `physics`, `golden` |
 | The edge and carve (edge angle and its cap, carve radius from the sidecut, turn-rate inertia); rig data in `RIGS` (`core/config.js`) | `edge.js`, `tuning.js` | `edge`, `snow-ride`, `physics`, `park`, `golden` |
 | The snow contact: edge hold and skid, powder sink, plough and drag (`SNOW`) | `contact.js`, `tuning.js` | `snow-ride`, `edge`, `brake`, `golden` |
-| Jumps, air, landing, crash, air scoring; flips (`flipRot`, the ±40° landing window, trick names); the air's gravity is `JUMP_GRAVITY` in `core/config.js` (world/ sizes landings with it, ADR 0012) | `jump.js`, `tuning.js` (`FLIP`) | `physics`, `park`, `sim`, `flip` |
-| Rails and boxes (`rider.grind` is `{r, t, seg, style, balance}`; K3 reads park rails' world points only, ADR 0012) | `grind.js` | `park`, `sim` |
+| Jumps, air, landing, crash, air scoring; flips (`flipRot`, the ±40° landing window; trick names are `ui/trick-names.js`); the air's gravity is `JUMP_GRAVITY` in `core/config.js` (world/ sizes landings with it, ADR 0012) | `jump.js`, `tuning.js` (`FLIP`) | `physics`, `park`, `sim`, `flip` |
+| Rails and boxes (K3): grinds on park rails' world points (ADR 0012) and the course rails; gravity along the segment, rail and box friction, kinks and the lift over a convex one, bends and lean, styles, balance (`rider.grind` is `{r, t, seg, style, balance}` plus its own state), getting on, side and leg crashes; tunables `GRIND` | `grind.js`, `tuning.js` | `grind`, `park`, `sim`, `golden` |
 | Snow spray: a fixed pool of typed arrays (`createSpray`, `MAX_PARTICLES` long, no allocation after; puff size `r` and life; powder plumes are emitted in `step.js`); read it only through `sprayPool` / `sprayCount` / `sprayCopies` | `particles.js` | `spray-pool`, `features`, `sim`, `snow-ride` |
 | Fixed timestep and interpolation | `timestep.js` | `timestep`, `facade` |
 | Rider and session state fields (+ `fields.js` to expose them to tests) | `state.js`, `fields.js` | `facade`, `sim` |

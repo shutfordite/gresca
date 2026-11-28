@@ -182,10 +182,13 @@ describe('rails and boxes', () => {
     assert.ok(!grinding());
   });
 
-  it('ignores a rider who is sideways, too slow or too far off to the side', () => {
+  it('a sideways board slides the rail; too slow or too far off to the side is ignored', () => {
+    // K3: square across the rail is a boardslide or lipslide (it was ignored before grinds had styles)
     onRail(0, 0.3, 12, { heading: phi(RAILS[0]) + Math.PI / 2 });
     g.sim(0.1);
-    assert.ok(!grinding(), 'sideways');
+    assert.ok(grinding(), 'sideways');
+    assert.match(st().grind.style, /^(boardslide|lipslide)$/);
+    g.set({ grind: null });
     onRail(0, 0.3, 2);
     g.sim(0.05);
     assert.ok(!grinding(), 'too slow');
