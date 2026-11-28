@@ -76,8 +76,9 @@ function saveCameraMode(env, index) {
  * test and debug façade (debug.js), which main.js puts on window.Gresca.
  */
 export function createGame(env) {
- const look = createHangaLook(env.HANGA, env.RiderAnim); // every colour, tone and style the view draws with
  const world = env.world || createWorld({ rotationRad: env.mapRotationRad || 0, map: env.map || 'test' });
+ // every colour, tone and style the view draws with; the loaded map's id and course sun pick its sun (ADR 0007)
+ const look = createHangaLook(env.HANGA, env.RiderAnim, { id: world.id ?? null, courseSun: world.sky?.sun ?? null });
  const mapFrame = world.frame; // where the map's grid sits in the world (docs/adr/0005-enu-frame.md)
  // Idle frames: what the loop needs to know to skip a draw. draws: frames drawn (the façade's draws); settleS: s the
  // start screen still draws; the last* fields are what the picture depended on at the last tick (a change redraws).
@@ -134,7 +135,7 @@ export function createGame(env) {
   frame: mapFrame,
   treeArr: world.treeArr,
   pistePoles: pistePoles(world.course, world.piste?.difficulty), // a real run's edge poles; none on procedural maps
-  spray, timestep, look, riderAnim: env.RiderAnim, camMode,
+  spray, timestep, look, riderAnim: env.RiderAnim, camMode, powderPose: env.powderPose || 0,
  };
 
  // Asks for a frame: the start screen draws for MENU_SETTLE_S more seconds. Anything that changes the picture calls it.

@@ -68,12 +68,15 @@ test('v1.5 is additive over v1.4.0', async (t) => {
   for (const [path, value] of was) assert.deepEqual(asLeaf(valueAt(HANGA, path)), value, path);
  });
  await t.test('what is new: the environment section and El Tarter keys only', () => {
-  assert.equal(HANGA.version, '1.5.0');
-  assert.deepEqual(Object.keys(HANGA).filter((k) => !(k in V14)), ['environment']);
+  // v1.6 and later keep v1.5's data (test/hanga-v16.test.js): the version is at least 1.5.0, and the only top-level
+  // key added since v1.5 is the v1.6 `park`.
+  assert.ok(HANGA.version.localeCompare('1.5.0', undefined, { numeric: true }) >= 0, HANGA.version);
+  assert.deepEqual(Object.keys(HANGA).filter((k) => !(k in V14)), ['environment', 'park']);
   assert.deepEqual(Object.keys(HANGA.maps['el-tarter']).filter((k) => !(k in V14.maps['el-tarter'])), NEW_MAP_KEYS);
   assert.deepEqual(Object.keys(HANGA.maps.procedural), Object.keys(V14.maps.procedural));
   const added = Object.keys(HANGA.palette).filter((k) => !(k in V14.palette));
-  assert.deepEqual(added, NEW_ROLES, 'palette gains exactly the new roles');
+  // v1.6 appends its own roles after these (test/hanga-v16.test.js); v1.5's are unchanged and in order.
+  assert.deepEqual(added.slice(0, NEW_ROLES.length), NEW_ROLES, 'palette gains exactly the new roles');
  });
  await t.test('projectRider gives the v1.4 draw list for a spread of rigs, poses, yaws and options', () => {
   const optionSets = [undefined, {}, { cameraPitchDeg: 37 }, { twistDeg: 15, headYawDeg: -25 },

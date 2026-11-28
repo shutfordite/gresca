@@ -94,3 +94,17 @@ test('El Tarter loads into the game, shows its credits, and the autopilot rides 
  assert.equal(s.phase, 'done', 'the run finishes (s ' + Math.round(c.project(s.x, s.y).s) + ' of ' + c.finishS + ')');
  assert.equal(s.crashes, 0);
 });
+
+// Over 1 s: two game boots on the shared El Tarter world (the only way to see the sun a booted game picked).
+test('El Tarter rides under the spec\'s sun (110), an unlisted map under its course file\'s sun', async () => {
+ const spec = createRequire(import.meta.url)('../art/gresca-hanga-spec.js').maps['el-tarter'];
+ const tarter = await load({ world: WORLD });
+ assert.deepEqual(tarter.debug.lookSun(), { azimuthDeg: 110, elevationDeg: spec.sun.elevationDeg });
+ assert.equal(tarter.debug.lookMap().sunFrom, 'spec');
+ assert.equal(tarter.debug.mapId, 'el-tarter');
+ const turned = 110 - WORLD.frame.rotation * 180 / Math.PI;
+ assert.equal(tarter.debug.sunAzimuthDeg(), turned, 'the sky turns it with the map');
+ const unlisted = await load({ world: { ...WORLD, id: 'not-in-the-spec' } });
+ assert.deepEqual(unlisted.debug.lookSun(), { ...WORLD.sky.sun }, 'the baked sun: 76');
+ assert.equal(unlisted.debug.lookMap().sunFrom, 'course');
+});

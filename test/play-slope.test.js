@@ -61,8 +61,6 @@ function ride(g) {
  return { jumps, top, time: t };
 }
 
-const biggest = (jumps) => jumps.reduce((a, b) => (b.airTime > a.airTime ? b : a));
-
 describe('which map is built', () => {
  it('the test slope is the default and the play mountain is asked for by name', () => {
   assert.equal(test.raw.world.map, 'test');
@@ -98,29 +96,38 @@ describe('the play mountain course', () => {
   assert.equal(play.raw.world.groomed(mid.x, mid.y), 255);
  });
 
- it('has big and small kickers, and rails and boxes, in order down the run', () => {
-  const k = c.kickers;
-  assert.ok(k.length >= 8, k.length + ' kickers');
-  assert.ok(k.filter((x) => x.big).length >= 4, 'at least four big kickers');
-  for (let i = 1; i < k.length; i++) assert.ok(k[i].s - k[i - 1].s >= 80, 'room to land after kicker ' + (i - 1));
-  assert.ok(play.raw.world.rails.length >= 5);
-  assert.ok(play.raw.world.rails.some((r) => r.t === 'box') && play.raw.world.rails.some((r) => r.t === 'rail'));
- });
-
- it('has kicker ramps in the terrain, taller than the test slope\'s', () => {
-  const k = c.kickers.find((x) => x.big);
-  const lip = play.raw.world.rampHeight(k.x, k.y);
-  assert.ok(lip >= 3.5, 'a big ramp is only ' + lip + ' m at the lip');
+ it('has no kickers: its jumps are snow in the features layer (K1); its rails and boxes are the jib', () => {
+  assert.equal(c.kickers.length, 0);
+  assert.equal(play.raw.world.rampHeight(c.point(900, 0).x, c.point(900, 0).y), 0);
+  assert.equal(play.raw.world.rails.length, 0, 'no straight stand-in rails: the jib is features, K3 grinds on them');
+  assert.deepEqual([...play.raw.world.layers], ['base', 'features']);
  });
 });
 
 describe('steepness', () => {
- it('the play mountain is steep: most of the run is 28 to 36 degrees, with flatter run-outs', () => {
+ // The park is ridden at steady speeds on gentle pitches (docs/ROADMAP.md K1; world/play-slope.js PITCH); the finish
+ // run below it is the steep part. Slope (deg) of the piste at grid row y.
+ const rowSlope = (g, y) => {
+  const p = g.raw.world.frame.toWorld(500, y);
+  return g.raw.world.slopeDeg(p.x, p.y);
+ };
+
+ it('the park pitches are gentle, 3 to 11 degrees, and the finish run is steep: 28 to 36 degrees', () => {
+  const park = [];
+  for (let y = 360; y <= 2000; y += 4) park.push(rowSlope(play, y));
+  park.sort((a, b) => a - b);
+  // the median row is the pitch itself; rows on a jump's takeoff and landing are steeper, so only the median is held
+  assert.ok(park[park.length >> 1] >= 3 && park[park.length >> 1] <= 11, 'median ' + park[park.length >> 1].toFixed(1));
+  const finish = [];
+  for (let y = 2150; y <= 2230; y += 4) finish.push(rowSlope(play, y));
+  finish.sort((a, b) => a - b);
+  const median = finish[finish.length >> 1];
+  assert.ok(median >= 28 && median <= 36, 'the finish run is ' + median.toFixed(1));
+ });
+
+ it('has no cliff on the whole run', () => {
   const sl = centreSlopes(play);
-  const median = sl[sl.length >> 1];
-  assert.ok(median >= 28 && median <= 35, 'median ' + median.toFixed(1));
   assert.ok(sl[Math.floor(sl.length * 0.9)] <= 38, 'the 90th percentile is not a cliff');
-  assert.ok(sl[Math.floor(sl.length * 0.1)] <= 24, 'some flatter run-outs');
  });
 
  it('the test slope stays gentle (about 15 degrees)', () => {
@@ -136,20 +143,5 @@ describe('riding the play mountain', () => {
  it('is faster than the test slope and reaches the finish', () => {
   assert.ok(b.top > a.top * 1.3, `top speed ${b.top.toFixed(1)} against ${a.top.toFixed(1)} m/s`);
   assert.ok(b.time < RIDE_MAX_S);
- });
-
- it('every kicker launches the rider, and the big ones give twice the airtime of the test slope\'s biggest', () => {
-  assert.equal(b.jumps.length, play.raw.world.course.kickers.length);
-  const ref = biggest(a.jumps);
-  const big = biggest(b.jumps);
-  assert.ok(big.airTime >= 2 * ref.airTime, `${big.airTime.toFixed(2)} s against ${ref.airTime.toFixed(2)} s`);
-  assert.ok(big.distance >= 2 * ref.distance, `${big.distance.toFixed(0)} m against ${ref.distance.toFixed(0)} m`);
- });
-
- it('lands every kicker on a downslope, without a crash', () => {
-  for (const j of b.jumps) {
-   assert.ok(j.landSlope >= 15, `the jump at s ${j.s.toFixed(0)} lands on ${j.landSlope.toFixed(0)} degrees`);
-   assert.ok(!j.crashed, `the jump at s ${j.s.toFixed(0)} crashes`);
-  }
  });
 });

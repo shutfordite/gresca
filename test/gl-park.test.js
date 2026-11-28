@@ -26,7 +26,9 @@ function makeWorld(map) {
  buildWorld(world);
  return world;
 }
-const maps = { 'test slope': makeWorld('test'), 'play mountain': makeWorld('play') };
+// The play mountain's park is features, not kickers and rails (K1): K4 draws them; its GPU mesh is empty until then.
+const maps = { 'test slope': makeWorld('test') };
+const play = makeWorld('play');
 const worldOf = (w) => ({ course: w.course, terrain: w.terrain, frame: w.frame });
 const near = (a, b, tol, what) => assert.ok(Math.abs(a - b) <= tol, what + ': ' + a + ' vs ' + b);
 
@@ -245,7 +247,7 @@ function fakeThree() {
 }
 
 describe('park mesh on the GPU', () => {
- const { course, terrain, frame } = worldOf(maps['play mountain']);
+ const { course, terrain, frame } = worldOf(maps['test slope']);
  const shared = Object.fromEntries(['uCam', 'uDir', 'uScreen', 'uClip', 'uFar', 'uFogLut', 'uFog', 'uAux', 'uMapSize',
   'uGridOrigin', 'uGridU', 'uGridV', 'uObjSun', 'uObjSunLight'].map((n) => [n, { value: null }]));
 
@@ -332,5 +334,12 @@ describe('sun visibility for GPU objects', () => {
   assert.match(SUN_VISIBILITY_GLSL, /\(grid \+ 0\.5\) \/ uMapSize/);
   assert.match(SUN_VISIBILITY_GLSL, /\)\.a;/);
   assert.match(SUN_LIGHT_GLSL, /sunLit\(vec3 n, vec3 ambient, float visibility\)/);
+ });
+});
+
+describe('park mesh on the play mountain', () => {
+ it('has no kickers or rails to draw: its park is features (K4 draws them)', () => {
+  const mesh = buildParkMesh(play.course, play.terrain, look, play.frame);
+  assert.deepEqual(mesh.counts, { kickers: 0, rails: 0, flags: 0 });
  });
 });

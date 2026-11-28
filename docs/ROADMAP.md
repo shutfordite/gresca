@@ -232,6 +232,15 @@ D0 decides whether search covers any place or only the baked catalog.
 8. **Whole mountains and a lighter frame (G above) are the next items taken:** G1 to G3 now, alongside K and C4b;
    the G4 decision on the CPU renderer before G5 and G6; G7 (lifting the 1000 × 2450 m window) right after C4b.
 
+## Decisions (owner and coordinator, 28 Nov, Round 1)
+1. **K1–K3 started** (owner, 27 Nov night): they run in Round 1 with K4a; K4, K5 and K6 follow.
+2. **The play mountain's park pitch is ridden as built first** (owner): 3–13° through the park, steep only after it,
+   so the jumps fit their run-in speeds; changed next round if it rides flat.
+3. **A jump's `designSpeed` is the sim's horizontal speed at the lip** (coordinator, K1/K2): the take-off velocity is
+   that speed along the lip's heading and that speed × tan(lip angle) up, less air drag in flight; `world/park/`
+   sizes tables and landings against it (`sim/jump.js` documents the model).
+4. **G4 is asked with ADR 0014 proposed** (frozen CPU fallback); ADR 0015 (whole-mountain tiles) assumes it.
+
 ## K: a real snow park (next to take, owner 26 Nov)
 Today a kicker is a launch zone (`Course.kickerAt`) with a speed gain, stamped as a bump on the procedural maps only;
 the jump is a height above whatever snow is underneath, so there is no landing to aim for and landing on a slope

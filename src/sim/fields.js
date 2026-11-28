@@ -1,6 +1,27 @@
 // The sim's façade fields (debug.js state() and set()): the rider, the session and the spray, by their state() names.
 import { field, prop } from '../core/facade-fields.js';
 import { sprayCount } from './particles.js';
+import { makeGrind, railIndex } from './grind.js';
+
+// The façade's view of rider r's grind on course (null off a rail): everything set() needs to carry it on exactly.
+function grindFields(r, course) {
+ const g = r.grind;
+ if (!g) return null;
+ return {
+  rail: railIndex(course, g.r),
+  feature: !!g.r.world,
+  t: g.t,
+  dist: r.grindDist,
+  seg: g.seg,
+  style: g.style,
+  balance: g.balance,
+  side: g.side,
+  lean: g.lean,
+  lift: g.lift,
+  liftV: g.liftV,
+  kinks: g.kinks,
+ };
+}
 
 /**
  * The sim's fields, in state() order. r: RiderState, s: the session, spray: {particles}, course: the Course (its rails
@@ -16,10 +37,11 @@ export function simFields(r, s, spray, course) {
   vy: prop(r, 'vy'),
   speed: field(() => Math.hypot(r.vx, r.vy)), // m/s, read only
   heading: prop(r, 'heading'),       // rad, direction the board points; twin tip: heading + PI is the board switch
-  z: prop(r, 'z', true),             // m above the ground (0 on the snow, the rail height while grinding)
-  vz: prop(r, 'vz'),                 // m/s, vertical speed (+ up)
+  z: prop(r, 'z', true),             // m above the snow under the rider (0 on it, the rail height while grinding)
+  vz: prop(r, 'vz'),                 // m/s, + up, relative to riding along the snow (sim/jump.js)
   airTime: prop(r, 'airTime'),       // s in the air this jump (briefly negative after dropping off the end of a rail)
   rotation: prop(r, 'rotation'),     // rad turned in the air this jump (+ right, - left)
+  flipRot: prop(r, 'flipRot'),       // rad flipped in the air this jump (+ front), 0 on the snow
   fromKicker: prop(r, 'fromKicker'), // true when this jump was launched by a kicker
   crashTimer: prop(r, 'crashTimer'), // s of wipeout left; the rider is crashed while this is > 0
   crashed: field(() => r.crashTimer > 0), // read only
@@ -28,20 +50,15 @@ export function simFields(r, s, spray, course) {
   score: prop(s, 'score'),           // points this run
   time: prop(s, 'time'),             // s since the drop
   grinding: field(() => !!r.grind),  // read only
-  // rail index into world.rails, m along it, m ground so far
-  grind: field(() => (r.grind ? { rail: course.rails.indexOf(r.grind.r), t: r.grind.t, dist: r.grindDist } : null),
-   (v) => {
+  // the grind: rail (index into world.rails, or into world.features.rails when feature), t (m along it, plan), dist
+  // (m ground so far), seg, style, balance (-1..1), side (+1 came from the left), lean (rad), lift (m over a kink),
+  // liftV (m/s), kinks (count): sim/grind.js
+  grind: field(() => grindFields(r, course), (v) => {
    if (v === null) {
     r.grind = null;
     return;
    }
-   r.grind = {
-    r: course.rails[v.rail],
-    t: v.t,
-    seg: 0,
-    style: '5050',
-    balance: 0,
-   };
+   r.grind = makeGrind(v.feature ? course.features.rails[v.rail] : course.rails[v.rail], v);
    if ('dist' in v) r.grindDist = v.dist;
   }),
   landings: prop(r, 'landings'),     // count of touchdowns since the page loaded
@@ -54,7 +71,6 @@ export function simFields(r, s, spray, course) {
   boardHeading: field(() => r.boardHeading),   // rad, direction the board points
   edge: field(() => r.edge),         // rad, edge angle: + on the edge that turns left (counter-clockwise), sim/edge.js
   skid: field(() => r.skid),         // m/s, sideways slip on the snow (0 in a clean carve, > 0 in a skid or brake)
-  flipRot: field(() => r.flipRot),   // rad, pre-added (0)
   spinRot: field(() => r.spinRot),   // rad, spin this jump
   isSwitch: field(() => r.isSwitch), // riding tail first
   isBraking: field(() => r.isBraking), // the brake was held on the last step

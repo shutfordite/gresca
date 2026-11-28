@@ -2,7 +2,7 @@
 
 The one place to find where the work stands. Read this first in a new thread, then `docs/ROADMAP.md` for the
 order and `AGENTS.md` for the rules. Repo docs are canonical; the claude.ai project docs only point here.
-Updated 27 Nov 2026 (night), main after PR #98. Only the coordinator edits this file (AGENTS.md).
+Updated 28 Nov 2026, round/1 (Round 1 PR) on main after #105. Only the coordinator edits this file (AGENTS.md).
 
 ## Done
 | Package | PR |
@@ -78,33 +78,26 @@ Updated 27 Nov 2026 (night), main after PR #98. Only the coordinator edits this 
 | **G2** three.js and the map load in parallel (`core/boot-loads.js`), `modulepreload` for the whole static tree (tested to stay in step) | #102 |
 | **G3** idle frames: no sim step or draw while paused, hidden or behind Controls (one still frame on resize, renderer swap or return); the menu draws for 2 s after a change. `Gresca.draws()` | #101 |
 | G1-prep: the spray is reached only through `sim/particles.js` (`createSpray`, `clearSpray`, `stepSpray`, `sprayCount`, `sprayCopies`) | #98 |
+| G1 spray as a fixed pool; C4b-menu credits show once; X3 one PR per round with a QA gate | #103, #104, #105 |
+| **Round 1** (28 Nov): `flips` on events and trick names in `src/ui/`; the Look picks the loaded map's sun (El Tarter 110°); spray/powder fill styles cached (frame garbage measured); ski lead loop; ADR 0015 and `world/height-tiles.js` (G7a); spec v1.6 park look (K4a/V2); **K1** park shapes and the play mountain's park; **K2** world-height flight and landing impact; **K3** grind physics on polylines; spike `?spike=powder-pose`; ADR 0014 proposed (G4) | Round 1 PR |
 
 ## In progress
-| Stream | Package | PR |
-|---|---|---|
-| S2 | **G1** spray as a fixed pool (typed arrays, order-preserving compaction; golden unchanged) | #103, ready |
-| Shared | C4b-menu follow-up: a real map's credits show once | #104, ready |
-
-The owner asked (27 Nov) that K1–K3 are **not started yet**: the notes they need are in `docs/ROADMAP.md` ("Notes for
-K1–K3") and ADR 0012.
+Round 1 PR, waiting on the owner's iPad session and merge. No stream branches open beyond it.
 
 ## Next, in order
-- **K1** (S5 shape library), **K2** (S2 flight) and **K3** (S2 grinds) in parallel, when the owner says go (K0 is in);
-  **K4a/V2** (S6 park look in the spec), docs and spec only; K4 (S4) once K1 and K4a are in; K5 (S3) and K6 (S1)
-  after K3.
-- **G4** (owner decision, below), then G5 and G6. **G7** the whole mountain (ADR 0015, S5 and S4) is unblocked (C4b,
-  G2 and G3 are in; G1 is ready), with **G8** bakes in a worker alongside.
-- S4: **find the frame's other garbage** (about 312 KB a frame in Chrome outside the sim, measured in #103), then
-  re-measure the slow frames, on the iPad too.
-- S4: **the Look picks the loaded map's sun** (decision 6; `look/hanga.js` reads `MAP_ID`, so El Tarter rides under the
-  play mountain's sun), after G2 (it may need `main.js`). Then **V1's environment look in game** (trees, sky, backdrop
-  ridge from spec v1.5, decision 5); then F1 rider scale per camera mode (decision 7); then E4 tilt-shift and haze.
-- Shared: `flips` (signed whole rotations) on the `score` and `flip` events; then S1 names tricks in the HUD popup,
-  moving `trickName` from `sim/jump.js` to `src/ui/` (#65 review). K6 needs it.
-- S2: **ollie preload** (a Shared `AnimInput` crouch field first; S1 requests the jump on release). K3's ollie-on
-  entry uses it.
-- S3: deep powder pose from `AnimInput.sink`, then K5.
-- S5: **C4c** R5 slope and data-defect rules (El Tarter's 60° slopes) in `world/`, alongside K1.
+- **Test-health (QA, Round 2):** `test/camera-follows-mode.test.js` rides one game across the camera modes instead of a
+  game per mode (about 4 s saved; the suite is 6.4% over main after Round 1 and must pay it back).
+- **G4** answer (ADR 0014, proposed: CPU renderer frozen fallback), then **G7b** (S4: clipmap sampling of the height
+  tiles, `paint-window.js` gone in GPU mode; the open questions in the Debt row below), with **G8** bakes in a worker
+  alongside; then G5 and G6.
+- **K4** (S4) park features on screen from spec v1.6 (rails and boxes as GPU meshes, jumps with dye lines; piste
+  pole roles); **K5** (S3) grind poses and **K6** (S1) grind trick names, now that K3 is in. K-tuning after the
+  owner rides the park (pitch, `CRASH_IMPACT`, balance drift).
+- S2: **ollie preload** (a Shared `AnimInput` crouch field first); K3's entry from beside a rail uses today's jump.
+- S3: the deep powder pose for real once the owner picks a spike variant (A or B), with the deep-powder scene.
+- S4: then **V1's environment look in game** (trees, sky, backdrop ridge, decision 5); F1 rider scale per camera
+  mode (decision 7); E4 tilt-shift and haze.
+- S5: **C4c** R5 slope and data-defect rules (El Tarter's 60° slopes); `launchGain` out of the world data.
 - TD (time of day) after K; U (street) after K, G7 and TD0.
 
 ## Waiting on the owner
@@ -117,7 +110,12 @@ Verdicts and one-tap jobs only; everything else is the agents'. The coordinator 
 | **Àliga as a ride** (C4b, #79, #82, #102): speed, the view from the start, load time (now in parallel); do the edge poles make it easy to follow (20 m apart)? | Main preview: pick El Tarter · Àliga in the menu | 27 Nov |
 | **Map picker** (#99): does it read well; is one-tap Credits OK? Pause, rotate and app-switch keep the frozen frame (#101)? | Main preview | 27 Nov |
 | **Camera modes** (CV2, CV3): do B and C frame well; is the rider tap easy to hit with no accidental switches? Which mode is the default? | Main preview, tap the rider | 27 Nov |
-| **G4: the CPU renderer's role** (before G5 and G6) | Is a device without WebGL2 still worth drawing for, or is the CPU raycaster a frozen fallback with no new looks? Recommendation: frozen fallback | 27 Nov |
+| **G4: the CPU renderer's role** (before G5 and G6) | Is a device without WebGL2 still worth drawing for, or is the CPU raycaster a frozen fallback with no new looks? Recommendation: frozen fallback (ADR 0014, proposed in Round 1) | 27 Nov |
+| **The park** (K1–K3, Round 1): the gentle park pitch (3–13°, steep finish only; owner chose "ride it as built first"); jumps land soft at their run-in speed?; hard landings' speed cost and `CRASH_IMPACT` (26 m/s now, about a 22 m drop to flat; proposal 15); grind balance drift and drop-off (a held steer drops you in about 1 s); rails and boxes still drawn plain until K4 | Round 1 preview, ride the play mountain top to bottom | 28 Nov |
+| **El Tarter's dawn light** (decision 6, Round 1): sun and shadows from 110° | Round 1 preview, El Tarter · Àliga | 28 Nov |
+| **Park palette** (spec v1.6, K4a): lip and knuckle lines, takeoff and landing snow, box colours, the deeper yellow pole | The board `docs/art/v1.6/park.png` on `round/1` | 28 Nov |
+| **Deep powder pose** (spike, Round 1): A `?spike=powder-pose` or B `?spike=powder-pose2`, or neither | Round 1 preview, slow through deep off-piste snow | 28 Nov |
+| **Trick name wording**: "Double front flip" (kept) or "Double frontflip" | Round 1 preview, land a flip | 28 Nov |
 
 ## Debt
 Known issues and review notes left for later. Each stream's next package clears one of its rows or says why not in
@@ -125,15 +123,15 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 
 | Item | Stream | From | Trigger |
 |---|---|---|---|
-| A few very slow frames in Chrome (mean frame time about 6× the median, on main too). G1 (#103) removed the spray's garbage (1.35 MB per 10 s to 0) but the gap stays: about 312 KB a frame is allocated outside the sim | S4 | D1 #37, #103 | S4 frame-garbage package, next |
+| A few very slow frames in Chrome (mean about 6× the median). Round 1 measured about 87 KB a frame on the GPU path (mostly the rider projection) and 377 KB on the CPU path: the gap is Chrome's 2D canvas queue, not garbage collection | S4 | D1 #37, #103, Round 1 | G6 (one canvas); re-measure on the iPad |
 | F1 rider scale: one scale for the rider, flags, rails and trees, with the ratio test from the feedback plan (folded into E1/E3 and never closed) | S4 | 20 Nov plan | after the camera-mode verdict (decision 7), per mode if needed |
 | Scenes `ride-board` and `ride-ski` never ride straight (scene inputs merge step to step, so "straight" still turns); fixing it changes their shots | S4 | X1 | next S4 package |
 | Pose tuning: ski tuck reads as a blob from behind, ski brake legs look short, board toe-side brake looks like kneeling at yaw 90 | S3 | #69, #51 | K5 or sooner |
-| Ski lead code allocates two arrays and two closures per frame: use a plain loop | S3 | #66 | next S3 package |
+| `RA.applyBody` still allocates per frame: the compression `forEach` closures, the board lead's pair arrays, `copyJ`; plus `projectRider` closures in the spec (about 50 KB a frame with the rider projection) | S3, S6 | #66, Round 1 | next S3 package |
 | C2 leftovers: `START_HEADING`/`MENU_HEADING` grid headings on the procedural maps; minimap in grid orientation (north-up for real maps?) | S5, S1 | #26 | G7 (the paint window goes) |
 | The view keeps the spec's clockwise sign for `pathTurn` and `riderYaw` (#58); tidy it | S3 | #58 | optional |
 | The design canvas copy of the art spec (claude.ai "Gresca Rider Style Prototypes") must be re-synced after every spec version | S6 | #18 | each spec version |
-| Deep powder pose: lean back and lower stance from `AnimInput.sink` (H0 added it; nothing reads it yet) | S3 | #84, #89 | next S3 package |
+| Deep powder pose: a spike (`?spike=powder-pose`, `powder-pose2`) waits on the owner's pick; no scene has deep powder for shots | S3, Shared (`scenes.js`) | #84, Round 1 | after the verdict |
 | The CPU colour map has no powder look (only the GPU shader shades light and deep snow); the rider, spray and trench work on both | S4 | #89 | before CPU fallback is shown to players, or E4 |
 | Analog steer on touch: the edge now builds with the steer held, but touch sends 0 or 1, so a light touch can't ask for a gentle edge | S1 | #88 | after the handling verdict |
 | Golden and `events.test.js` autopilots aim 8 m ahead with bang-bang steering, tuned to H2's edge rate: a sensitivity change can send them off the piste again. A proportional pilot would make them robust | S5 (tools), S2 | #88 | next feel change to `edgeRate` or `yawLag` |
@@ -143,12 +141,22 @@ its PR; the coordinator adds rows from reviews and raises any row older than a w
 | `course.test.js` fall-line check moved to world metres (`g.raw`): through the map view, grid rounding of 1e-13 m swung it 1.3e-12 rad on a nearly level spot. Other map-view checks with 1e-12 tolerances may be as fragile | Shared (`test/map-view.js`) | #88 | next map-view change |
 | Real maps: lifts, village and finish line aren't painted; the start heading is the window's start-to-finish direction, not the run's first bend | S4, S2 | #79 | G5; with C4c |
 | El Tarter has 60° slopes the bake warned about | S5 | #79 | C4c |
-| Piste pole colours are in the Look's unspecified list (`sprites.pistePole`): needs a spec role; poles on bends are spaced along the centreline | S6, S4 | #82 | V2 |
+| Piste pole colours have spec roles in v1.6 (`park`, Round 1); the Look still reads `sprites.pistePole` from its unspecified list. Poles on bends are spaced along the centreline | S4 | #82, Round 1 | K4 |
 | Camera modes: `horizonFrac` per mode is the spike's, not tuned; the rider draws smaller in B and C; `Gresca.config.camBack` is mode A's | S4 | #94 | F1 |
 | The rider tap box is estimated from the camera (boots to 1.9 m), so it stays at the boots in a jump | S1, S4 | #95 | G6 |
-| K1/K3: feature heights and world points are measured from the base snow (`heightAt` without the features layer); K1's stamped snow and K3's rail contact must use the same surface | S5, S2 | #100 | K1, K3 |
+| Park: the mega ramp lands at 6.6 m/s (under the 7 m/s soft limit) and L/XL landing slopes are within about 18° of the descent angle, held by the landing-height cap of 10 in `core/contracts.js` | Shared, S5 | Round 1 K1 | K-tuning after the park ride |
 | The map picker is a frozen catalog in `src/ui/map-catalog.js`; two `styles/menu.css` lines are over 120 characters | S1 | #99 | U (map search); next S1 PR |
 | `?renderer=cpu` fetches three.js it doesn't use (preloaded for the GPU default); preloading the map files from `<head>` is left | Shared | #102 | G4 (if the CPU renderer stays a fallback) |
+| G7b open questions (ADR 0015): the mesh past the map's edge; which levels relief, groomed, sun visibility and piste get rings at; spreading tile builds over frames; what the CPU fallback draws after a lost context if G5 drops the colour map | S4 | Round 1 G7a | G7b brief |
+| CPU raycast and trees allocate about 314 KB a frame through boxed `terrain.height` results | S5 | Round 1 | only if ADR 0014 keeps the CPU renderer live; else won't do |
+| `test/page.test.js` `PENDING_ROOTS` still lists `map-loader.js`, loaded since C4b | Shared | Round 1 | next page.test change |
+| `state.railSegment` is made lazily in `sim/step.js`: make it with the sim state | S2, Shared | Round 1 K3 | next sim package |
+| `launchGain` is still in the world data and its validator, unused since K2 | S5 | Round 1 K2 | next S5 package |
+| `MAP_ID` in `core/config.js` may be redundant now the Look takes the map id from the world | Shared | Round 1 | next config change |
+| Untested tunables: landing speed loss (`LANDING.SOFT_LOSS`, `HARD_LOSS`, `MAX_LOSS`); `GRIND.CRASH_PUSH`, `DROP_SIDE_SPEED`, `LIFT_MIN_SPEED` (bounds in flight and grind tests) | S2 | Round 1 QA | next S2 package |
+| `alpha-style.test.js` asserts `<= 101`, not that a second identical stretch adds none | S4 | Round 1 QA | next S4 package |
+| `real-map` two-boot sun test repeats `look-contract`'s cases: one boot will do | S4 | Round 1 QA | next S4 package |
+| `play-slope.test.js` steep band 28–36° over the finish needs a comment on why 36 | S5 | Round 1 QA | next S5 package |
 
 `?rot=<deg>` places the procedural map rotated (debug).
 

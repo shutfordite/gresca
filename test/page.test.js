@@ -65,8 +65,9 @@ test('every <script src> exists', () => {
 
 // The look lab (lab.html, P4) is a second page: its one module script imports src/view/look/lab.js, the lab's root.
 const LAB_ROOTS = ['src/view/look/lab.js'];
-// Modules built ahead of the code that loads them: the map loader (C4a) until the menu uses it (C4b removes this).
-const PENDING_ROOTS = ['src/world/map-loader.js'];
+// Modules built ahead of the code that loads them: the map loader (C4a) until the menu uses it (C4b removes this),
+// the whole-mountain height tiles (G7a) until the GPU terrain samples them (G7b removes this).
+const PENDING_ROOTS = ['src/world/map-loader.js', 'src/world/height-tiles.js'];
 
 test('every module in src/ is reached from src/main.js (or, for the look lab, from lab.html\'s module) through ' +
   'static imports, and every import exists', () => {

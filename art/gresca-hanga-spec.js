@@ -1,10 +1,12 @@
 /*
- * Gresca · Hanga Dawn art spec  v1.5.0
+ * Gresca · Hanga Dawn art spec  v1.6.0
  * Standalone, data-only module. No drawing code and no dependencies.
+ * v1.6.0 (additive): the park look K4 draws: jump snow (takeoff, table, landing, sidewalls), dyed lip and knuckle
+ * lines, rails and boxes with legs and bases, and the piste pole colours, as palette roles and a top-level park
+ * section. Nothing existing changes. Notes: docs/art/HANGA-v1.6.md in the game repo.
+ * version: '1.6.0' (the PR check looks for this form; the data key is "version" below).
  * v1.5.0 (additive): the environment for real maps: tree sets, treeline, bushes, rocks, sky, sun and backdrop peaks
- * (the Pyrenees set first), new palette roles, and new maps keys for El Tarter. Nothing existing changes. Notes:
- * docs/art/HANGA-v1.5.md in the game repo.
- * version: '1.5.0' (the PR check looks for this form; the data key is "version" below).
+ * (the Pyrenees set first), new palette roles, and new maps keys for El Tarter. Notes: docs/art/HANGA-v1.5.md.
  * v1.4.0 (additive): rider twist, head yaw with the face vector, body pitch and the real camera pitch as an options
  * argument to projectRider; brake, switch-ski and flip-tuck poses; true-scale rider guidance. Calls without the new
  * options or state fields give exactly the v1.3 result. Notes: docs/art/HANGA-v1.4.md in the game repo.
@@ -17,7 +19,7 @@
 'use strict';
 var HANGA = {
  "name": "Gresca · Hanga Dawn",
- "version": "1.5.0",
+ "version": "1.6.0",
  "contrastTargets": [
   {
    "a": "kickSide",
@@ -220,7 +222,41 @@ var HANGA = {
   "mtnMidS": "#7F92B9",
   "mtnMidCap": "#F1EBDD",
   "alpenglow": "#F0A98E",
-  "sunGlow": "#F8C9A8"
+  "sunGlow": "#F8C9A8",
+  "parkTakeLit": "#F7E4D3",
+  "parkTakeMid": "#EBD2BF",
+  "parkTakeShade": "#C9B8C0",
+  "parkTableLit": "#F4F2EC",
+  "parkTableMid": "#E3E0D8",
+  "parkTableShade": "#BCC6DB",
+  "parkLandLit": "#EAF1F8",
+  "parkLandMid": "#D6E1EE",
+  "parkLandShade": "#A9BBD6",
+  "parkWallLit": "#DCE4F0",
+  "parkWallMid": "#C2CEE2",
+  "parkWallShade": "#8FA3C6",
+  "dyeLip": "#E8402A",
+  "dyeLipS": "#B72F1F",
+  "dyeKnuckle": "#1F66D1",
+  "dyeKnuckleS": "#174E9E",
+  "railSteel": "#46506B",
+  "railSteelS": "#2F3750",
+  "railTape": "#F2B72E",
+  "boxTop": "#2B3552",
+  "boxEdge": "#F28A2E",
+  "boxSide": "#4F78B8",
+  "boxSideS": "#3B5C8E",
+  "boxEnd": "#2F486F",
+  "legMetal": "#5D667C",
+  "legMetalS": "#434B5F",
+  "baseWood": "#7A5A3E",
+  "baseWoodS": "#5C4330",
+  "poleGreen": "#2E9E4F",
+  "poleBlue": "#2F6FD6",
+  "poleRed": "#D8333A",
+  "poleBlack": "#1B1D22",
+  "poleYellow": "#DDA00F",
+  "poleTop": "#FF6B3D"
  },
  "camera": {
   "chasePitchDeg": 20,
@@ -6361,6 +6397,341 @@ var HANGA = {
     "why": "Sun disc against its glow"
    }
   ]
+ },
+ "park": {
+  "note": "v1.6 park look: what K4 draws for a snow park. Data only; the game does not read it until K4 (S4). Sizes in metres, angles in degrees. Every colour is a palette role, in fields named role, *Role, lit, mid, shade, or inside an object called roles. Shapes (heights, lip and landing angles, lengths) belong to the shape library (K1, ADR 0012); this section only says how the shapes look, plus the widths of the painted lines and the cross-sections of rails, boxes, legs and bases.",
+  "jumps": {
+   "note": "A jump is snow: the terrain draws and lights it, so each surface is a lit / mid / shade triple for the terrain posteriser (terrain.posterise), the way kickFace and kickSide are. Takeoff is a warm tint (a hue change from the cold piste, as kickFace is) so the ramp reads before the lip; the table is neutral; the landing is a cool, slightly bluer white so it reads as the target; the sidewalls are the darker groomed walls.",
+   "surfaces": {
+    "takeoff": {
+     "lit": "parkTakeLit",
+     "mid": "parkTakeMid",
+     "shade": "parkTakeShade",
+     "finish": "corduroy",
+     "cordAlong": "run",
+     "cordPeriodM": 0.8
+    },
+    "table": {
+     "lit": "parkTableLit",
+     "mid": "parkTableMid",
+     "shade": "parkTableShade",
+     "finish": "packed",
+     "cordAlong": "run",
+     "cordPeriodM": 0.8
+    },
+    "landing": {
+     "lit": "parkLandLit",
+     "mid": "parkLandMid",
+     "shade": "parkLandShade",
+     "finish": "corduroy",
+     "cordAlong": "run",
+     "cordPeriodM": 0.8
+    },
+    "sidewall": {
+     "lit": "parkWallLit",
+     "mid": "parkWallMid",
+     "shade": "parkWallShade",
+     "finish": "groomed",
+     "cordAlong": "wall",
+     "cordPeriodM": 0.5
+    },
+    "note": "finish: corduroy = the groomer's fine lines (cordPeriodM apart, drawn as on the piste cord); packed = smooth, no lines; groomed = vertical-ish cut face with lines along the wall. cordAlong run = lines along the run direction; wall = along the wall."
+   },
+   "sidewalls": {
+    "slopeDeg": 55,
+    "crestRadiusM": 0.3,
+    "byClass": {
+     "S": {
+      "topWidthM": 0.6,
+      "heightOverTableM": 0.3
+     },
+     "M": {
+      "topWidthM": 0.8,
+      "heightOverTableM": 0.5
+     },
+     "L": {
+      "topWidthM": 1,
+      "heightOverTableM": 0.7
+     },
+     "XL": {
+      "topWidthM": 1.4,
+      "heightOverTableM": 1
+     }
+    },
+    "note": "The groomed wall beside takeoff, table and landing: a steep face (slopeDeg) with a rounded crest and a flat top of topWidthM. heightOverTableM is the wall crest above the table beside it, tapering to nothing at the end of the landing. Sizes: S is XS / S kicker, M, L, XL is the mega ramp."
+   },
+   "dyeLines": {
+    "lip": {
+     "role": "dyeLip",
+     "shadeRole": "dyeLipS",
+     "haloRole": "paper",
+     "haloWidthM": 0.05,
+     "widthByClassM": {
+      "S": 0.2,
+      "M": 0.25,
+      "L": 0.3,
+      "XL": 0.4
+     },
+     "placement": "across the full takeoff width, centred on the lip edge (half its width on the takeoff, half past it)",
+     "note": "The dyed line at the lip: a vivid orange-red so the rider sees where the takeoff ends at speed. A 0.05 m paper halo each side, as the kicker lipBand has, so it reads in shade too."
+    },
+    "knuckle": {
+     "role": "dyeKnuckle",
+     "shadeRole": "dyeKnuckleS",
+     "haloRole": "paper",
+     "haloWidthM": 0.05,
+     "widthByClassM": {
+      "S": 0.3,
+      "M": 0.4,
+      "L": 0.5,
+      "XL": 0.6
+     },
+     "placement": "across the landing, on the knuckle where the table meets the landing slope",
+     "note": "The blue line on the knuckle: the start of the landing. It is the cold counterpart of the orange-red lip line, so the two never read as one."
+    }
+   },
+   "contrastTargets": [
+    {
+     "a": "dyeLip",
+     "b": "pisteLit",
+     "min": 3.2,
+     "why": "Lip dye on lit snow"
+    },
+    {
+     "a": "dyeLip",
+     "b": "pisteShade",
+     "min": 2.3,
+     "why": "Lip dye on snow in shade"
+    },
+    {
+     "a": "dyeLip",
+     "b": "parkTakeLit",
+     "min": 2.8,
+     "why": "Lip dye on the lit takeoff"
+    },
+    {
+     "a": "dyeLipS",
+     "b": "parkTakeShade",
+     "min": 2.8,
+     "why": "Lip dye in shade on the takeoff in shade"
+    },
+    {
+     "a": "dyeKnuckle",
+     "b": "pisteLit",
+     "min": 4,
+     "why": "Knuckle dye on lit snow"
+    },
+    {
+     "a": "dyeKnuckle",
+     "b": "parkLandLit",
+     "min": 4,
+     "why": "Knuckle dye on the lit landing"
+    },
+    {
+     "a": "dyeKnuckleS",
+     "b": "parkLandShade",
+     "min": 3.5,
+     "why": "Knuckle dye in shade on the landing in shade"
+    },
+    {
+     "a": "parkWallShade",
+     "b": "parkLandLit",
+     "min": 2,
+     "why": "Sidewall in shade against the lit landing"
+    },
+    {
+     "a": "parkTakeLit",
+     "b": "pisteLit",
+     "min": 1.1,
+     "why": "Takeoff against lit piste (plus a hue change)"
+    },
+    {
+     "a": "parkTakeMid",
+     "b": "pisteMid",
+     "min": 1.1,
+     "why": "Takeoff against mid piste (plus a hue change)"
+    }
+   ]
+  },
+  "rails": {
+   "note": "A rail is a round steel tube on legs. Heights above the base snow are 0.3 to 1.5 m (K); the legs run from the tube down into the snow.",
+   "tube": {
+    "diameterM": {
+     "min": 0.05,
+     "standard": 0.07,
+     "max": 0.1
+    },
+    "role": "railSteel",
+    "shadeRole": "railSteelS",
+    "highlightRole": "railHi",
+    "highlightWidthFrac": 0.25,
+    "shadowRole": "powderShade",
+    "shadowOffsetM": [
+     0.25,
+     0.25
+    ],
+    "gripTape": {
+     "role": "railTape",
+     "bandLengthM": 0.15,
+     "everyM": 2.5,
+     "note": "A tape band at each leg, so a long rail reads as segments and its bends read from far."
+    },
+    "minPxWidth": 2
+   },
+   "legs": {
+    "everyM": 2.5,
+    "diameterM": 0.05,
+    "role": "legMetal",
+    "shadeRole": "legMetalS",
+    "footPlateM": 0.2,
+    "note": "A leg stands every everyM along the rail, plus one at each end; its foot plate is buried in the snow. Hitting a leg is a crash (K3), so legs must read."
+   },
+   "base": {
+    "widthM": 0.3,
+    "heightM": 0.08,
+    "buriedM": 0.05,
+    "role": "baseWood",
+    "shadeRole": "baseWoodS",
+    "note": "A wooden skid under each foot plate, mostly buried; a sliver shows where the snow is thin."
+   }
+  },
+  "boxes": {
+   "note": "A box is a flat-topped plastic deck on painted sides. Heights are 0.3 to 1.5 m, widths 0.3 to 0.6 m (K).",
+   "widthM": {
+    "min": 0.3,
+    "standard": 0.5,
+    "max": 0.6
+   },
+   "top": {
+    "role": "boxTop",
+    "thicknessM": 0.05,
+    "edgeRole": "boxEdge",
+    "edgeWidthM": 0.05,
+    "note": "A dark deck with an orange edge strip each side, so the riding surface and its width read from above and behind."
+   },
+   "sides": {
+    "role": "boxSide",
+    "shadeRole": "boxSideS",
+    "endRole": "boxEnd",
+    "insetM": 0.03,
+    "note": "Blue painted sides, a darker end. Riding into a side is a crash (K3), so the side must read against both lit and shaded snow."
+   },
+   "legs": {
+    "everyM": 2.5,
+    "widthM": 0.3,
+    "role": "legMetal",
+    "shadeRole": "legMetalS",
+    "note": "Plinth blocks under the deck every everyM, plus one at each end."
+   },
+   "base": {
+    "widthM": 0.3,
+    "heightM": 0.08,
+    "buriedM": 0.05,
+    "role": "baseWood",
+    "shadeRole": "baseWoodS"
+   },
+   "shadowRole": "powderShade"
+  },
+  "pistePoles": {
+   "note": "The edge poles of a real run (src/view/piste-poles.js): one colour per difficulty, as Europe colours them, and an orange top on the right-hand ones going down. The Look maps its sprites.pistePole keys to these roles.",
+   "heightM": 2.3,
+   "topM": 0.5,
+   "halfWidthM": 0.05,
+   "spacingM": 20,
+   "outsideM": 1,
+   "roles": {
+    "green": "poleGreen",
+    "blue": "poleBlue",
+    "red": "poleRed",
+    "black": "poleBlack",
+    "yellow": "poleYellow",
+    "rightTop": "poleTop"
+   },
+   "difficultyTone": {
+    "novice": "green",
+    "easy": "blue",
+    "intermediate": "red",
+    "advanced": "black",
+    "expert": "black",
+    "extreme": "black",
+    "freeride": "yellow"
+   },
+   "contrastTargets": [
+    {
+     "a": "poleGreen",
+     "b": "pisteLit",
+     "min": 3,
+     "why": "Green pole on lit snow"
+    },
+    {
+     "a": "poleBlue",
+     "b": "pisteLit",
+     "min": 4,
+     "why": "Blue pole on lit snow"
+    },
+    {
+     "a": "poleRed",
+     "b": "pisteLit",
+     "min": 3.5,
+     "why": "Red pole on lit snow"
+    },
+    {
+     "a": "poleBlack",
+     "b": "pisteLit",
+     "min": 10,
+     "why": "Black pole on lit snow"
+    },
+    {
+     "a": "poleYellow",
+     "b": "pisteLit",
+     "min": 2,
+     "why": "Yellow pole on lit snow"
+    },
+    {
+     "a": "poleTop",
+     "b": "pisteLit",
+     "min": 2.4,
+     "why": "Orange pole top on lit snow"
+    },
+    {
+     "a": "poleBlack",
+     "b": "pisteShade",
+     "min": 8,
+     "why": "Black pole on snow in shade"
+    }
+   ]
+  },
+  "sizes": {
+   "note": "Reference profile of each class for the board (middle of the K table). Not the shape library: K1 builds the real shapes from designSpeed. lipHeightM, lipAngleDeg, tableM, landingDeg, landingLengthM.",
+   "S": {
+    "lipHeightM": 1,
+    "lipAngleDeg": 20,
+    "tableM": 4.5,
+    "landingDeg": 26,
+    "landingLengthM": 12
+   },
+   "M": {
+    "lipHeightM": 2,
+    "lipAngleDeg": 28,
+    "tableM": 10,
+    "landingDeg": 29,
+    "landingLengthM": 17
+   },
+   "L": {
+    "lipHeightM": 3.2,
+    "lipAngleDeg": 30,
+    "tableM": 17,
+    "landingDeg": 31,
+    "landingLengthM": 24
+   },
+   "XL": {
+    "lipHeightM": 6,
+    "lipAngleDeg": 32,
+    "tableM": 25,
+    "landingDeg": 33,
+    "landingLengthM": 35
+   }
+  }
  },
  "terrain": {
   "sun": {

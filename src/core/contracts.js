@@ -37,7 +37,7 @@ export const INPUT_FIELDS = Object.freeze([
  * @property {number} heading rad counter-clockwise from east, the direction the board points (twin tip: heading + PI
  *  is the same board switch)
  * @property {number} z m above the ground
- * @property {number} vz m/s, + up
+ * @property {number} vz m/s, + up, relative to the snow's slope under the rider (0 when riding along it; K2)
  * @property {number} airTime s in the air this jump
  * @property {number} rotation rad turned in the air this jump, + to the right (clockwise)
  * @property {boolean} fromKicker this jump was launched by a kicker
@@ -79,12 +79,13 @@ export const RIDER_FIELDS = Object.freeze({
 
 /**
  * Something that happened in one sim step. t: s, session time of the step. Other fields by type:
- * land {speed m/s down, airTime s}; crash {cause 'tree' | 'landing'}; grindStart {rail (index), kind 'rail' | 'box',
- * style?}; grindEnd {rail, kind, dist m, jumped, style?, kinks?}; flip {} (declared, not emitted yet); brakeStart {};
- * brakeEnd {}; score {points, kind 'air' | 'rail' | 'box', degrees (air: spin rounded to 180)}; finish {time s, score,
- * crashes}. Declared, not emitted yet (ADR 0012; K3 emits them, when it re-records the golden trace): style, the grind
- * (GRIND_STYLES; absent means '5050') at the start, and at the end the style it ended in; kinks, the count of kinks
- * ridden over (absent means 0). When present they must have these types.
+ * land {speed m/s down, airTime s}; crash {cause 'tree' | 'landing' | 'rail'}; grindStart {rail (index),
+ * kind 'rail' | 'box', style?}; grindEnd {rail, kind, dist m, jumped, style?, kinks?}; flip {flips}; brakeStart {};
+ * brakeEnd {}; score {points, kind 'air' | 'rail' | 'box', degrees (air: spin rounded to 180), flips};
+ * finish {time s, score, crashes}. flips is the signed number of whole rotations of the flip landed (0 for a score
+ * with no flip): + is a front flip, as flipRot counts it in AnimInput (rad, + is a front flip). Emitted by grinds
+ * (ADR 0012, K3): style, the grind (GRIND_STYLES; absent means '5050') at the start, and at the end the style it
+ * ended in; kinks, the count of kinks ridden over (absent means 0). When present they must have these types.
  * @typedef {{type: string, t: number}} SimEvent
  */
 
@@ -99,10 +100,10 @@ const EVENT_FIELDS = Object.freeze({
  crash: { cause: 'string' },
  grindStart: { rail: 'number', kind: 'string' },
  grindEnd: { rail: 'number', kind: 'string', dist: 'number', jumped: 'boolean' },
- flip: {},
+ flip: { flips: 'number' },
  brakeStart: {},
  brakeEnd: {},
- score: { points: 'number', kind: 'string', degrees: 'number' },
+ score: { points: 'number', kind: 'string', degrees: 'number', flips: 'number' },
  finish: { time: 'number', score: 'number', crashes: 'number' },
 });
 

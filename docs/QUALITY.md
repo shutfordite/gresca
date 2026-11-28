@@ -74,8 +74,13 @@ One row per round, added by the QA agent on the round branch.
 | Round | Date | Tests | Summed time | Lines | Branches | Functions | Verdict |
 |---|---|---|---|---|---|---|---|
 | baseline | 27 Nov 2026 | 1036 | 116.6 s | 96.9% | 94.4% | 96.6% | — |
+| 1 | 28 Nov 2026 | 1151 | 98.6 s (main 92.6 s on the same machine: +6.4%) | 97.2% | 94.8% | 97.1% | PASS WITH NOTES |
 
 Baseline notes: the slowest files are `scenes` (13.8 s), `camera-follows-mode` (12.3 s), `air-controls` (8.9 s),
 `camera` (7.9 s) and `tap-rider` (7.2 s); the slowest test is the look-back check in every camera mode (5.2 s). The
 least covered `src/` files are `view/gl/gl-renderer.js` (GPU only, exempt), `view/fps-meter.js` (61%) and
 `view/renderer.js` (72%).
+
+Round 1 notes: over the 5% line, paid by round 2's test-health package (`camera-follows-mode`: one game for all
+modes, about 4 s). New slow tests: `park-play` ride (1.2 s) and jib (1.0 s), `real-map` sun (1.0 s), each with its
+reason. No `src/` folder fell; `src/world/park/` arrives at 99%.

@@ -1,12 +1,12 @@
 // @areas sim
-// Flips (S2/F3): the rotation about the across axis, the landing window, the scoring and the trick names, through
-// jumpStep and trickName on their own. Deterministic: fixed dt, no randomness beyond a seeded spray.
+// Flips (S2/F3): the rotation about the across axis, the landing window, the scoring and the events' flips, through
+// jumpStep on its own (trick names: test/trick-names.test.js). Deterministic: fixed dt, no randomness beyond a seeded spray.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRng } from '../src/core/rng.js';
 import { SIM_DT } from '../src/core/config.js';
 import { createRider, createSession } from '../src/sim/state.js';
-import { jumpStep, trickName } from '../src/sim/jump.js';
+import { jumpStep } from '../src/sim/jump.js';
 import { FLIP } from '../src/sim/tuning.js';
 import { createInput } from '../src/input/input.js';
 import { createSpray } from '../src/sim/particles.js';
@@ -74,6 +74,19 @@ describe('flips', () => {
   assert.equal(events.filter((e) => e === 'flip').length, 1);
  });
 
+ it('the flip and score events carry the signed whole rotations: + front, - back, 0 for a plain air', () => {
+  const flipsOf = (r, type) => r.session.events.find((e) => e.type === type).flips;
+  const front = fly(airborne(1), 1);
+  const back = fly(airborne(1), -1);
+  const doubleBack = fly(airborne(2), -1);
+  const plain = fly(airborne(1), 0);
+  assert.deepEqual([flipsOf(front, 'flip'), flipsOf(front, 'score')], [1, 1]);
+  assert.deepEqual([flipsOf(back, 'flip'), flipsOf(back, 'score')], [-1, -1]);
+  assert.deepEqual([flipsOf(doubleBack, 'flip'), flipsOf(doubleBack, 'score')], [-2, -2]);
+  assert.equal(flipsOf(plain, 'score'), 0);
+  assert.ok(!plain.events.includes('flip'), 'a plain air has no flip event');
+ });
+
  it('a double flip lands clean, scores more, and emits one flip event', () => {
   const single = fly(airborne(1), 1);
   const double = fly(airborne(2), 1);
@@ -123,20 +136,6 @@ describe('flips', () => {
   input.flip = 1;
   for (let i = 0; i < 20; i++) jumpStep(rider, input, createSession(), createSpray(createRng(1)), SIM_DT);
   assert.equal(rider.flipRot, 0);
- });
-
- it('names: flips alone, doubles, and combined with the spin', () => {
-  assert.equal(trickName(1, 0), 'Front flip');
-  assert.equal(trickName(-1, 0), 'Backflip');
-  assert.equal(trickName(2, 0), 'Double front flip');
-  assert.equal(trickName(-2, 0), 'Double backflip');
-  assert.equal(trickName(-3, 0), 'Triple backflip');
-  assert.equal(trickName(4, 0), 'Quad front flip');
-  assert.equal(trickName(5, 0), '5x front flip');
-  assert.equal(trickName(-1, 360), 'Backflip 360');
-  assert.equal(trickName(1, 180), 'Front flip 180');
-  assert.equal(trickName(-2, 540), 'Double backflip 540');
-  assert.equal(trickName(0, 360), '', 'a plain spin keeps its own name');
  });
 
  it('a flip with a spin scores both and reports the spin degrees', () => {

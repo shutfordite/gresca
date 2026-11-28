@@ -163,9 +163,10 @@ export const TEST_LAYOUT = Object.freeze({
  * park (kickers, rails) and the finish placed where they always were on the map; a kicker launches over its ramp
  * footprint on the grid, as on main. terrain: the world's Terrain, for
  * fallLine(); null gives a course whose fall line is always the tangent. frame: the MapFrame placing the grid in the
- * world (default: the piste runs south). Frozen and stateless: every query writes into the caller's out.
+ * world (default: the piste runs south). features: the park's ParkFeatures, or a function returning them (see
+ * polyline-course.js); default none. Frozen and stateless: every query writes into the caller's out.
  */
-export function createGridCourse(layout, terrain, frame = DEFAULT_FRAME) {
+export function createGridCourse(layout, terrain, frame = DEFAULT_FRAME, features = undefined) {
  const { cx, H: H0, FIN, startY } = layout;
  const { xy, first } = sampleCentreline(cx, H0, startY);
  const width = 2 * layout.pisteHalfWidth;
@@ -176,6 +177,7 @@ export function createGridCourse(layout, terrain, frame = DEFAULT_FRAME) {
   frame, width, terrain, startS: startY, finishS: sOfY(FIN), launchZone: rampZone(frame, cx),
   kickers: makeKickers(layout, frame, sOfY),
   rails: layout.RAILS.map((r) => placeRail(r, frame, base)),
+  features,
  });
 }
 
