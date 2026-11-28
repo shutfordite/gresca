@@ -5,6 +5,7 @@ import { createMapFrame } from './map-frame.js';
 import { W0, H0, cx, TEST_LAYOUT, createGridCourse } from './course.js';
 import { PLAY_LAYOUT } from './play-slope.js';
 import { hash, vn, fbmRows } from './noise.js';
+import { createPark } from './park/park-layer.js';
 
 export const TREE_CELL_M = 6;      // m, one tree candidate per cell of this size
 export const TREE_KEY_STRIDE = 10000; // the trees map key is gx * TREE_KEY_STRIDE + gy
@@ -41,11 +42,15 @@ export function createWorld({ rotationRad = 0, map = 'test' } = {}) {
  const M = new Uint8Array(W * Hm);
  const frame = createMapFrame({ rotation: rotationRad });
  const at = { u: 0, v: 0 }; // scratch for groomed(): world to grid
- // The procedural map's terrain (world/terrain.js): one base layer, the H grid (1 m cells, kicker ramps baked in by
- // buildWorld()) placed by frame; sculpt, features and detail are empty. Groomed is the M mask of the grid cell
- // containing world (x,y), 0..1. Everything outside this file reads the ground through `terrain`, never H or M.
+ // The procedural map's terrain (world/terrain.js): the base layer, the H grid (1 m cells) placed by frame, and for a
+ // map with a park (layout.park) the features layer, its jumps stamped on the base by buildWorld() (world/park/);
+ // sculpt and detail are empty. Groomed is the M mask of the grid cell containing world (x,y), 0..1. Everything
+ // outside this file reads the ground through `terrain`, never H or M.
+ const base = Terrain.grid(H, W, Hm, 1, frame);
+ const park = layout.park ? createPark(base.height) : null;
  const terrain = Terrain.create({
-  base: Terrain.grid(H, W, Hm, 1, frame),
+  base,
+  ...(park ? { features: park.layer } : {}),
   groomed: (x, y) => {
    frame.toGrid(x, y, at);
    return M[Math.max(0, Math.min(Hm - 1, at.v | 0)) * W + Math.max(0, Math.min(W - 1, at.u | 0))] / 255;
@@ -53,8 +58,8 @@ export function createWorld({ rotationRad = 0, map = 'test' } = {}) {
  });
  const treeCells = new Map();
  return {
-  layout, H, M, frame, treeCells, treeArr: [], trees: createTreeLookup(treeCells, frame), terrain,
-  course: createGridCourse(layout, terrain, frame),
+  layout, H, M, frame, treeCells, treeArr: [], trees: createTreeLookup(treeCells, frame), terrain, park,
+  course: createGridCourse(layout, terrain, frame, park ? () => park.features : undefined),
  };
 }
 
@@ -83,10 +88,11 @@ export function createTreeLookup(treeCells, frame) {
  return Object.freeze({ near, maxNear: TREE_NEAR_MAX });
 }
 
-/** Fills world (from createWorld) in place: heights, the groomed piste, kicker ramps and the trees. */
+/** Fills world (from createWorld) in place: heights, the groomed piste, kicker ramps, the park and the trees. */
 export function buildWorld(world) {
  world.layout.fill(world.H, world.M);
  addKickerRamps(world.H, world.layout);
+ if (world.park) world.park.build(world.layout.park(), world.course);
  placeTrees(world);
 }
 

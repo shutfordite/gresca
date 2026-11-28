@@ -225,6 +225,7 @@ export function polylineCourseFromWorld(xy, opts = {}) {
   out.heading = Math.atan2(out.fy, out.fx);
   return out;
  }
+ const featuresOf = typeof features === 'function' ? features : () => features;
  const kickerList = freezeAll(kickers);
  const isInZone = opts.launchZone || inBand;
  function kickerAt(s, d) {
@@ -235,7 +236,9 @@ export function polylineCourseFromWorld(xy, opts = {}) {
  const centreline = () => ({ xy: Float64Array.from(xy), s: Float64Array.from(seg.cum) });
  return Object.freeze({
   length, startS, finishS, kickers: kickerList, rails: freezeAll(rails),
-  features,
+  get features() {
+   return featuresOf();
+  },
   project, point, fallLine, kickerAt, widthAt, centreline,
  });
 }

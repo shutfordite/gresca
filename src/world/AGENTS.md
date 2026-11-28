@@ -12,7 +12,13 @@
 |---|---|---|
 | Terrain heights, layers, sampling | `terrain.js`, `noise.js` | `terrain`, `build` |
 | The procedural test slope's course (centreline, finish, kickers, rails); `createGridCourse`, the `Course` (s, d) | `course.js` (interface in `core/contracts.js`) | `course`, `sim`, `park`, `physics`, `golden` |
-| The play mountain (the map the game opens on) and which map loads (`?map=test`, `MAPS`; ADR 0009) | `play-slope.js`, `build.js`, `src/main.js` | `play-slope`, `frame`, `terrain` |
+| The play mountain (the map the game opens on) and which map loads (`?map=test`, `MAPS`; ADR 0009): pitches per park line, straight centreline through the park, no kickers | `play-slope.js`, `build.js`, `src/main.js` | `play-slope`, `frame`, `terrain` |
+| **The park (K1, ADR 0012)**: jump snow shapes (takeoff cubic to the lip angle, table or gap, knuckle, landing parabola into the base snow, run-out, groomed sidewalls, the mega ramp's drop-in) | `park/jump-shape.js` | `park-shapes`, `park-play` |
+| Sizing a jump from its size, lip speed and slope: the landing catches a rider at `designSpeed` mid-landing, flown with `JUMP_GRAVITY`; the roadmap's size table (`sizeSpec`) | `park/jump-design.js` | `park-shapes` |
+| Rail and box lines (straight, down, flat-down, down-flat-down, flat-down-flat, rainbow, C, S; flat, down, kinked, rainbow boxes) as `{s, d, h}` polylines, 0.3 to 1.5 m high | `park/rail-shapes.js` | `park-shapes` |
+| The terrain's `features` layer and the resolved park of one world (`createPark`, built by `buildWorld`; `course.features` reads it) | `park/park-layer.js`, `build.js`, `polyline-course.js` | `park-play`, `park-features` |
+| The play mountain's park layout: S, M and L jump lines with the speed at each lip, the jib section, the mega ramp | `park/play-park.js`, `play-slope.js` (`PITCH`) | `park-play` |
+| **The park surface (one definition, K1 and K3)**: every feature height is above the BASE snow, the terrain without its `features` layer (`createPark(baseHeight)`). Stamped snow = base + `jump-shape`; a rail's world point = base + `h`; nothing else is added, so the two never differ or count a jump twice. K3 grinds on `course.features.rails[i].world`. | `park/park-layer.js` | `park-play` |
 | The polyline course and `Course.fromRun(ways)` (ADR 0004, R4) | `polyline-course.js`, `run-geometry.js` | `polyline-course`, `course` |
 | The world frame: a map's grid placed in ENU, compass degrees | `map-frame.js` (ADR 0005) | `course`, `golden`, `rotated` (`npm run test:rotated`) |
 | Loose snow: powder depth off the piste, light or deep (`terrain.powder`, `POWDER`, `snowKind`) | `snow.js` | `snow`, `terrain` |
