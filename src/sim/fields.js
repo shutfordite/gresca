@@ -16,10 +16,11 @@ export function simFields(r, s, spray, course) {
   vy: prop(r, 'vy'),
   speed: field(() => Math.hypot(r.vx, r.vy)), // m/s, read only
   heading: prop(r, 'heading'),       // rad, direction the board points; twin tip: heading + PI is the board switch
-  z: prop(r, 'z', true),             // m above the ground (0 on the snow, the rail height while grinding)
-  vz: prop(r, 'vz'),                 // m/s, vertical speed (+ up)
+  z: prop(r, 'z', true),             // m above the snow under the rider (0 on it, the rail height while grinding)
+  vz: prop(r, 'vz'),                 // m/s, + up, relative to riding along the snow (sim/jump.js)
   airTime: prop(r, 'airTime'),       // s in the air this jump (briefly negative after dropping off the end of a rail)
   rotation: prop(r, 'rotation'),     // rad turned in the air this jump (+ right, - left)
+  flipRot: prop(r, 'flipRot'),       // rad flipped in the air this jump (+ front), 0 on the snow
   fromKicker: prop(r, 'fromKicker'), // true when this jump was launched by a kicker
   crashTimer: prop(r, 'crashTimer'), // s of wipeout left; the rider is crashed while this is > 0
   crashed: field(() => r.crashTimer > 0), // read only
@@ -54,7 +55,6 @@ export function simFields(r, s, spray, course) {
   boardHeading: field(() => r.boardHeading),   // rad, direction the board points
   edge: field(() => r.edge),         // rad, edge angle: + on the edge that turns left (counter-clockwise), sim/edge.js
   skid: field(() => r.skid),         // m/s, sideways slip on the snow (0 in a clean carve, > 0 in a skid or brake)
-  flipRot: field(() => r.flipRot),   // rad, pre-added (0)
   spinRot: field(() => r.spinRot),   // rad, spin this jump
   isSwitch: field(() => r.isSwitch), // riding tail first
   isBraking: field(() => r.isBraking), // the brake was held on the last step
